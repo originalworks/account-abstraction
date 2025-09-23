@@ -1,0 +1,3 @@
+[submodule "submodules/entryPoint"]
+	path = submodules/entryPoint
+	url = https://github.com/eth-infinitism/account-abstraction.git
