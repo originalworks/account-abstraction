@@ -1,0 +1,10 @@
+{
+    "entryPoints": [
+        "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+    ],
+    "relayers": [
+        "0xf214f2b2cd398c806f84e317254e0f0b801d0643303237d97a22a48e01628897"
+    ],
+    "beneficiary": "0x71be63f3384f5fb98995898a86b02fb2426c5788",
+    "rpcEndpoint": "http://hardhat:8545"
+}
