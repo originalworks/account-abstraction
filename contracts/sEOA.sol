@@ -7,16 +7,15 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/account/extensions/draft-ERC7821.sol";
 import "@openzeppelin/contracts/utils/cryptography/signers/SignerERC7702.sol";
 import "./WhitelistSigner.sol";
+import "./interfaces/IDdexSequencer.sol";
 
 contract sEOA is Account, ERC721Holder, ERC1155Holder, WhitelistSigner {
     using ECDSA for bytes32;
 
-    modifier onlyOwner() {
-        require(
-            msg.sender == address(this),
-            "sEOA: Msg.sender is not the owner"
-        );
-        _;
+    struct SubmitNewBlobInput {
+        bytes32 imageId;
+        bytes commitment;
+        bytes32 blobSha2;
     }
 
     function entryPoint()
@@ -28,13 +27,21 @@ contract sEOA is Account, ERC721Holder, ERC1155Holder, WhitelistSigner {
         return ERC4337Utils.ENTRYPOINT_V07;
     }
 
-    function setAllowedSigners(
-        address[] calldata who,
-        bool[] calldata allowed
-    ) external onlyOwner {
-        require(who.length == allowed.length, "sEOA: Args length mismatch");
-        for (uint256 i = 0; i < who.length; i++) {
-            _setAllowedSigner(who[i], allowed[i]);
+    function submitNewBlobBatch(
+        SubmitNewBlobInput[] calldata inputs,
+        address ddexSequencerAddress
+    ) public {
+        require(
+            hasRole(BLOB_SENDER_ROLE, msg.sender) == true,
+            "Unauthorized: missing BLOB_SENDER_ROLE"
+        );
+        for (uint i = 0; i < inputs.length; i++) {
+            IDdexSequencer(ddexSequencerAddress).submitNewBlob(
+                inputs[i].imageId,
+                inputs[i].commitment,
+                inputs[i].blobSha2,
+                i
+            );
         }
     }
 
@@ -43,7 +50,11 @@ contract sEOA is Account, ERC721Holder, ERC1155Holder, WhitelistSigner {
         address from,
         address[] calldata to,
         uint256[] calldata values
-    ) external onlyOwner {
+    ) external {
+        require(
+            hasRole(PAYMENT_SENDER_ROLE, msg.sender) == true,
+            "Unauthorized: missing PAYMENT_SENDER_ROLE"
+        );
         require(to.length == values.length, "len mismatch");
         for (uint256 i = 0; i < to.length; i++) {
             (bool ok, bytes memory res) = token.call(
@@ -59,5 +70,17 @@ contract sEOA is Account, ERC721Holder, ERC1155Holder, WhitelistSigner {
                 "transferFrom failed"
             );
         }
+    }
+
+    function supportsInterface(
+        bytes4 interfaceId
+    )
+        public
+        view
+        virtual
+        override(ERC1155Holder, AccessControl)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }

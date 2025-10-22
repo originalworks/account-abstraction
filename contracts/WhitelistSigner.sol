@@ -7,21 +7,32 @@ import {IEntryPoint} from "@openzeppelin/contracts/interfaces/draft-IERC4337.sol
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "@openzeppelin/contracts/account/extensions/draft-ERC7821.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-abstract contract WhitelistSigner is AbstractSigner, ERC7821 {
+abstract contract WhitelistSigner is AbstractSigner, ERC7821, AccessControl {
     event SignersWhitelistUpdated(address signer, bool allowed);
 
-    mapping(address => bool) public signerWhitelist;
+    bytes32 public constant PAYMENT_SENDER_ROLE =
+        keccak256("PAYMENT_SENDER_ROLE");
+    bytes32 public constant TOKENIZER_ROLE = keccak256("TOKENIZER_ROLE");
+    bytes32 public constant BLOB_SENDER_ROLE = keccak256("BLOB_SENDER_ROLE");
 
     function entryPoint() public view virtual returns (IEntryPoint);
 
-    function _setAllowedSigner(address signer, bool allowed) internal virtual {
-        signerWhitelist[signer] = allowed;
-        emit SignersWhitelistUpdated(signer, allowed);
+    function grantRole(bytes32 role, address account) public override {
+        require(
+            msg.sender == address(this),
+            "Unauthorized: only self-call allowed"
+        );
+        _grantRole(role, account);
     }
 
-    function isSignerWhitelisted(address signer) public view returns (bool) {
-        return signerWhitelist[signer];
+    function revokeRole(bytes32 role, address account) public override {
+        require(
+            msg.sender == address(this),
+            "Unauthorized: only self-call allowed"
+        );
+        _revokeRole(role, account);
     }
 
     function _erc7821AuthorizedExecutor(
@@ -32,7 +43,7 @@ abstract contract WhitelistSigner is AbstractSigner, ERC7821 {
         return
             caller == address(entryPoint()) ||
             caller == address(this) ||
-            isSignerWhitelisted(caller);
+            hasRole(DEFAULT_ADMIN_ROLE, caller);
     }
 
     function _rawSignatureValidation(
@@ -44,18 +55,16 @@ abstract contract WhitelistSigner is AbstractSigner, ERC7821 {
             signature
         );
 
-        return
-            (address(this) == recovered || isSignerWhitelisted(recovered)) &&
-            err == ECDSA.RecoverError.NoError;
+        return err == ECDSA.RecoverError.NoError;
     }
 
-    function isValidSignature(
-        bytes32 hash,
-        bytes calldata signature
-    ) public view returns (bytes4) {
-        return
-            _rawSignatureValidation(hash, signature)
-                ? IERC1271.isValidSignature.selector
-                : bytes4(0xffffffff);
-    }
+    // function isValidSignature(
+    //     bytes32 hash,
+    //     bytes calldata signature
+    // ) public view returns (bytes4) {
+    //     return
+    //         _rawSignatureValidation(hash, signature)
+    //             ? IERC1271.isValidSignature.selector
+    //             : bytes4(0xffffffff);
+    // }
 }
