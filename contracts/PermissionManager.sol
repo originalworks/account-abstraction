@@ -9,9 +9,10 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "@openzeppelin/contracts/account/extensions/draft-ERC7821.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-abstract contract WhitelistSigner is AbstractSigner, ERC7821, AccessControl {
+abstract contract PermissionManager is AbstractSigner, ERC7821, AccessControl {
     event SignersWhitelistUpdated(address signer, bool allowed);
 
+    bytes32 public constant EXECUTOR = keccak256("EXECUTOR");
     bytes32 public constant PAYMENT_SENDER_ROLE =
         keccak256("PAYMENT_SENDER_ROLE");
     bytes32 public constant TOKENIZER_ROLE = keccak256("TOKENIZER_ROLE");
@@ -55,16 +56,18 @@ abstract contract WhitelistSigner is AbstractSigner, ERC7821, AccessControl {
             signature
         );
 
-        return err == ECDSA.RecoverError.NoError;
+        return
+            (address(this) == recovered || hasRole(EXECUTOR, recovered)) &&
+            err == ECDSA.RecoverError.NoError;
     }
 
-    // function isValidSignature(
-    //     bytes32 hash,
-    //     bytes calldata signature
-    // ) public view returns (bytes4) {
-    //     return
-    //         _rawSignatureValidation(hash, signature)
-    //             ? IERC1271.isValidSignature.selector
-    //             : bytes4(0xffffffff);
-    // }
+    function isValidSignature(
+        bytes32 hash,
+        bytes calldata signature
+    ) public view returns (bytes4) {
+        return
+            _rawSignatureValidation(hash, signature)
+                ? IERC1271.isValidSignature.selector
+                : bytes4(0xffffffff);
+    }
 }

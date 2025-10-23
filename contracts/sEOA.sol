@@ -6,10 +6,10 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/account/extensions/draft-ERC7821.sol";
 import "@openzeppelin/contracts/utils/cryptography/signers/SignerERC7702.sol";
-import "./WhitelistSigner.sol";
+import "./PermissionManager.sol";
 import "./interfaces/IDdexSequencer.sol";
 
-contract sEOA is Account, ERC721Holder, ERC1155Holder, WhitelistSigner {
+contract sEOA is Account, ERC721Holder, ERC1155Holder, PermissionManager {
     using ECDSA for bytes32;
 
     struct SubmitNewBlobInput {
@@ -21,7 +21,7 @@ contract sEOA is Account, ERC721Holder, ERC1155Holder, WhitelistSigner {
     function entryPoint()
         public
         pure
-        override(Account, WhitelistSigner)
+        override(Account, PermissionManager)
         returns (IEntryPoint)
     {
         return ERC4337Utils.ENTRYPOINT_V07;
