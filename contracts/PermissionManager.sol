@@ -44,7 +44,7 @@ abstract contract PermissionManager is AbstractSigner, ERC7821, AccessControl {
         return
             caller == address(entryPoint()) ||
             caller == address(this) ||
-            hasRole(DEFAULT_ADMIN_ROLE, caller);
+            hasRole(EXECUTOR, caller);
     }
 
     function _rawSignatureValidation(
