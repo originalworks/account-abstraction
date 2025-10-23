@@ -10,9 +10,7 @@ import "@openzeppelin/contracts/account/extensions/draft-ERC7821.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 abstract contract PermissionManager is AbstractSigner, ERC7821, AccessControl {
-    event SignersWhitelistUpdated(address signer, bool allowed);
-
-    bytes32 public constant EXECUTOR = keccak256("EXECUTOR");
+    bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
     bytes32 public constant PAYMENT_SENDER_ROLE =
         keccak256("PAYMENT_SENDER_ROLE");
     bytes32 public constant TOKENIZER_ROLE = keccak256("TOKENIZER_ROLE");
@@ -44,7 +42,7 @@ abstract contract PermissionManager is AbstractSigner, ERC7821, AccessControl {
         return
             caller == address(entryPoint()) ||
             caller == address(this) ||
-            hasRole(EXECUTOR, caller);
+            hasRole(EXECUTOR_ROLE, caller);
     }
 
     function _rawSignatureValidation(
@@ -57,7 +55,7 @@ abstract contract PermissionManager is AbstractSigner, ERC7821, AccessControl {
         );
 
         return
-            (address(this) == recovered || hasRole(EXECUTOR, recovered)) &&
+            (address(this) == recovered || hasRole(EXECUTOR_ROLE, recovered)) &&
             err == ECDSA.RecoverError.NoError;
     }
 
