@@ -8,9 +8,12 @@ import "@openzeppelin/contracts/account/extensions/draft-ERC7821.sol";
 import "@openzeppelin/contracts/utils/cryptography/signers/SignerERC7702.sol";
 import "./PermissionManager.sol";
 import "./interfaces/IDdexSequencer.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract sEOA is Account, ERC721Holder, ERC1155Holder, PermissionManager {
     using ECDSA for bytes32;
+    using SafeERC20 for IERC20;
 
     struct SubmitNewBlobInput {
         bytes32 imageId;
@@ -30,11 +33,7 @@ contract sEOA is Account, ERC721Holder, ERC1155Holder, PermissionManager {
     function submitNewBlobBatch(
         SubmitNewBlobInput[] calldata inputs,
         address ddexSequencerAddress
-    ) public {
-        require(
-            hasRole(BLOB_SENDER_ROLE, msg.sender) == true,
-            "Unauthorized: missing BLOB_SENDER_ROLE"
-        );
+    ) public onlyRole(BLOB_SENDER_ROLE) {
         for (uint i = 0; i < inputs.length; i++) {
             IDdexSequencer(ddexSequencerAddress).submitNewBlob(
                 inputs[i].imageId,
@@ -50,25 +49,10 @@ contract sEOA is Account, ERC721Holder, ERC1155Holder, PermissionManager {
         address from,
         address[] calldata to,
         uint256[] calldata values
-    ) external {
-        require(
-            hasRole(PAYMENT_SENDER_ROLE, msg.sender) == true,
-            "Unauthorized: missing PAYMENT_SENDER_ROLE"
-        );
+    ) external onlyRole(PAYMENT_SENDER_ROLE) {
         require(to.length == values.length, "len mismatch");
         for (uint256 i = 0; i < to.length; i++) {
-            (bool ok, bytes memory res) = token.call(
-                abi.encodeWithSelector(
-                    bytes4(keccak256("transferFrom(address,address,uint256)")),
-                    from,
-                    to[i],
-                    values[i]
-                )
-            );
-            require(
-                ok && (res.length == 0 || abi.decode(res, (bool))),
-                "transferFrom failed"
-            );
+            IERC20(token).safeTransferFrom(from, to[i], values[i]);
         }
     }
 
