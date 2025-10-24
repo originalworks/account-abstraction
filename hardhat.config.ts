@@ -30,6 +30,7 @@ const config: HardhatUserConfig = {
   },
   typechain: {
     outDir: 'typechain',
+    
   },
   networks: {
     localhost: {
