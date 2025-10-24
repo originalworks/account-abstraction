@@ -65,7 +65,6 @@ const main = async () => {
     console.log("Got existing delegation")
     sEOA = SEOA__factory.connect(owner.address, owner)
   }
-    console.log('Going with this shit')
     const {packedUserOp, userOp} = await createUserOp(sEOA)
     await sendUserOpToEntryPoint([packedUserOp], deployer)
 }
