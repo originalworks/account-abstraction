@@ -20,4 +20,5 @@
 /coverage
 
 typechain
+typechain-entrypoint
 .env

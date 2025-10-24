@@ -1,22 +1,32 @@
-import { ethers, Signer } from "ethers";
+import { ethers, Provider, Signer, Wallet } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/types";
-import { SEOA__factory } from "../typechain/index.js";
 
-interface UserOp {
+export interface UserOp {
     sender: string,
+    nonce: bigint,
+    initCode: string,
+    callData: string,
+    callGasLimit: bigint,
+    verificationGasLimit: bigint,
+    preVerificationGas: bigint,
+    maxPriorityFeePerGas: bigint,
+    paymasterAndData: string // is it packed already?
+    signature: string,
+    maxFeePerGas: bigint,
+    // paymaster: typ.address
+    // paymasterVerificationGasLimit: typ.uint128
+    // paymasterPostOpGasLimit: typ.uint128
+    // paymasterData: typ.bytes
+}
+
+export interface PackedUserOp {
+   sender: string,
     nonce: bigint,
     initCode: string,
     callData: string,
     preVerificationGas: bigint,
     paymasterAndData: string
     signature: string,
-    verificationGasLimit: bigint,
-    callGasLimit: bigint,
-    maxFeePerGas: bigint,
-    maxPriorityFeePerGas: bigint,
-}
-
-interface PackedUserOp extends Omit<UserOp, 'verificationGasLimit' | 'callGasLimit' | 'maxFeePerGas' | 'maxPriorityFeePerGas'> {
     accountGasLimits: string,
     gasFees: string,
 }
@@ -62,13 +72,7 @@ function packGasFees(maxFeePerGas: bigint, maxPriorityFeePerGas: bigint): string
   return ethers.solidityPacked(["uint128", "uint128"], [maxFeePerGas, maxPriorityFeePerGas]);
 }
 
-export function getUserOpHashOffchain(userOp: Omit<UserOp, "signature">, entryPointAddress: string, chainId: bigint) {
-    const accountGasLimits = packGasLimits(userOp.verificationGasLimit, userOp.callGasLimit);
-    const accountGasLimitsBytes32 = toBytes32(accountGasLimits)
-    const gasFees = packGasFees(userOp.maxFeePerGas, userOp.maxPriorityFeePerGas);
-    const gasFeesBytes32 = toBytes32(gasFees)
-
-    console.log('eloszki')
+export function getUserOpHashOffchain(packedUserOp: PackedUserOp, entryPointAddress: string, chainId: bigint) {
     const coder = ethers.AbiCoder.defaultAbiCoder()
     const packedData = coder.encode(
         [
@@ -82,14 +86,14 @@ export function getUserOpHashOffchain(userOp: Omit<UserOp, "signature">, entryPo
             "bytes32"      // paymasterAndData
         ],
         [
-            userOp.sender,
-            userOp.nonce,
-            ethers.keccak256(userOp.initCode),
-            ethers.keccak256(userOp.callData),
-            accountGasLimitsBytes32,
-            userOp.preVerificationGas,
-            gasFeesBytes32,
-            ethers.keccak256(userOp.paymasterAndData)
+            packedUserOp.sender,
+            packedUserOp.nonce,
+            ethers.keccak256(packedUserOp.initCode),
+            ethers.keccak256(packedUserOp.callData),
+            toBytes32(packedUserOp.accountGasLimits),
+            packedUserOp.preVerificationGas,
+            toBytes32(packedUserOp.gasFees),
+            ethers.keccak256(packedUserOp.paymasterAndData)
         ]
     );
       
@@ -103,24 +107,51 @@ export function getUserOpHashOffchain(userOp: Omit<UserOp, "signature">, entryPo
       return userOpHash;
 }
 
-export async function getUserOpHashOnchain(userOp: UserOp | PackedUserOp ,entryPointAddress: string, signer: Signer) {
+export async function getUserOpHashOnchain(packedUserOp: PackedUserOp ,entryPointAddress: string, provider: Provider) {
     const entryPointAbi = [
     "function getUserOpHash((address,uint256,bytes,bytes,bytes32,uint256,bytes32,bytes,bytes)) view returns (bytes32)"
   ];
-    if (!('accountGasLimits' in userOp) || !('gasFees' in userOp)) {
-        userOp = userOpToPackedUserOp(userOp)
-    }
 
-    const entryPoint = new ethers.Contract(entryPointAddress, entryPointAbi, signer.provider);
+    const packedUserOpTuple = [
+      packedUserOp.sender, 
+      packedUserOp.nonce, 
+      packedUserOp.initCode, 
+      packedUserOp.callData, 
+      packedUserOp.accountGasLimits, 
+      packedUserOp.preVerificationGas, 
+      packedUserOp.gasFees, 
+      packedUserOp.paymasterAndData, 
+      packedUserOp.signature
+    ]
 
-    const userOpHash = await entryPoint.getUserOpHash(userOp);
+    const entryPoint = new ethers.Contract(entryPointAddress, entryPointAbi, provider);
+    const userOpHash = await entryPoint.getUserOpHash(packedUserOpTuple) as string;
 
     return userOpHash
 }
 
-export async function signUserOp (signer: Signer, userOp: UserOp, entryPointAddress: string, chainId: bigint) {
-    const userOpHash = getUserOpHashOffchain(userOp, entryPointAddress, chainId); 
-    return await signer.signMessage(ethers.getBytes(userOpHash));
+export async function getUserOpHash(packedUserOp: PackedUserOp ,entryPointAddress: string, provider: Provider, onchain:boolean = false) {
+  if (onchain) {
+      return await getUserOpHashOnchain(packedUserOp, entryPointAddress, provider)
+  }
+  
+  const chainId = (await provider.getNetwork())?.chainId!
+  
+  return getUserOpHashOffchain(packedUserOp, entryPointAddress, chainId)  
+}
+
+export async function signUserOp (userOpHash: string, signer: Wallet) {
+    const hashBytes = ethers.getBytes(userOpHash);
+    const sigObj = signer.signingKey.sign(hashBytes);
+    const signature = ethers.Signature.from(sigObj).serialized;
+
+    const recovered = ethers.recoverAddress(hashBytes, signature);
+
+    if (recovered !== signer.address) {
+      throw new Error("SignUserOp: Recovered address doesn't match signer address")
+    }
+    
+    return signature
 }
 
 export const userOpToPackedUserOp = (userOp: UserOp): PackedUserOp => {
@@ -156,8 +187,6 @@ export const encodeExecuteBatch = (executes: ExecuteProps[]) => {
 
 export async function checkDelegationStatus(signer: HardhatEthersSigner, verbose: boolean = false): Promise<boolean> {
   verbose && console.log("\n=== CHECKING DELEGATION STATUS ===");
-
-
 
   try {
     const code = await signer.provider?.getCode(signer.address);
