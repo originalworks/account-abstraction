@@ -4,12 +4,14 @@
   "main": "index.js",
   "scripts": {
     "deploy:entrypoint": "yarn --cwd submodules/entryPoint/ hardhat deploy --network localhost",
-    "typechain:entrypoint": "typechain --target ethers-v6 --out-dir typechain-entrypoint --node16-modules './node_modules/@account-abstraction/contracts/artifacts/EntryPoint.json'"
+    "typechain:entrypoint": "typechain --target ethers-v6 --out-dir typechain-entrypoint --node16-modules './node_modules/@account-abstraction/contracts/artifacts/EntryPoint.json'",
+    "postinstall": "npm run typechain:entrypoint"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@account-abstraction/contracts": "^0.7.0",
     "@nomicfoundation/hardhat-ethers": "^4.0.2",
     "@nomicfoundation/hardhat-ethers-chai-matchers": "^3.0.0",
     "@nomicfoundation/hardhat-ignition": "^3.0.2",
@@ -34,8 +36,5 @@
     "typescript": "~5.8.0"
   },
   "type": "module",
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
-  "dependencies": {
-    "@account-abstraction/contracts": "^0.7.0"
-  }
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

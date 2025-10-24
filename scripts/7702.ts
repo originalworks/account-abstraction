@@ -26,6 +26,8 @@ const fundOwnerIfNeeded = async () => {
   }
 }
 
+const EXECUTOR_ROLE = ethers.id("EXECUTOR_ROLE");
+
 const main = async () => {
   let sEOA;
 
@@ -49,7 +51,10 @@ const main = async () => {
       const tx = await owner.sendTransaction({
         to: owner.address,
         authorizationList:[auth],
-        data: SEOA__factory.createInterface().encodeFunctionData("setAllowedSigners", [[external.address], [true]])
+        data: SEOA__factory.createInterface().encodeFunctionData("grantRole", [
+                EXECUTOR_ROLE,
+                external.address,
+              ]),
       })
   
       await tx.wait()
