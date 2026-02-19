@@ -1,0 +1,8 @@
+[workspace]
+resolver = "3"
+
+members = [
+    "rust/transaction_signer",
+    "rust/transaction_db",
+    "rust/transaction_sender",
+]
