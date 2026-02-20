@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, types::time::OffsetDateTime};
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Transaction {
@@ -7,9 +7,13 @@ pub struct Transaction {
     pub sender_id: String,
     pub tx_type: String,
     pub tx_status: String,
-    pub signed_calldata: Option<String>,
+    pub calldata: String,
+    pub chain_id: i32,
+    pub signature: Option<String>,
     pub blob_file_path: Option<String>,
     pub tx_hash: Option<String>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 pub struct TransactionRepo<'a> {
@@ -31,8 +35,12 @@ impl<'a> TransactionRepo<'a> {
                 tx_status, 
                 tx_type, 
                 blob_file_path, 
-                signed_calldata, 
-                tx_hash 
+                calldata, 
+                chain_id,
+                signature,
+                tx_hash,
+                created_at,
+                updated_at
             FROM 
                 transactions
             WHERE
