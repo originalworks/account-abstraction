@@ -6,3 +6,6 @@ members = [
     "rust/transaction_db",
     "rust/transaction_sender",
 ]
+
+[workspace.dependencies]
+transaction_db = { path = "./rust/transaction_db" }
