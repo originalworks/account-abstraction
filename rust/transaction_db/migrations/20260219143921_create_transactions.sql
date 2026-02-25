@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     tx_status TEXT NOT NULL,
     calldata TEXT NOT NULL,
     chain_id INT NOT NULL,
-    signature TEXT,
+    signature TEXT NOT NULL,
     blob_file_path TEXT,
     tx_hash TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
