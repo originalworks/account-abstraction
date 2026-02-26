@@ -54,7 +54,45 @@ impl Config {
         })
     }
 
-    fn get_env_var(key: &str) -> String {
+    pub fn get_env_var(key: &str) -> String {
         env::var(key).expect(format!("Missing env variable: {key}").as_str())
+    }
+}
+
+#[cfg(feature = "aws")]
+pub mod aws_lambda {
+    use aws_lambda_events::sqs::SqsEvent;
+    use lambda_runtime::LambdaEvent;
+    use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
+    use transaction_db::transactions::TransactionRepo;
+
+    use crate::{Config, calldata::parse_calldata, event::SignTxRequest};
+
+    pub async fn function_handler(
+        event: LambdaEvent<SqsEvent>,
+        pool: &sqlx::Pool<sqlx::Postgres>,
+    ) -> anyhow::Result<(), lambda_runtime::Error> {
+        println!("Building...");
+
+        let config = Config::build()?;
+        let wallet_config = OwWalletConfig::from(&config)?;
+        let wallet = OwWallet::build(&wallet_config).await?;
+        let transaction_repo = TransactionRepo::new(&pool);
+
+        println!("Signing...");
+        let sign_tx_requests = SignTxRequest::from_sqs_event(event)?;
+        for sign_tx_request in sign_tx_requests {
+            let calldata = parse_calldata(&sign_tx_request.calldata)?;
+
+            let signature = wallet.sign_message(calldata.as_slice()).await?;
+
+            println!("Saving...");
+            let insert_tx_input = sign_tx_request.into_db_transaction(signature.to_string())?;
+            transaction_repo
+                .insert_ignore_conflict(&insert_tx_input)
+                .await?;
+        }
+
+        Ok(())
     }
 }

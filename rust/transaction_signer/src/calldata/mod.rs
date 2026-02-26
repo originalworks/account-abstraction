@@ -1,5 +1,8 @@
 use anyhow::anyhow;
 
+#[cfg(test)]
+mod tests;
+
 pub fn parse_calldata(input: &String) -> anyhow::Result<Vec<u8>> {
     let hex = input.strip_prefix("0x").unwrap_or(input);
 
