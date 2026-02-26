@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::Type;
 use sqlx::{PgPool, types::time::OffsetDateTime};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]
 #[sqlx(type_name = "text")]
 pub enum TxType {
     STANDARD,
