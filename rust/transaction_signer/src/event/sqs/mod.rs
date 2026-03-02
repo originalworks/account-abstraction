@@ -1,6 +1,5 @@
 #![cfg(feature = "aws")]
 use crate::event::SignTxRequest;
-// use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
 use aws_lambda_events::sqs::SqsEvent;
 use lambda_runtime::LambdaEvent;
 use transaction_db::transactions::TxType;
