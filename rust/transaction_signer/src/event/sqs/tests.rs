@@ -29,7 +29,7 @@ mod tests {
             "calldata": "0xdeafbeef",
             "chain_id": 12,
             "tx_id": "abc123",
-            "sender_id": "sender-1",
+            "requester_id": "sender-1",
             "tx_type": "STANDARD"
         })
         .to_string()
@@ -40,7 +40,7 @@ mod tests {
             "calldata": "0xdeafbeef",
             "chain_id": 12,
             "tx_id": "abc123",
-            "sender_id": "sender-1",
+            "requester_id": "sender-1",
             "tx_type": "BLOB",
             "blob_file_path": "path/to/file"
         })
@@ -62,7 +62,7 @@ mod tests {
             "calldata": "0xdeafbeef",
             "chain_id": 12,
             "tx_id": "abc123",
-            "sender_id": "sender-1",
+            "requester_id": "sender-1",
             "tx_type": "BLOB",
         }"#;
         let event = build_lambda_event(vec![message_with_body(json)]);

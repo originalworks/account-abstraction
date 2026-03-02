@@ -1,6 +1,8 @@
 CREATE TABLE IF NOT EXISTS transactions (
-    tx_id TEXT PRIMARY KEY,
-    sender_id TEXT NOT NULL,
+    sequence_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    tx_id TEXT NOT NULL UNIQUE,
+    requester_id TEXT NOT NULL,
+    assigned_wallet TEXT,
     tx_type TEXT NOT NULL,
     tx_status TEXT NOT NULL,
     calldata TEXT NOT NULL,
@@ -10,7 +12,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     tx_hash TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-
 );
 
 CREATE OR REPLACE FUNCTION set_updated_at()

@@ -17,8 +17,9 @@ pub enum TxStatus {
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Transaction {
+    pub sequence_id: i64,
     pub tx_id: String,
-    pub sender_id: String,
+    pub requester_id: String,
     pub tx_type: TxType,
     pub tx_status: TxStatus,
     pub calldata: String,
@@ -26,6 +27,7 @@ pub struct Transaction {
     pub signature: String,
     pub blob_file_path: Option<String>,
     pub tx_hash: Option<String>,
+    pub assigned_wallet: Option<String>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -33,7 +35,7 @@ pub struct Transaction {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InsertTransactionInput {
     pub tx_id: String,
-    pub sender_id: String,
+    pub requester_id: String,
     pub tx_type: TxType,
     pub tx_status: TxStatus,
     pub calldata: String,
@@ -59,10 +61,10 @@ impl<'a> TransactionRepo<'a> {
             r#"
             INSERT INTO transactions (
                 tx_id,
-                sender_id,
+                requester_id,
                 tx_status,
                 tx_type,
-                blob_file_path,
+                blob_file_path, 
                 calldata,
                 chain_id,
                 signature
@@ -71,7 +73,7 @@ impl<'a> TransactionRepo<'a> {
             ON CONFLICT (tx_id) DO NOTHING
             "#,
             input.tx_id,
-            input.sender_id,
+            input.requester_id,
             input.tx_status.clone() as TxStatus,
             input.tx_type.clone() as TxType,
             input.blob_file_path,
@@ -90,11 +92,13 @@ impl<'a> TransactionRepo<'a> {
             Transaction,
             r#"
             SELECT 
+                sequence_id,
                 tx_id, 
-                sender_id, 
+                requester_id, 
+                assigned_wallet,
                 tx_status as "tx_status: TxStatus", 
                 tx_type as "tx_type: TxType", 
-                blob_file_path, 
+                blob_file_path,
                 calldata, 
                 chain_id,
                 signature,

@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
     use lambda_runtime::{Context, LambdaEvent};
     use serde_json::json;
@@ -7,17 +8,34 @@ mod tests {
     use transaction_db::transactions::TransactionRepo;
     use transaction_signer::{Config, aws_lambda::function_handler};
 
+    async fn create_transaction_sender_queue() {
+        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+        let aws_config = aws_config::defaults(BehaviorVersion::latest())
+            .region(region_provider)
+            .load()
+            .await;
+        let client = aws_sdk_sqs::Client::new(&aws_config);
+
+        client
+            .create_queue()
+            .queue_name("transaction-sender-queue")
+            .send()
+            .await
+            .unwrap();
+    }
+
     // Do not run this test directly!
     // Instead run it with: ./aws_lambda_e2e.sh
     #[ignore]
     #[tokio::test]
     async fn test_function_handler_e2e() {
+        create_transaction_sender_queue().await;
         let tx_id = "abc123";
         let sqs_message_body = json!({
             "calldata": "0xdeafbeef",
             "chain_id": 12,
             "tx_id": tx_id,
-            "sender_id": "test_sender",
+            "requester_id": "test_sender",
             "tx_type": "STANDARD"
         });
 
