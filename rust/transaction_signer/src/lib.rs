@@ -23,11 +23,13 @@ pub struct Config {
     pub rpc_url: String,
     pub private_key: Option<String>,
     pub signer_kms_id: Option<String>,
+    pub transaction_sender_queue_url: Option<String>,
     pub database_url: String,
 }
 
 impl Config {
     pub fn build() -> anyhow::Result<Self> {
+        let transaction_sender_queue_url = env::var("TRANSACTION_SENDER_QUEUE_URL").ok();
         let rpc_url = Self::get_env_var("RPC_URL");
         let database_url = Self::get_env_var("DATABASE_URL");
         let mut signer_kms_id = None;
@@ -51,6 +53,7 @@ impl Config {
             private_key,
             signer_kms_id,
             database_url,
+            transaction_sender_queue_url,
         })
     }
 
@@ -61,12 +64,17 @@ impl Config {
 
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
+    use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
     use lambda_runtime::LambdaEvent;
     use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
     use transaction_db::transactions::TransactionRepo;
 
-    use crate::{Config, calldata::parse_calldata, event::SignTxRequest};
+    use crate::{
+        Config,
+        calldata::parse_calldata,
+        event::{SignTxRequest, sqs::TxSenderSqsTrigger},
+    };
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
@@ -78,9 +86,20 @@ pub mod aws_lambda {
         let wallet_config = OwWalletConfig::from(&config)?;
         let wallet = OwWallet::build(&wallet_config).await?;
         let transaction_repo = TransactionRepo::new(&pool);
+        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+        let aws_config = aws_config::defaults(BehaviorVersion::latest())
+            .region(region_provider)
+            .load()
+            .await;
+        let tx_sender_trigger = TxSenderSqsTrigger::build(
+            &aws_config,
+            &config
+                .transaction_sender_queue_url
+                .expect("Missing env var: transaction_sender_queue_url"),
+        )?;
 
-        println!("Signing...");
         let sign_tx_requests = SignTxRequest::from_sqs_event(event)?;
+        println!("Signing: {sign_tx_requests:?}");
         for sign_tx_request in sign_tx_requests {
             let calldata = parse_calldata(&sign_tx_request.calldata)?;
 
@@ -91,6 +110,8 @@ pub mod aws_lambda {
             transaction_repo
                 .insert_ignore_conflict(&insert_tx_input)
                 .await?;
+
+            tx_sender_trigger.trigger_tx_sender().await?;
         }
 
         Ok(())
