@@ -2,14 +2,16 @@ CREATE TABLE IF NOT EXISTS transactions (
     sequence_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     tx_id TEXT NOT NULL UNIQUE,
     requester_id TEXT NOT NULL,
-    assigned_wallet TEXT,
     tx_type TEXT NOT NULL,
     tx_status TEXT NOT NULL,
-    calldata TEXT NOT NULL,
+    calldata BYTEA NOT NULL,
+    to_address TEXT NOT NULL,
+    value_wei BIGINT NOT NULL,
     chain_id INT NOT NULL,
-    signature TEXT NOT NULL,
+    signature BYTEA NOT NULL,
     blob_file_path TEXT,
     tx_hash TEXT,
+    retry_count SMALLINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -21,3 +23,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE INDEX idx_tx_status_created
+    ON transactions (created_at)
+    WHERE tx_status = 'SIGNED';

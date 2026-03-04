@@ -1,5 +1,5 @@
 [package]
-name = "transaction_db"
+name = "migrator"
 version = "0.1.0"
 edition = "2024"
 
@@ -12,7 +12,15 @@ sqlx = { version = "0.8.6", features = [
     "runtime-tokio",
     "tls-rustls",
     "macros",
-    "time",
 ] }
-time = { version = "0.3.47", features = ["serde"] }
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
+
+# aws feature:
+aws-config = { version = "1.8.13", features = [
+    "behavior-version-latest",
+], optional = true }
+lambda_runtime = { version = "1.0.2", optional = true }
+
+
+[features]
+aws = ["dep:aws-config", "dep:lambda_runtime"]

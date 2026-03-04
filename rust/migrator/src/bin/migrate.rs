@@ -1,4 +1,4 @@
-use transaction_db::run_migration;
+use migrator::run_migration;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

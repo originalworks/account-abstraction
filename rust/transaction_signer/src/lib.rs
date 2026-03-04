@@ -106,7 +106,8 @@ pub mod aws_lambda {
             let signature = wallet.sign_message(calldata.as_slice()).await?;
 
             println!("Saving...");
-            let insert_tx_input = sign_tx_request.into_db_transaction(signature.to_string())?;
+            let insert_tx_input =
+                sign_tx_request.into_db_transaction(signature.as_bytes().to_vec())?;
             transaction_repo
                 .insert_ignore_conflict(&insert_tx_input)
                 .await?;

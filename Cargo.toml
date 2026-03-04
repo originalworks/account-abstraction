@@ -5,6 +5,9 @@ members = [
     "rust/transaction_signer",
     "rust/transaction_db",
     "rust/transaction_sender",
+    "rust/operator_wallet_db",
+    "rust/migrator",
+    "rust/transaction_assignment_db", "rust/receipt_poller",
 ]
 
 [workspace.dependencies]
