@@ -22,12 +22,14 @@ pub struct Transaction {
     pub requester_id: String,
     pub tx_type: TxType,
     pub tx_status: TxStatus,
-    pub calldata: String,
+    pub calldata: Vec<u8>,
+    pub to_address: String,
+    pub value_wei: i64,
     pub chain_id: i32,
-    pub signature: String,
-    pub blob_file_path: Option<String>,
+    pub signature: Vec<u8>,
+    pub retry_count: i32,
     pub tx_hash: Option<String>,
-    pub assigned_wallet: Option<String>,
+    pub blob_file_path: Option<String>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -38,9 +40,11 @@ pub struct InsertTransactionInput {
     pub requester_id: String,
     pub tx_type: TxType,
     pub tx_status: TxStatus,
-    pub calldata: String,
+    pub calldata: Vec<u8>,
+    pub to_address: String,
+    pub value_wei: i64,
     pub chain_id: i32,
-    pub signature: String,
+    pub signature: Vec<u8>,
     pub blob_file_path: Option<String>,
 }
 
@@ -62,24 +66,28 @@ impl<'a> TransactionRepo<'a> {
             INSERT INTO transactions (
                 tx_id,
                 requester_id,
-                tx_status,
                 tx_type,
-                blob_file_path, 
+                tx_status,
                 calldata,
+                to_address,
+                value_wei,
                 chain_id,
-                signature
+                signature,
+                blob_file_path
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             ON CONFLICT (tx_id) DO NOTHING
             "#,
             input.tx_id,
             input.requester_id,
-            input.tx_status.clone() as TxStatus,
             input.tx_type.clone() as TxType,
-            input.blob_file_path,
+            input.tx_status.clone() as TxStatus,
             input.calldata,
+            input.to_address,
+            input.value_wei,
             input.chain_id,
-            input.signature
+            input.signature,
+            input.blob_file_path,
         )
         .execute(self.pool)
         .await?;
@@ -95,14 +103,16 @@ impl<'a> TransactionRepo<'a> {
                 sequence_id,
                 tx_id, 
                 requester_id, 
-                assigned_wallet,
                 tx_status as "tx_status: TxStatus", 
                 tx_type as "tx_type: TxType", 
                 blob_file_path,
-                calldata, 
+                calldata,
+                to_address,
+                value_wei,
                 chain_id,
                 signature,
                 tx_hash,
+                retry_count,
                 created_at,
                 updated_at
             FROM 

@@ -1,7 +1,7 @@
 #![cfg(feature = "aws")]
 use crate::event::SignTxRequest;
 use aws_lambda_events::sqs::SqsEvent;
-use lambda_runtime::LambdaEvent;
+use lambda_runtime::{LambdaEvent, tracing::log::warn};
 use transaction_db::transactions::TxType;
 
 #[cfg(test)]
@@ -14,11 +14,12 @@ impl SignTxRequest {
             .records
             .into_iter()
             .filter_map(|record| {
-                let body = record.body?;
+                let body = record.body.clone()?;
                 let sign_tx_request = serde_json::from_str::<SignTxRequest>(&body).ok()?;
                 if sign_tx_request.tx_type == TxType::BLOB
                     && sign_tx_request.blob_file_path.is_none()
                 {
+                    warn!("Failed to parse event: {:?}", record);
                     return None;
                 }
                 Some(sign_tx_request)

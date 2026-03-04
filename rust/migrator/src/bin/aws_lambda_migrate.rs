@@ -1,8 +1,7 @@
 #![cfg(feature = "aws")]
 use lambda_runtime::{LambdaEvent, run, service_fn, tracing};
+use migrator::run_migration;
 use serde_json::Value;
-
-use transaction_db::run_migration;
 
 async fn function_handler(_event: LambdaEvent<Value>) -> anyhow::Result<(), lambda_runtime::Error> {
     let database_url = &std::env::var("DATABASE_URL")?;
