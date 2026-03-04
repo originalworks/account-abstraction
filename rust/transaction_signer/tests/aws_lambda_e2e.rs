@@ -32,11 +32,13 @@ mod tests {
         create_transaction_sender_queue().await;
         let tx_id = "abc123";
         let sqs_message_body = json!({
+            "tx_id": "abc123",
+            "requester_id": "requester-1",
+            "tx_type": "STANDARD",
             "calldata": "0xdeafbeef",
-            "chain_id": 12,
-            "tx_id": tx_id,
-            "requester_id": "test_sender",
-            "tx_type": "STANDARD"
+            "to_address": "0x00112233",
+            "value_wei": 123,
+            "chain_id": 12
         });
 
         let mut sqs_message = SqsMessage::default();

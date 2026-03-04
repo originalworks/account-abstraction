@@ -4,22 +4,22 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.101"
-serde = "1.0.228"
-serde_json = "1.0.149"
-sqlx = { version = "0.8.6", features = [
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx = { workspace = true, features = [
     "postgres",
     "runtime-tokio",
     "tls-rustls",
     "macros",
 ] }
-tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 # aws feature:
-aws-config = { version = "1.8.13", features = [
+aws-config = { workspace = true, features = [
     "behavior-version-latest",
 ], optional = true }
-lambda_runtime = { version = "1.0.2", optional = true }
+lambda_runtime = { workspace = true, optional = true }
 
 
 [features]
