@@ -3,6 +3,12 @@
 version = 4
 
 [[package]]
+name = "adler2"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
+
+[[package]]
 name = "aho-corasick"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -595,7 +601,7 @@ checksum = "a03bb3f02b9a7ab23dacd1822fa7f69aa5c8eefcdcf57fad085e0b8d76fb4334"
 dependencies = [
  "alloy-json-rpc",
  "auto_impl",
- "base64",
+ "base64 0.22.1",
  "derive_more",
  "futures",
  "futures-utils-wasm",
@@ -1351,8 +1357,16 @@ version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca106ceeb46420f22b33b863f8a667214afbf6b0457bc209f8c97de2282bedae"
 dependencies = [
- "base64",
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "flate2",
+ "http 1.4.0",
+ "http-body 1.0.1",
+ "http-serde",
+ "query_map",
  "serde",
+ "serde_dynamo",
  "serde_json",
  "serde_with",
 ]
@@ -1362,6 +1376,12 @@ name = "base16ct"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
+
+[[package]]
+name = "base64"
+version = "0.21.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
 name = "base64"
@@ -1673,6 +1693,15 @@ name = "crc-catalog"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19d374276b40fb8bbdee95aef7c7fa6b5316ec764510eb64b8dd0e2ed0d7e7f5"
+
+[[package]]
+name = "crc32fast"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9481c1c90cbf2ac953f07c8d4a58aa3945c425b7185c9154d67a65e4230da511"
+dependencies = [
+ "cfg-if",
+]
 
 [[package]]
 name = "crossbeam-queue"
@@ -2040,6 +2069,16 @@ dependencies = [
  "rand 0.8.5",
  "rustc-hex",
  "static_assertions",
+]
+
+[[package]]
+name = "flate2"
+version = "1.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c"
+dependencies = [
+ "crc32fast",
+ "miniz_oxide",
 ]
 
 [[package]]
@@ -2564,7 +2603,7 @@ version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96547c2556ec9d12fb1578c4eaf448b04993e7fb79cbaad930a656880a6bdfa0"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "bytes",
  "futures-channel",
  "futures-util",
@@ -2871,7 +2910,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc0b4409eea054e4c06f0101fed547b2cf208e8eca9dc6d41dead4114577852b"
 dependencies = [
  "async-stream",
- "base64",
+ "base64 0.22.1",
  "bytes",
  "futures",
  "http 1.4.0",
@@ -3045,6 +3084,16 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
+]
+
+[[package]]
+name = "miniz_oxide"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316"
+dependencies = [
+ "adler2",
+ "simd-adler32",
 ]
 
 [[package]]
@@ -3461,6 +3510,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "query_map"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5eab6b8b1074ef3359a863758dae650c7c0c6027927a085b7af911c8e0bf3a15"
+dependencies = [
+ "form_urlencoded",
+ "serde",
+ "serde_derive",
+]
+
+[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3693,7 +3753,7 @@ version = "0.12.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eddd3ca559203180a307f12d114c268abf583f59b03cb906fd0b3ff8646c1147"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "bytes",
  "futures-core",
  "http 1.4.0",
@@ -4114,6 +4174,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_dynamo"
+version = "4.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "873a97c3f7a67dd042bceb47d056d288424b82d4c66b0a25e1a3b34675620951"
+dependencies = [
+ "base64 0.21.7",
+ "serde",
+ "serde_core",
+]
+
+[[package]]
 name = "serde_json"
 version = "1.0.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4155,7 +4226,7 @@ version = "3.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fa237f2807440d238e0364a218270b98f767a00d3dada77b1c53ae88940e2e7"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "chrono",
  "hex",
  "indexmap 1.9.3",
@@ -4268,6 +4339,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "simd-adler32"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e320a6c5ad31d271ad523dcf3ad13e2767ad8b1cb8f047f75a8aeaf8da139da2"
+
+[[package]]
 name = "slab"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4340,7 +4417,7 @@ version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee6798b1838b6a0f69c007c133b8df5866302197e404e8b6ee8ed3e3a5e68dc6"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "bytes",
  "crc",
  "crossbeam-queue",
@@ -4417,7 +4494,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aa003f0038df784eb8fecbbac13affe3da23b45194bd57dba231c8f48199c526"
 dependencies = [
  "atoi",
- "base64",
+ "base64 0.22.1",
  "bitflags",
  "byteorder",
  "bytes",
@@ -4461,7 +4538,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db58fcd5a53cf07c184b154801ff91347e4c30d17a3562a635ff028ad5deda46"
 dependencies = [
  "atoi",
- "base64",
+ "base64 0.22.1",
  "bitflags",
  "byteorder",
  "crc",
@@ -4978,6 +5055,20 @@ dependencies = [
 [[package]]
 name = "transaction_sender"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws-config",
+ "aws-sdk-sqs",
+ "aws_lambda_events",
+ "hex",
+ "lambda_runtime",
+ "ow_wallet_adapter",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "transaction_db",
+]
 
 [[package]]
 name = "transaction_signer"

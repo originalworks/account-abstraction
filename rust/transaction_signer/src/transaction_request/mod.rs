@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use transaction_db::transactions::{InsertTransactionInput, TxStatus, TxType};
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct SignTxRequest {
+pub struct RequestBody {
     pub tx_id: String,
     pub requester_id: String,
     pub tx_type: TxType,
@@ -16,11 +16,8 @@ pub struct SignTxRequest {
     pub blob_file_path: Option<String>,
 }
 
-impl SignTxRequest {
-    pub fn into_db_transaction(
-        &self,
-        signature: Vec<u8>,
-    ) -> anyhow::Result<InsertTransactionInput> {
+impl RequestBody {
+    pub fn into_db_input(&self, signature: Vec<u8>) -> anyhow::Result<InsertTransactionInput> {
         Ok(InsertTransactionInput {
             tx_id: self.tx_id.clone(),
             requester_id: self.requester_id.clone(),

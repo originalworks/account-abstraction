@@ -1,6 +1,3 @@
-pub mod calldata;
-pub mod transaction_request;
-pub mod tx_sender_trigger;
 use ow_wallet_adapter::HasOwWalletFields;
 use std::env;
 
@@ -71,55 +68,19 @@ pub mod aws_lambda {
     use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
     use transaction_db::transactions::TransactionRepo;
 
-    use crate::{
-        Config,
-        calldata::parse_calldata,
-        transaction_request::RequestBody,
-        tx_sender_trigger::{TriggerBody, sqs::TxSenderSqsQueue},
-    };
+    use crate::Config;
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
         pool: &sqlx::Pool<sqlx::Postgres>,
     ) -> anyhow::Result<(), lambda_runtime::Error> {
         println!("Building...");
+
         let config = Config::build()?;
         let wallet_config = OwWalletConfig::from(&config)?;
         let wallet = OwWallet::build(&wallet_config).await?;
         let transaction_repo = TransactionRepo::new(&pool);
-        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
-        let aws_config = aws_config::defaults(BehaviorVersion::latest())
-            .region(region_provider)
-            .load()
-            .await;
-        let tx_sender_queue = TxSenderSqsQueue::build(
-            &aws_config,
-            &config
-                .transaction_sender_queue_url
-                .expect("Missing env var: transaction_sender_queue_url"),
-        )?;
-
-        let tx_request_body_vec = RequestBody::from_sqs_event(event)?;
-
-        for tx_request_body in tx_request_body_vec {
-            println!("Signing: {tx_request_body:?}");
-            let calldata = parse_calldata(&tx_request_body.calldata)?;
-
-            let signature = wallet.sign_message(calldata.as_slice()).await?;
-
-            println!("Saving...");
-            let insert_tx_input = tx_request_body.into_db_input(signature.as_bytes().to_vec())?;
-            transaction_repo
-                .insert_ignore_conflict(&insert_tx_input)
-                .await?;
-
-            let trigger_body = TriggerBody {
-                tx_id: insert_tx_input.tx_id,
-            };
-
-            tx_sender_queue.send_new_trigger(&trigger_body).await?;
-        }
-
+        println!("TODO");
         Ok(())
     }
 }
