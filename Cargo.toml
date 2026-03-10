@@ -9,10 +9,12 @@ members = [
     "rust/migrator",
     "rust/transaction_assignment_db",
     "rust/receipt_poller",
+    "rust/network_db",
 ]
 
 [workspace.dependencies]
 transaction_db = { path = "./rust/transaction_db" }
+network_db = { path = "./rust/network_db" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"

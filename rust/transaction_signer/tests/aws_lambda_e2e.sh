@@ -40,4 +40,4 @@ cd transaction_signer
 cargo test --features aws --test aws_lambda_e2e -- --ignored --no-capture
 
 cd ../../
-docker compose down
+docker compose down -v
