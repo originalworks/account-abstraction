@@ -5,8 +5,8 @@ import {
   ERC20TokenMock__factory,
   MockExchange,
   MockExchange__factory,
-  SEOA,
-  SEOA__factory,
+  SEOAwith4337,
+  SEOAwith4337__factory,
 } from "../typechain/index.js";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/types";
 import {
@@ -32,7 +32,7 @@ const delegationWizard = (sEOAImplementationAddress: string) => ({
     });
 
     const receipt = await tx.wait();
-    const sEOA = SEOA__factory.connect(signer.address, signer);
+    const sEOA = SEOAwith4337__factory.connect(signer.address, signer);
 
     return {
       receipt,
@@ -65,7 +65,7 @@ describe("sEOA", function () {
     [deployer, owner, external] = await ethers.getSigners();
 
     if (!sEOAImplementationAddress) {
-      const sEOAFactory = new SEOA__factory(deployer);
+      const sEOAFactory = new SEOAwith4337__factory(deployer);
       const sEOAImplementation = await (
         await sEOAFactory.deploy()
       ).waitForDeployment();
@@ -91,10 +91,11 @@ describe("sEOA", function () {
     });
 
     it("works with calldata and emits events", async function () {
-      const calldata = SEOA__factory.createInterface().encodeFunctionData(
-        "grantRole",
-        [EXECUTOR_ROLE, external.address]
-      );
+      const calldata =
+        SEOAwith4337__factory.createInterface().encodeFunctionData(
+          "grantRole",
+          [EXECUTOR_ROLE, external.address],
+        );
 
       const { receipt, sEOA } = await delegation.create(owner, calldata);
 
@@ -103,17 +104,17 @@ describe("sEOA", function () {
       const events = await sEOA.queryFilter(
         sEOA.getEvent("RoleGranted"),
         receipt?.blockNumber,
-        receipt?.blockNumber
+        receipt?.blockNumber,
       );
 
       expect(events.length).to.equal(1);
       expect(events[0].args.role).to.equal(EXECUTOR_ROLE);
       expect(events[0].args.account.toLowerCase()).to.equal(
-        external.address.toLowerCase()
+        external.address.toLowerCase(),
       );
 
       expect(await sEOA.hasRole(EXECUTOR_ROLE, external.address)).to.equal(
-        true
+        true,
       );
     });
 
@@ -121,10 +122,10 @@ describe("sEOA", function () {
       await delegation.create(owner);
 
       const externalBalanceBefore = await external.provider?.getBalance(
-        external.address
+        external.address,
       );
       const ownerBalanceBefore = await owner.provider?.getBalance(
-        owner.address
+        owner.address,
       );
 
       const res = await (
@@ -138,17 +139,17 @@ describe("sEOA", function () {
       expect(res?.logs.length).to.equal(0);
 
       const externalBalanceAfter = await external.provider?.getBalance(
-        external.address
+        external.address,
       );
       const ownerBalanceAfter = await owner.provider?.getBalance(owner.address);
 
       expect(externalBalanceAfter).to.equal(
-        externalBalanceBefore! + ethers.parseEther("1")
+        externalBalanceBefore! + ethers.parseEther("1"),
       );
       expect(ownerBalanceAfter).to.equal(
         ownerBalanceBefore! -
           ethers.parseEther("1") -
-          res?.gasUsed! * res?.gasPrice!
+          res?.gasUsed! * res?.gasPrice!,
       );
     });
 
@@ -168,10 +169,10 @@ describe("sEOA", function () {
       ]);
 
       const externalBalanceBefore = await ethers.provider.getBalance(
-        external.address
+        external.address,
       );
       const ownerBalanceBefore = await ethers.provider.getBalance(
-        differentSmartAccount.address
+        differentSmartAccount.address,
       );
 
       const res = await (
@@ -179,16 +180,16 @@ describe("sEOA", function () {
       ).wait();
 
       const externalBalanceAfter = await external.provider?.getBalance(
-        external.address
+        external.address,
       );
       const ownerBalanceAfter =
         await differentSmartAccount.provider?.getBalance(
-          differentSmartAccount.address
+          differentSmartAccount.address,
         );
 
       expect(ownerBalanceAfter).to.equal(ownerBalanceBefore! - 1n);
       expect(externalBalanceAfter).to.equal(
-        externalBalanceBefore! + 1n - res?.gasUsed! * res?.gasPrice!
+        externalBalanceBefore! + 1n - res?.gasUsed! * res?.gasPrice!,
       );
     });
 
@@ -208,7 +209,7 @@ describe("sEOA", function () {
   });
 
   describe("Execute", () => {
-    let sEOA: SEOA;
+    let sEOA: SEOAwith4337;
     let USDC: ERC20TokenMock;
     let mockExchange: MockExchange;
 
@@ -223,7 +224,7 @@ describe("sEOA", function () {
 
       mockExchange = await (
         await new MockExchange__factory(deployer).deploy(
-          await USDC.getAddress()
+          await USDC.getAddress(),
         )
       ).waitForDeployment();
       await (await USDC.mintTo(mockExchange, ethers.parseEther("1"))).wait();
@@ -241,7 +242,7 @@ describe("sEOA", function () {
       const calldata =
         ERC20TokenMock__factory.createInterface().encodeFunctionData(
           "transfer",
-          [external.address, ethers.parseEther("0.1")]
+          [external.address, ethers.parseEther("0.1")],
         );
       const mode = encodeMode();
       const encodedBatch = encodeExecuteBatch([
@@ -255,10 +256,10 @@ describe("sEOA", function () {
       const externalBalanceAfter = await USDC.balanceOf(external.address);
 
       expect(ownerBalanceAfter).to.equal(
-        ownerBalanceBefore - ethers.parseEther("0.1")
+        ownerBalanceBefore - ethers.parseEther("0.1"),
       );
       expect(externalBalanceAfter).to.equal(
-        externalBalanceBefore + ethers.parseEther("0.1")
+        externalBalanceBefore + ethers.parseEther("0.1"),
       );
     });
 
@@ -268,7 +269,7 @@ describe("sEOA", function () {
       const calldata =
         ERC20TokenMock__factory.createInterface().encodeFunctionData(
           "transfer",
-          [external.address, ethers.parseEther("0.1")]
+          [external.address, ethers.parseEther("0.1")],
         );
       const mode = encodeMode();
       const encodedBatch = encodeExecuteBatch([
@@ -282,34 +283,34 @@ describe("sEOA", function () {
       const externalBalanceAfter = await USDC.balanceOf(external.address);
 
       expect(ownerBalanceAfter).to.equal(
-        ownerBalanceBefore - ethers.parseEther("0.1")
+        ownerBalanceBefore - ethers.parseEther("0.1"),
       );
       expect(externalBalanceAfter).to.equal(
-        externalBalanceBefore + ethers.parseEther("0.1")
+        externalBalanceBefore + ethers.parseEther("0.1"),
       );
     });
 
     it("works for multiple transactions if all succeeds", async () => {
       const ownerUSDCBalanceBefore = await USDC.balanceOf(owner.address);
       const ownerEthBalanceBefore = await owner.provider?.getBalance(
-        owner.address
+        owner.address,
       )!;
       const exchangeUSDCBalanceBefore = await USDC.balanceOf(
-        await mockExchange.getAddress()
+        await mockExchange.getAddress(),
       );
       const exchangeEthBalanceBefore = await owner.provider?.getBalance(
-        await mockExchange.getAddress()
+        await mockExchange.getAddress(),
       )!;
 
       const calldataForApprove =
         ERC20TokenMock__factory.createInterface().encodeFunctionData(
           "approve",
-          [await mockExchange.getAddress(), ethers.parseEther("0.1")]
+          [await mockExchange.getAddress(), ethers.parseEther("0.1")],
         );
       const calldataForSwap =
         MockExchange__factory.createInterface().encodeFunctionData(
           "swapToEth",
-          [ethers.parseEther("0.1")]
+          [ethers.parseEther("0.1")],
         );
 
       const mode = encodeMode();
@@ -324,21 +325,21 @@ describe("sEOA", function () {
 
       const ownerUSDCBalanceAfter = await USDC.balanceOf(owner.address);
       const ownerEthBalanceAfter = await owner.provider?.getBalance(
-        owner.address
+        owner.address,
       )!;
       const exchangeUSDCBalanceAfter = await USDC.balanceOf(
-        await mockExchange.getAddress()
+        await mockExchange.getAddress(),
       );
       const exchangeEthBalanceAfter = await owner.provider?.getBalance(
-        await mockExchange.getAddress()
+        await mockExchange.getAddress(),
       )!;
 
       expect(ownerUSDCBalanceAfter).to.equal(
-        ownerUSDCBalanceBefore - ethers.parseEther("0.1")
+        ownerUSDCBalanceBefore - ethers.parseEther("0.1"),
       );
       expect(ownerEthBalanceAfter).to.equal(ownerEthBalanceBefore + 1n);
       expect(exchangeUSDCBalanceAfter).to.equal(
-        exchangeUSDCBalanceBefore + ethers.parseEther("0.1")
+        exchangeUSDCBalanceBefore + ethers.parseEther("0.1"),
       );
       expect(exchangeEthBalanceAfter).to.equal(exchangeEthBalanceBefore - 1n);
     });
@@ -347,12 +348,12 @@ describe("sEOA", function () {
       const calldataForApprove =
         ERC20TokenMock__factory.createInterface().encodeFunctionData(
           "approve",
-          [await mockExchange.getAddress(), ethers.parseEther("0.01")]
+          [await mockExchange.getAddress(), ethers.parseEther("0.01")],
         );
       const calldataForSwap =
         MockExchange__factory.createInterface().encodeFunctionData(
           "swapToEth",
-          [ethers.parseEther("0.1")]
+          [ethers.parseEther("0.1")],
         );
 
       const mode = encodeMode();
@@ -365,7 +366,7 @@ describe("sEOA", function () {
 
       await expect(tx).to.revertedWithCustomError(
         USDC,
-        "ERC20InsufficientAllowance"
+        "ERC20InsufficientAllowance",
       );
     });
 
@@ -384,17 +385,17 @@ describe("sEOA", function () {
       await sEOA.grantRole(EXECUTOR_ROLE, external);
 
       await expect(
-        sEOA.connect(owner).grantRole(EXECUTOR_ROLE, randomAddress1)
+        sEOA.connect(owner).grantRole(EXECUTOR_ROLE, randomAddress1),
       ).not.revert(ethers);
       await expect(
-        sEOA.connect(external).grantRole(EXECUTOR_ROLE, randomAddress1)
+        sEOA.connect(external).grantRole(EXECUTOR_ROLE, randomAddress1),
       ).revert(ethers);
 
       await expect(
-        sEOA.connect(external).revokeRole(EXECUTOR_ROLE, randomAddress2)
+        sEOA.connect(external).revokeRole(EXECUTOR_ROLE, randomAddress2),
       ).revert(ethers);
       await expect(
-        sEOA.connect(owner).revokeRole(EXECUTOR_ROLE, randomAddress2)
+        sEOA.connect(owner).revokeRole(EXECUTOR_ROLE, randomAddress2),
       ).not.revert(ethers);
     });
   });
