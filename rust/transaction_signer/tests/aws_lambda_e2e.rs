@@ -71,10 +71,9 @@ mod tests {
             Ok(value) => value,
             Err(err) => {
                 println!("{err:?}");
+                panic!("function_handler error");
             }
         };
-
-        // assert!(result.is_ok());
 
         let transaction_repo = TransactionRepo::new(&pool);
         let inserted_transaction = transaction_repo.find_by_tx_id(tx_id.to_string()).await?;
