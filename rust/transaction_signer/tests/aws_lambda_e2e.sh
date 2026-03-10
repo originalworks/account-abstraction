@@ -24,7 +24,7 @@ done
 
 echo "Container is ready. Running migrations.."
 
-cd rust
+cd rust/database
 sqlx database create
 sqlx migrate run
 
@@ -36,7 +36,7 @@ done
 
 echo "Containers are ready, running e2e test..."
 
-cd transaction_signer
+cd ../transaction_signer
 cargo test --features aws --test aws_lambda_e2e -- --ignored --no-capture
 
 cd ../../

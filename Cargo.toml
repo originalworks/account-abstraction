@@ -2,19 +2,19 @@
 resolver = "3"
 
 members = [
+    "rust/database/operator_wallet_db",
+    "rust/database/transaction_db",
+    "rust/database/transaction_assignment_db",
+    "rust/database/network_db",
+    "rust/database/migrator",
     "rust/transaction_signer",
-    "rust/transaction_db",
     "rust/transaction_sender",
-    "rust/operator_wallet_db",
-    "rust/migrator",
-    "rust/transaction_assignment_db",
     "rust/receipt_poller",
-    "rust/network_db",
 ]
 
 [workspace.dependencies]
-transaction_db = { path = "./rust/transaction_db" }
-network_db = { path = "./rust/network_db" }
+transaction_db = { path = "./rust/database/transaction_db" }
+network_db = { path = "./rust/database/network_db" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"
