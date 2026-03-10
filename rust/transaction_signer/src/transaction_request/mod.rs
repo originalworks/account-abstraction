@@ -12,7 +12,7 @@ pub struct RequestBody {
     pub calldata: String,
     pub to_address: String,
     pub value_wei: i64,
-    pub chain_id: i32,
+    pub chain_id: i64,
     pub blob_file_path: Option<String>,
 }
 

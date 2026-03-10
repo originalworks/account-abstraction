@@ -2,7 +2,11 @@ CREATE TABLE IF NOT EXISTS transaction_assignments (
     id UUID PRIMARY KEY,
     transaction_sequence_id BIGINT NOT NULL REFERENCES transactions(sequence_id),
     operator_wallet_id UUID NOT NULL REFERENCES operator_wallets(id),
-    outcome TEXT NOT NULL,
+    nonce_used BIGINT,
+    gas_limit BIGINT,
+    max_fee_per_gas  BIGINT,
+    max_priority_fee  BIGINT,
+    outcome TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

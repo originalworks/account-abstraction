@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     calldata BYTEA NOT NULL,
     to_address TEXT NOT NULL,
     value_wei BIGINT NOT NULL,
-    chain_id INT NOT NULL,
+    chain_id BIGINT NOT NULL REFERENCES networks(chain_id),
     signature BYTEA NOT NULL,
     blob_file_path TEXT,
     tx_hash TEXT,

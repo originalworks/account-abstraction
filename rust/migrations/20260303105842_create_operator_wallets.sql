@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS operator_wallets (
     wallet_address TEXT NOT NULL UNIQUE,
     key_ref TEXT NOT NULL,
     key_type TEXT NOT NULL,
-    chain_id BIGINT NOT NULL,
+    chain_id BIGINT NOT NULL REFERENCES networks(chain_id),
     nonce BIGINT NOT NULL,
     is_enabled BOOLEAN NOT NULL,
     in_use BOOLEAN NOT NULL,

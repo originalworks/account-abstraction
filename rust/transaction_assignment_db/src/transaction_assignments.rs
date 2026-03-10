@@ -13,9 +13,13 @@ pub enum TxAssignmentOutcome {
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct TransactionAssignment {
     pub id: Uuid,
-    transaction_sequence_id: i64,
-    operator_wallet_id: String,
-    outcome: TxAssignmentOutcome,
+    pub transaction_sequence_id: i64,
+    pub operator_wallet_id: String,
+    pub nonce_used: Option<i64>,
+    pub gas_limit: Option<i64>,
+    pub max_fee_per_gas: Option<i64>,
+    pub max_priority_fee: Option<i64>,
+    pub outcome: Option<TxAssignmentOutcome>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -40,6 +44,10 @@ impl<'a> TransactionAssignmentRepo<'a> {
                 id,
                 transaction_sequence_id, 
                 operator_wallet_id, 
+                nonce_used,
+                gas_limit,
+                max_fee_per_gas,
+                max_priority_fee,
                 outcome as "outcome: TxAssignmentOutcome", 
                 created_at,
                 updated_at

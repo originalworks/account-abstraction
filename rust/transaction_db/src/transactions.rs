@@ -25,7 +25,7 @@ pub struct Transaction {
     pub calldata: Vec<u8>,
     pub to_address: String,
     pub value_wei: i64,
-    pub chain_id: i32,
+    pub chain_id: i64,
     pub signature: Vec<u8>,
     pub retry_count: i32,
     pub tx_hash: Option<String>,
@@ -43,7 +43,7 @@ pub struct InsertTransactionInput {
     pub calldata: Vec<u8>,
     pub to_address: String,
     pub value_wei: i64,
-    pub chain_id: i32,
+    pub chain_id: i64,
     pub signature: Vec<u8>,
     pub blob_file_path: Option<String>,
 }
