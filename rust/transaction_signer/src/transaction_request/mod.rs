@@ -3,6 +3,7 @@ pub mod sqs;
 
 use serde::{Deserialize, Serialize};
 use transaction_db::transactions::{InsertTransactionInput, TxStatus, TxType};
+use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct RequestBody {
@@ -14,6 +15,7 @@ pub struct RequestBody {
     pub value_wei: i64,
     pub chain_id: i64,
     pub blob_file_path: Option<String>,
+    pub use_operator_wallet_id: Option<Uuid>,
 }
 
 impl RequestBody {
@@ -28,6 +30,7 @@ impl RequestBody {
             value_wei: self.value_wei,
             chain_id: self.chain_id,
             blob_file_path: self.blob_file_path.clone(),
+            use_operator_wallet_id: self.use_operator_wallet_id.clone(),
             signature,
         })
     }

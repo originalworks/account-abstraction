@@ -5062,6 +5062,7 @@ dependencies = [
  "sqlx",
  "time",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -5099,6 +5100,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "transaction_db",
+ "uuid",
 ]
 
 [[package]]

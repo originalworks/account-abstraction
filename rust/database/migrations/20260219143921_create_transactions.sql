@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     chain_id BIGINT NOT NULL REFERENCES networks(chain_id),
     signature BYTEA NOT NULL,
     blob_file_path TEXT,
+    use_operator_wallet_id UUID REFERENCES operator_wallets(id),
     tx_hash TEXT,
     retry_count SMALLINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
