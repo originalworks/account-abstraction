@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
 use sqlx::{PgPool, types::time::OffsetDateTime};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]
 #[sqlx(type_name = "text")]
@@ -46,6 +47,7 @@ pub struct InsertTransactionInput {
     pub chain_id: i64,
     pub signature: Vec<u8>,
     pub blob_file_path: Option<String>,
+    pub use_operator_wallet_id: Option<Uuid>,
 }
 
 pub struct TransactionRepo<'a> {
@@ -73,9 +75,10 @@ impl<'a> TransactionRepo<'a> {
                 value_wei,
                 chain_id,
                 signature,
-                blob_file_path
+                blob_file_path,
+                use_operator_wallet_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ON CONFLICT (tx_id) DO NOTHING
             "#,
             input.tx_id,
@@ -88,6 +91,7 @@ impl<'a> TransactionRepo<'a> {
             input.chain_id,
             input.signature,
             input.blob_file_path,
+            input.use_operator_wallet_id
         )
         .execute(self.pool)
         .await?;
