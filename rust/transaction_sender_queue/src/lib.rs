@@ -4,6 +4,6 @@ pub mod sqs;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct TriggerBody {
+pub struct TxSenderQueueMessageBody {
     pub tx_id: String,
 }

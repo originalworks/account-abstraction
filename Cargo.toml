@@ -10,11 +10,13 @@ members = [
     "rust/transaction_signer",
     "rust/transaction_sender",
     "rust/receipt_poller",
+    "rust/transaction_sender_queue",
 ]
 
 [workspace.dependencies]
 transaction_db = { path = "./rust/database/transaction_db" }
 network_db = { path = "./rust/database/network_db" }
+transaction_sender_queue = { path = "./rust/transaction_sender_queue" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"

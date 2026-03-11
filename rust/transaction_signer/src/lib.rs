@@ -1,6 +1,5 @@
 pub mod calldata;
 pub mod transaction_request;
-pub mod tx_sender_trigger;
 use ow_wallet_adapter::HasOwWalletFields;
 use std::env;
 
@@ -70,13 +69,9 @@ pub mod aws_lambda {
     use lambda_runtime::LambdaEvent;
     use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
     use transaction_db::transactions::TransactionRepo;
+    use transaction_sender_queue::{TxSenderQueueMessageBody, sqs::TxSenderSqsQueue};
 
-    use crate::{
-        Config,
-        calldata::parse_calldata,
-        transaction_request::RequestBody,
-        tx_sender_trigger::{TriggerBody, sqs::TxSenderSqsQueue},
-    };
+    use crate::{Config, calldata::parse_calldata, transaction_request::RequestBody};
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
@@ -113,7 +108,7 @@ pub mod aws_lambda {
                 .insert_ignore_conflict(&insert_tx_input)
                 .await?;
 
-            let trigger_body = TriggerBody {
+            let trigger_body = TxSenderQueueMessageBody {
                 tx_id: insert_tx_input.tx_id,
             };
 
