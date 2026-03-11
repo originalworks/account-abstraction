@@ -5084,6 +5084,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "transaction_sender_queue"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws-config",
+ "aws-sdk-sqs",
+ "aws_lambda_events",
+ "lambda_runtime",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "transaction_signer"
 version = "0.1.0"
 dependencies = [
@@ -5100,6 +5113,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "transaction_db",
+ "transaction_sender_queue",
  "uuid",
 ]
 

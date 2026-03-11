@@ -1,30 +1,20 @@
 [package]
-name = "transaction_signer"
+name = "transaction_sender_queue"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 anyhow.workspace = true
-ow_wallet_adapter.workspace = true
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
-transaction_db = { workspace = true }
 serde.workspace = true
 serde_json.workspace = true
-hex.workspace = true
-sqlx = { workspace = true, features = ["postgres"] }
-uuid.workspace = true
-transaction_sender_queue = { workspace = true, features = ["aws"] }
 
-# aws
+# aws feature
 aws-sdk-sqs = { workspace = true, optional = true }
 aws-config = { workspace = true, features = [
     "behavior-version-latest",
 ], optional = true }
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
-
-[dev-dependencies]
-network_db.workspace = true
 
 
 [features]
