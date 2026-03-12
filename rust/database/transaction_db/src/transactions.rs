@@ -45,6 +45,7 @@ pub struct InsertTransactionInput {
     pub to_address: String,
     pub value_wei: i64,
     pub chain_id: i64,
+    pub pass_value_from_operator_wallet: bool,
     pub signature: Vec<u8>,
     pub blob_file_path: Option<String>,
     pub use_operator_wallet_id: Option<Uuid>,
@@ -74,11 +75,12 @@ impl<'a> TransactionRepo<'a> {
                 to_address,
                 value_wei,
                 chain_id,
+                pass_value_from_operator_wallet,
                 signature,
                 blob_file_path,
                 use_operator_wallet_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             ON CONFLICT (tx_id) DO NOTHING
             "#,
             input.tx_id,
@@ -89,6 +91,7 @@ impl<'a> TransactionRepo<'a> {
             input.to_address,
             input.value_wei,
             input.chain_id,
+            input.pass_value_from_operator_wallet,
             input.signature,
             input.blob_file_path,
             input.use_operator_wallet_id

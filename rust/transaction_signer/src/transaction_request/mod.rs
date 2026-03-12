@@ -14,6 +14,7 @@ pub struct RequestBody {
     pub to_address: String,
     pub value_wei: i64,
     pub chain_id: i64,
+    pub pass_value_from_operator_wallet: bool,
     pub blob_file_path: Option<String>,
     pub use_operator_wallet_id: Option<Uuid>,
 }
@@ -31,6 +32,7 @@ impl RequestBody {
             chain_id: self.chain_id,
             blob_file_path: self.blob_file_path.clone(),
             use_operator_wallet_id: self.use_operator_wallet_id.clone(),
+            pass_value_from_operator_wallet: self.pass_value_from_operator_wallet.clone(),
             signature,
         })
     }
