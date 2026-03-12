@@ -54,7 +54,7 @@ const delegationWizard = (sEOAImplementationAddress: string) => ({
   },
 });
 
-describe("sEOA", function () {
+describe("sEOAwith4337", function () {
   let sEOAImplementationAddress: string = "";
   let deployer: HardhatEthersSigner;
   let owner: HardhatEthersSigner;

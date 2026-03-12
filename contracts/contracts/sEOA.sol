@@ -16,13 +16,22 @@ contract sEOA is EIP712 {
     error Expired();
     error AlreadyUsed();
     error InvalidSignature();
-    error InvalidBatchInput();
+    // error InvalidBatchInput();
     error ExecutionFailed(bytes reason);
     error ZeroAddress();
 
+    struct ExecuteInput {
+        address target;
+        bytes payload;
+        uint256 value;
+        bytes32 salt;
+        uint256 deadline;
+        bytes signature;
+    }
+
     bytes32 private constant EXECUTE_TYPEHASH =
         keccak256(
-            "Execute(address target,bytes32 payloadHash,bytes32 salt,uint256 deadline)"
+            "Execute(address target,bytes32 payloadHash,uint256 value,bytes32 salt,uint256 deadline)"
         );
 
     mapping(bytes32 => bool) public usedSalts;
@@ -30,62 +39,42 @@ contract sEOA is EIP712 {
     constructor() EIP712("sEOA", "1") {}
 
     function execute(
-        address target,
-        bytes calldata payload,
-        bytes32 salt,
-        uint256 deadline,
-        bytes calldata signature
-    ) public returns (bool success, bytes memory returnData) {
-        if (block.timestamp > deadline) revert Expired();
-        if (usedSalts[salt]) revert AlreadyUsed();
+        ExecuteInput calldata input
+    ) public payable returns (bool success, bytes memory returnData) {
+        if (block.timestamp > input.deadline) revert Expired();
+        if (usedSalts[input.salt]) revert AlreadyUsed();
 
         bytes32 digest = _hashTypedDataV4(
             keccak256(
                 abi.encode(
                     EXECUTE_TYPEHASH,
-                    target,
-                    keccak256(payload),
-                    salt,
-                    deadline
+                    input.target,
+                    keccak256(input.payload),
+                    input.value,
+                    input.salt,
+                    input.deadline
                 )
             )
         );
 
-        address recovered = digest.recover(signature);
+        address recovered = digest.recover(input.signature);
         if (recovered != address(this)) revert InvalidSignature();
 
-        usedSalts[salt] = true;
+        usedSalts[input.salt] = true;
 
-        (success, returnData) = target.call(payload);
+        (success, returnData) = input.target.call{value: input.value}(
+            input.payload
+        );
 
-        emit Executed(salt, msg.sender, success);
+        emit Executed(input.salt, msg.sender, success);
         if (!success) revert ExecutionFailed(returnData);
     }
 
-    function executeBatch(
-        address[] calldata targets,
-        bytes[] calldata payloads,
-        bytes32[] calldata salts,
-        uint256[] calldata deadlines,
-        bytes[] calldata signatures
-    ) external {
-        uint256 len = payloads.length;
-        if (
-            salts.length != len ||
-            deadlines.length != len ||
-            signatures.length != len
-        ) {
-            revert InvalidBatchInput();
-        }
+    function executeBatch(ExecuteInput[] calldata inputs) external payable {
+        uint256 len = inputs.length;
 
         for (uint256 i = 0; i < len; i++) {
-            execute(
-                targets[i],
-                payloads[i],
-                salts[i],
-                deadlines[i],
-                signatures[i]
-            );
+            execute(inputs[i]);
         }
     }
 
@@ -112,4 +101,6 @@ contract sEOA is EIP712 {
     function domainSeparator() external view returns (bytes32) {
         return _domainSeparatorV4();
     }
+
+    receive() external payable {}
 }

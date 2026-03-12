@@ -3,18 +3,11 @@ import { SEOA__factory } from "../typechain/factories/SEOA__factory.js";
 import { expect } from "chai";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/types";
 import { SEOA } from "../typechain/SEOA.js";
+// import { ExecuteInputStruct } from "../typechain/SEOA.js/";
 import { HDNodeWallet } from "ethers";
 import { ERC20TokenMock, ERC20TokenMock__factory } from "../typechain/index.js";
 
 const { ethers } = await network.connect();
-
-interface ExecuteInput {
-  target: string;
-  payload: string;
-  salt: string;
-  deadline: number;
-  signature: string;
-}
 
 interface BuildAndSignInput {
   signer: HardhatEthersSigner;
@@ -24,6 +17,7 @@ interface BuildAndSignInput {
   salt: string;
   deadline: number;
   chainId?: number;
+  value?: number;
 }
 
 async function getCurrentTimestamp(): Promise<number> {
@@ -57,11 +51,11 @@ async function buildRandomBatchInput(
   erc20Mock: ERC20TokenMock,
   signer: HardhatEthersSigner,
   sEoa: SEOA,
-): Promise<ExecuteInput[]> {
+): Promise<SEOA.ExecuteInputStruct[]> {
   const target = await erc20Mock.getAddress();
   const deadline = await futureDeadline(60);
 
-  const inputs: ExecuteInput[] = [];
+  const inputs: SEOA.ExecuteInputStruct[] = [];
   for (let i = 0; i < n; i++) {
     const payload = buildERC20MintToPayload(
       signer.address,
@@ -80,6 +74,7 @@ async function buildRandomBatchInput(
     inputs.push({
       target,
       payload,
+      value: 0,
       salt,
       deadline,
       signature,
@@ -102,6 +97,7 @@ async function buildAndSign(input: BuildAndSignInput) {
     Execute: [
       { name: "target", type: "address" },
       { name: "payloadHash", type: "bytes32" },
+      { name: "value", type: "uint256" },
       { name: "salt", type: "bytes32" },
       { name: "deadline", type: "uint256" },
     ],
@@ -112,6 +108,7 @@ async function buildAndSign(input: BuildAndSignInput) {
   const value = {
     target: input.target,
     payloadHash,
+    value: input.value || 0,
     salt: input.salt,
     deadline: input.deadline,
   };
@@ -176,9 +173,14 @@ describe("sEOA.sol", () => {
       });
 
       await expect(
-        sEoa
-          .connect(gasSponsorA)
-          .execute(erc20Mock, payload, salt, deadline, signature),
+        sEoa.connect(gasSponsorA).execute({
+          target: erc20Mock,
+          value: 0,
+          payload,
+          salt,
+          deadline,
+          signature,
+        }),
       )
         .to.emit(sEoa, "Executed")
         .withArgs(salt, gasSponsorA.address, true);
@@ -212,15 +214,25 @@ describe("sEOA.sol", () => {
       });
 
       await expect(
-        sEoa
-          .connect(gasSponsorA)
-          .execute(erc20Mock, payload, salt1, deadline, signature1),
+        sEoa.connect(gasSponsorA).execute({
+          target: erc20Mock,
+          value: 0,
+          payload,
+          salt: salt1,
+          deadline,
+          signature: signature1,
+        }),
       ).to.emit(sEoa, "Executed");
 
       await expect(
-        sEoa
-          .connect(gasSponsorB)
-          .execute(erc20Mock, payload, salt2, deadline, signature2),
+        sEoa.connect(gasSponsorB).execute({
+          target: erc20Mock,
+          payload,
+          salt: salt2,
+          value: 0,
+          deadline,
+          signature: signature2,
+        }),
       ).to.emit(sEoa, "Executed");
     });
   });
@@ -241,12 +253,12 @@ describe("sEOA.sol", () => {
 
       await sEoa
         .connect(gasSponsorA)
-        .execute(target, payload, salt, deadline, signature);
+        .execute({ target, value: 0, payload, salt, deadline, signature });
 
       await expect(
         sEoa
           .connect(gasSponsorA)
-          .execute(target, payload, salt, deadline, signature),
+          .execute({ target, value: 0, payload, salt, deadline, signature }),
       ).to.be.revertedWithCustomError(sEoa, "AlreadyUsed");
     });
   });
@@ -270,7 +282,7 @@ describe("sEOA.sol", () => {
       await expect(
         sEoa
           .connect(gasSponsorA)
-          .execute(target, payload, salt, deadline, signature),
+          .execute({ target, value: 0, payload, salt, deadline, signature }),
       ).to.be.revertedWithCustomError(sEoa, "Expired");
     });
 
@@ -294,8 +306,62 @@ describe("sEOA.sol", () => {
       await expect(
         sEoa
           .connect(gasSponsorB)
-          .execute(target, payload, salt, deadline, signature),
+          .execute({ target, value: 0, payload, salt, deadline, signature }),
       ).to.emit(sEoa, "Executed");
+    });
+  });
+  describe("execute() - native coin transfers", () => {
+    it("can receive ether in standard transfer", async () => {
+      const value = 10000000;
+      const tx = await deployer.sendTransaction({ to: sEoa, value });
+      const sEoaBalanceBefore = await ethers.provider.getBalance(sEoa);
+      await expect(deployer.sendTransaction({ to: sEoa, value })).not.revert(
+        ethers,
+      );
+      const sEoaBalanceAfter = await ethers.provider.getBalance(sEoa);
+
+      expect(sEoaBalanceAfter - sEoaBalanceBefore).to.equal(value);
+    });
+    it("caller can pass ether in the function call", async () => {
+      const value = 1000;
+      const salt = randomSalt();
+      const deadline = await futureDeadline(60);
+      const payload = "0x";
+      const target = ethers.Wallet.createRandom().address;
+
+      const signature = await buildAndSign({
+        target,
+        signer: delegatedAccount,
+        sEoa,
+        payload,
+        salt,
+        deadline,
+        value,
+      });
+
+      const gasSponsorBalanceBefore = await ethers.provider.getBalance(
+        gasSponsorA,
+      );
+      const sEoaBalanceBefore = await ethers.provider.getBalance(sEoa);
+      const tx = await sEoa
+        .connect(gasSponsorA)
+        .execute(
+          { target, value, payload, salt, deadline, signature },
+          { value },
+        );
+
+      const receipt = await tx.wait();
+      const gasSponsorBalanceAfter = await ethers.provider.getBalance(
+        gasSponsorA,
+      );
+      const gasCost = receipt!.gasPrice * receipt!.gasUsed;
+      const targetBalanceAfter = await ethers.provider.getBalance(target);
+      const sEoaBalanceAfter = await ethers.provider.getBalance(sEoa);
+      expect(targetBalanceAfter).equal(value);
+      expect(sEoaBalanceAfter).equal(sEoaBalanceBefore);
+      expect(gasSponsorBalanceBefore - gasSponsorBalanceAfter - gasCost).equal(
+        value,
+      );
     });
   });
   describe("execute() — signature validation", function () {
@@ -317,7 +383,7 @@ describe("sEOA.sol", () => {
       await expect(
         sEoa
           .connect(gasSponsorA)
-          .execute(target, payload, salt, deadline, signature),
+          .execute({ target, value: 0, payload, salt, deadline, signature }),
       ).to.be.revertedWithCustomError(sEoa, "InvalidSignature");
     });
 
@@ -338,9 +404,14 @@ describe("sEOA.sol", () => {
       });
 
       await expect(
-        sEoa
-          .connect(gasSponsorA)
-          .execute(target, payload2, salt, deadline, signature), // submitting 0x
+        sEoa.connect(gasSponsorA).execute({
+          target,
+          value: 0,
+          payload: payload2,
+          salt,
+          deadline,
+          signature,
+        }),
       ).to.be.revertedWithCustomError(sEoa, "InvalidSignature");
     });
 
@@ -364,7 +435,7 @@ describe("sEOA.sol", () => {
       await expect(
         sEoa
           .connect(gasSponsorA)
-          .execute(target, payload, salt, deadline, signature),
+          .execute({ target, value: 0, payload, salt, deadline, signature }),
       ).to.be.revertedWithCustomError(sEoa, "InvalidSignature");
     });
   });
@@ -378,46 +449,11 @@ describe("sEOA.sol", () => {
         sEoa,
       );
 
-      await sEoa.connect(gasSponsorA).executeBatch(
-        batchInput.map((i) => i.target),
-        batchInput.map((i) => i.payload),
-        batchInput.map((i) => i.salt),
-        batchInput.map((i) => i.deadline),
-        batchInput.map((i) => i.signature),
-      );
+      await sEoa.connect(gasSponsorA).executeBatch(batchInput);
 
       for (const input of batchInput) {
         expect(await sEoa.usedSalts(input.salt)).to.be.true;
       }
-    });
-
-    it("reverts with InvalidBatchInput on mismatched array lengths", async function () {
-      const batchInput = await buildRandomBatchInput(
-        5,
-        erc20Mock,
-        delegatedAccount,
-        sEoa,
-      );
-
-      await expect(
-        sEoa.connect(gasSponsorA).executeBatch(
-          batchInput.map((i) => i.target),
-          batchInput.map((i) => i.payload),
-          batchInput.map((i) => i.salt),
-          batchInput.map((i) => i.deadline),
-          batchInput.map((i) => i.signature).slice(0, -1),
-        ),
-      ).to.be.revertedWithCustomError(sEoa, "InvalidBatchInput");
-
-      await expect(
-        sEoa.connect(gasSponsorA).executeBatch(
-          batchInput.map((i) => i.target),
-          batchInput.map((i) => i.payload),
-          batchInput.map((i) => i.salt).slice(0, -1),
-          batchInput.map((i) => i.deadline),
-          batchInput.map((i) => i.signature),
-        ),
-      ).to.be.revertedWithCustomError(sEoa, "InvalidBatchInput");
     });
 
     it("halts batch on first failure (execute reverts propagate)", async function () {
@@ -439,29 +475,38 @@ describe("sEOA.sol", () => {
       const signature2 = await buildAndSign({
         payload,
         target,
-        signer: gasSponsorB,
+        signer: gasSponsorB, // wrong signer
         sEoa,
         salt: salt2,
         deadline,
       });
 
       await expect(
-        sEoa
-          .connect(gasSponsorA)
-          .executeBatch(
-            [target, target],
-            [payload, payload],
-            [salt1, salt2],
-            [deadline, deadline],
-            [signature1, signature2],
-          ),
+        sEoa.connect(gasSponsorA).executeBatch([
+          {
+            target,
+            payload,
+            value: 0,
+            salt: salt1,
+            deadline,
+            signature: signature1,
+          },
+          {
+            target,
+            payload,
+            value: 0,
+            salt: salt2,
+            deadline,
+            signature: signature2,
+          },
+        ]),
       ).to.be.revertedWithCustomError(sEoa, "InvalidSignature");
 
       expect(await sEoa.usedSalts(salt1)).to.be.false;
       expect(await sEoa.usedSalts(salt2)).to.be.false;
     });
 
-    it("batch with expired deadline reverts entire transaction", async function () {
+    it("batch with one expired deadline reverts entire transaction", async function () {
       const deadline = await futureDeadline(60);
       const expiredDeadline = (await getCurrentTimestamp()) - 1;
 
@@ -489,15 +534,24 @@ describe("sEOA.sol", () => {
       });
 
       await expect(
-        sEoa
-          .connect(gasSponsorA)
-          .executeBatch(
-            [target, target],
-            [payload, payload],
-            [salt1, salt2],
-            [deadline, expiredDeadline],
-            [signature1, signature2],
-          ),
+        sEoa.connect(gasSponsorA).executeBatch([
+          {
+            target,
+            payload,
+            value: 0,
+            salt: salt1,
+            deadline,
+            signature: signature1,
+          },
+          {
+            target,
+            payload,
+            value: 0,
+            salt: salt2,
+            deadline: expiredDeadline,
+            signature: signature2,
+          },
+        ]),
       ).to.be.revertedWithCustomError(sEoa, "Expired");
     });
   });
