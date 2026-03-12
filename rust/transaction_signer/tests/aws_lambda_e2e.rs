@@ -56,6 +56,7 @@ mod tests {
             "calldata": "0xdeafbeef",
             "to_address": "0x00112233",
             "value_wei": 123,
+            "pass_value_from_operator_wallet": false,
             "chain_id": CHAIN_ID
         });
 

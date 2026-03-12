@@ -32,6 +32,7 @@ mod tests {
             "calldata": "0xdeafbeef",
             "to_address": "0x00112233",
             "value_wei": 123,
+            "pass_value_from_operator_wallet": false,
             "chain_id": 12
         })
         .to_string()
@@ -46,6 +47,7 @@ mod tests {
             "to_address": "0x00112233",
             "value_wei": 123,
             "chain_id": 12,
+            "pass_value_from_operator_wallet": false,
             "blob_file_path": "path/to/file"
         })
         .to_string()
@@ -67,6 +69,8 @@ mod tests {
             "chain_id": 12,
             "tx_id": "abc123",
             "requester_id": "sender-1",
+            "pass_value_from_operator_wallet": false,
+            "value_wei": 123,
             "tx_type": "BLOB",
         }"#;
         let event = build_lambda_event(vec![message_with_body(json)]);
