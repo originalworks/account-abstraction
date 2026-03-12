@@ -16,7 +16,6 @@ contract sEOA is EIP712 {
     error Expired();
     error AlreadyUsed();
     error InvalidSignature();
-    // error InvalidBatchInput();
     error ExecutionFailed(bytes reason);
     error ZeroAddress();
 
