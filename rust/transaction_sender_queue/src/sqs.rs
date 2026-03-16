@@ -56,4 +56,14 @@ impl TxSenderQueueMessageBody {
 
         Ok(Some(queue_message_body))
     }
+
+    pub fn from_sqs_message_vec(messages: &Vec<SqsMessage>) -> anyhow::Result<Vec<Self>> {
+        let mut output = Vec::new();
+        for message in messages {
+            if let Some(body) = Self::from_sqs_message(message)? {
+                output.push(body);
+            }
+        }
+        Ok(output)
+    }
 }

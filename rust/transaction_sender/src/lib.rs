@@ -1,58 +1,18 @@
-use ow_wallet_adapter::HasOwWalletFields;
+mod contract;
+mod transaction;
+mod wallet_pool;
+
 use std::env;
 
-impl HasOwWalletFields for Config {
-    fn use_kms(&self) -> bool {
-        self.use_kms
-    }
-    fn rpc_url(&self) -> String {
-        self.rpc_url.clone()
-    }
-    fn private_key(&self) -> Option<String> {
-        self.private_key.clone()
-    }
-    fn signer_kms_id(&self) -> Option<String> {
-        self.signer_kms_id.clone()
-    }
-}
-
 pub struct Config {
-    pub use_kms: bool,
-    pub rpc_url: String,
-    pub private_key: Option<String>,
-    pub signer_kms_id: Option<String>,
-    pub transaction_sender_queue_url: Option<String>,
     pub database_url: String,
 }
 
 impl Config {
     pub fn build() -> anyhow::Result<Self> {
-        let transaction_sender_queue_url = env::var("TRANSACTION_SENDER_QUEUE_URL").ok();
-        let rpc_url = Self::get_env_var("RPC_URL");
         let database_url = Self::get_env_var("DATABASE_URL");
-        let mut signer_kms_id = None;
-        let mut private_key = None;
-        let use_kms = matches!(
-            std::env::var("USE_KMS")
-                .unwrap_or_else(|_| "false".to_string())
-                .as_str(),
-            "1" | "true"
-        );
 
-        if use_kms {
-            signer_kms_id = Some(Self::get_env_var("SIGNER_KMS_ID"));
-        } else {
-            private_key = Some(Self::get_env_var("PRIVATE_KEY"));
-        }
-
-        Ok(Self {
-            use_kms,
-            rpc_url,
-            private_key,
-            signer_kms_id,
-            database_url,
-            transaction_sender_queue_url,
-        })
+        Ok(Self { database_url })
     }
 
     pub fn get_env_var(key: &str) -> String {
@@ -62,13 +22,17 @@ impl Config {
 
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
-    use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
     use lambda_runtime::LambdaEvent;
-    use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
+    use network_db::networks::NetworkRepo;
+    use operator_wallet_db::operator_wallets::OperatorWalletRepo;
+    use transaction_assignment_db::transaction_assignments::TransactionAssignmentRepo;
     use transaction_db::transactions::TransactionRepo;
+    use transaction_sender_queue::TxSenderQueueMessageBody;
 
-    use crate::Config;
+    use crate::{
+        contract::ContractManager, transaction::TxContextBuilder, wallet_pool::WalletPoolManager,
+    };
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
@@ -76,11 +40,27 @@ pub mod aws_lambda {
     ) -> anyhow::Result<(), lambda_runtime::Error> {
         println!("Building...");
 
-        let config = Config::build()?;
-        let wallet_config = OwWalletConfig::from(&config)?;
-        let wallet = OwWallet::build(&wallet_config).await?;
+        let transaction_assignment_repo = TransactionAssignmentRepo::new(&pool);
+        let operator_wallet_repo = OperatorWalletRepo::new(&pool);
+        let network_repo = NetworkRepo::new(&pool);
         let transaction_repo = TransactionRepo::new(&pool);
-        println!("TODO");
+        let networks = network_repo.select_all().await?;
+
+        let wallet_pool_manager =
+            WalletPoolManager::build(operator_wallet_repo, transaction_assignment_repo, &networks);
+        let tx_context_builder = TxContextBuilder::build(&transaction_repo);
+        let contract_manager = ContractManager::build(&networks)?;
+
+        let queue_messages =
+            TxSenderQueueMessageBody::from_sqs_message_vec(&event.payload.records)?;
+        let execute_batch_context_vec = tx_context_builder
+            .fetch_and_sort_into_batches(queue_messages)
+            .await?;
+
+        for execute_batch_context in execute_batch_context_vec {
+            println!("TODO");
+        }
+
         Ok(())
     }
 }
