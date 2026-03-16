@@ -8,7 +8,9 @@ async fn main() -> Result<(), lambda_runtime::Error> {
     println!("Cold start");
     tracing::init_default_subscriber();
 
-    let pool = PgPool::connect(&Config::get_env_var("DATABASE_URL")).await?;
+    let config = Config::build()?;
+
+    let pool = PgPool::connect(&config.database_url).await?;
 
     run(service_fn(|event| function_handler(event, &pool))).await
 }

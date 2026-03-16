@@ -43,17 +43,12 @@ contract sEOA is EIP712 {
         if (block.timestamp > input.deadline) revert Expired();
         if (usedSalts[input.salt]) revert AlreadyUsed();
 
-        bytes32 digest = _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    EXECUTE_TYPEHASH,
-                    input.target,
-                    keccak256(input.payload),
-                    input.value,
-                    input.salt,
-                    input.deadline
-                )
-            )
+        bytes32 digest = buildDigest(
+            input.target,
+            input.payload,
+            input.value,
+            input.salt,
+            input.deadline
         );
 
         address recovered = digest.recover(input.signature);
@@ -80,9 +75,10 @@ contract sEOA is EIP712 {
     function buildDigest(
         address target,
         bytes calldata payload,
+        uint256 value,
         bytes32 salt,
         uint256 deadline
-    ) external view returns (bytes32) {
+    ) public view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(
@@ -90,6 +86,7 @@ contract sEOA is EIP712 {
                         EXECUTE_TYPEHASH,
                         target,
                         keccak256(payload),
+                        value,
                         salt,
                         deadline
                     )
