@@ -16,7 +16,7 @@ pub enum TxStatus {
     SIGNED,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Transaction {
     pub sequence_id: i64,
     pub tx_id: String,
