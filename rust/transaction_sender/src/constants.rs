@@ -1,0 +1,1 @@
+pub const TX_DEADLINE_IN_SEC: i64 = 86400;

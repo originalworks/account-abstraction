@@ -1,3 +1,4 @@
+mod constants;
 mod contract;
 mod transaction;
 mod wallet_pool;
