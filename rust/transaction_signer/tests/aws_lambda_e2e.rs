@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
-    const CHAIN_ID: i64 = 10;
+    use std::env;
 
+    use alloy::node_bindings::Anvil;
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
     use lambda_runtime::{Context, LambdaEvent};
@@ -27,15 +28,15 @@ mod tests {
         Ok(())
     }
 
-    async fn add_network() -> anyhow::Result<()> {
+    async fn add_network(rpc_url: String, chain_id: i64) -> anyhow::Result<()> {
         let pool = PgPool::connect(&Config::get_env_var("DATABASE_URL")).await?;
         let network_repo = NetworkRepo::new(&pool);
         network_repo
             .insert_new_network(&InsertNetworkInput {
-                rpc_url: "http://localhost:8545".to_string(),
-                chain_id: CHAIN_ID,
+                rpc_url,
+                chain_id,
                 contract_address: "0x0123".to_string(),
-                chain_name: "hardhat".to_string(),
+                chain_name: "anvil".to_string(),
             })
             .await?;
         Ok(())
@@ -46,18 +47,27 @@ mod tests {
     #[ignore]
     #[tokio::test]
     async fn test_function_handler_e2e() -> anyhow::Result<()> {
+        let anvil = Anvil::new().spawn();
+        let rpc_url = anvil.endpoint();
+
+        let chain_id: i64 = anvil.chain_id() as i64;
+
+        unsafe {
+            env::set_var("RPC_URL", &rpc_url);
+        }
+
         create_transaction_sender_queue().await?;
-        add_network().await?;
+        add_network(rpc_url, chain_id).await?;
         let tx_id = "abc123";
         let sqs_message_body = json!({
-            "tx_id": "abc123",
+            "tx_id": tx_id,
             "requester_id": "requester-1",
             "tx_type": "STANDARD",
             "calldata": "0xdeafbeef",
             "to_address": "0x00112233",
             "value_wei": 123,
             "pass_value_from_operator_wallet": false,
-            "chain_id": CHAIN_ID
+            "chain_id": chain_id
         });
 
         let mut sqs_message = SqsMessage::default();

@@ -51,12 +51,14 @@ pub mod aws_lambda {
         let tx_context_builder = TxContextBuilder::build(&transaction_repo);
         let contract_manager = ContractManager::build(&networks)?;
 
+        println!("Reading...");
         let queue_messages =
             TxSenderQueueMessageBody::from_sqs_message_vec(&event.payload.records)?;
         let execute_batch_context_vec = tx_context_builder
             .fetch_and_sort_into_batches(queue_messages)
             .await?;
 
+        println!("Executing...");
         for execute_batch_context in execute_batch_context_vec {
             println!("TODO");
         }

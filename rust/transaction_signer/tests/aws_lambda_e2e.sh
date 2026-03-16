@@ -4,7 +4,6 @@ export POSTGRES_PASSWORD=password
 export POSTGRES_DB=mydb
 export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" # Default private key from Anvil localhost
 export USE_KMS=false
-export RPC_URL=http://localhost:8545
 export DATABASE_URL=postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DB
 export TRANSACTION_SENDER_QUEUE_URL="http://localhost:4566/000000000000/transaction-sender-queue"
 export AWS_ACCESS_KEY_ID=test
