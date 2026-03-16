@@ -31,6 +31,8 @@ pub struct Transaction {
     pub retry_count: i32,
     pub tx_hash: Option<String>,
     pub blob_file_path: Option<String>,
+    pub use_operator_wallet_id: Option<Uuid>,
+    pub pass_value_from_operator_wallet: bool,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -120,6 +122,8 @@ impl<'a> TransactionRepo<'a> {
                 signature,
                 tx_hash,
                 retry_count,
+                pass_value_from_operator_wallet,
+                use_operator_wallet_id,
                 created_at,
                 updated_at
             FROM 
@@ -132,5 +136,51 @@ impl<'a> TransactionRepo<'a> {
         .await?;
 
         Ok(transaction)
+    }
+
+    pub async fn select_and_lock_many(
+        &self,
+        ids: &Vec<String>,
+    ) -> anyhow::Result<Vec<Transaction>> {
+        let rows = sqlx::query_as!(
+            Transaction,
+            r#"
+        WITH selected AS (
+            SELECT tx_id
+            FROM transactions
+            WHERE tx_id = ANY($1)
+              AND tx_status = 'SIGNED'
+            FOR UPDATE SKIP LOCKED
+        )
+        UPDATE transactions t
+        SET tx_status = 'LOCKED'
+        FROM selected
+        WHERE t.tx_id = selected.tx_id
+        RETURNING
+            t.sequence_id,
+            t.tx_id, 
+            t.requester_id, 
+            t.tx_status as "tx_status: TxStatus", 
+            t.tx_type as "tx_type: TxType", 
+            t.blob_file_path,
+            t.calldata,
+            t.to_address,
+            t.value_wei,
+            t.chain_id,
+            t.signature,
+            t.tx_hash,
+            t.retry_count,
+            t.use_operator_wallet_id,
+            t.pass_value_from_operator_wallet,
+            t.created_at,
+            t.updated_at
+        "#,
+            ids,
+        )
+        // .bind(ids)
+        .fetch_all(self.pool)
+        .await?;
+
+        Ok(rows)
     }
 }

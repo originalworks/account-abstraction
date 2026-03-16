@@ -35,6 +35,20 @@ impl<'a> TxContextBuilder<'a> {
         &self,
         input: Vec<TxSenderQueueMessageBody>,
     ) -> anyhow::Result<Vec<ExecuteBatchTxContext>> {
+        let ids: Vec<String> = input.iter().map(|message| message.tx_id.clone()).collect();
+        let fetched_txs = self.transaction_repo.select_and_lock_many(&ids).await?;
+
+        let mut sorted = HashMap::<i64, HashMap<Option<Uuid>, Vec<Transaction>>>::new();
+
+        for tx in fetched_txs {
+            sorted
+                .entry(tx.chain_id)
+                .or_default()
+                .entry(tx.use_operator_wallet_id)
+                .or_default()
+                .push(tx);
+        }
+
         Ok(vec![])
     }
 }
