@@ -37,6 +37,7 @@ mod tests {
                 chain_id,
                 contract_address: "0x0123".to_string(),
                 chain_name: "anvil".to_string(),
+                min_operator_wallet_balance: 1000000,
             })
             .await?;
         Ok(())

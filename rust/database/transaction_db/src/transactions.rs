@@ -14,6 +14,7 @@ pub enum TxType {
 #[sqlx(type_name = "text")]
 pub enum TxStatus {
     SIGNED,
+    LOCKED,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -28,7 +29,7 @@ pub struct Transaction {
     pub value_wei: i64,
     pub chain_id: i64,
     pub signature: Vec<u8>,
-    pub retry_count: i32,
+    pub attempts: i32,
     pub tx_hash: Option<String>,
     pub blob_file_path: Option<String>,
     pub use_operator_wallet_id: Option<Uuid>,
@@ -121,7 +122,7 @@ impl<'a> TransactionRepo<'a> {
                 chain_id,
                 signature,
                 tx_hash,
-                retry_count,
+                attempts,
                 pass_value_from_operator_wallet,
                 use_operator_wallet_id,
                 created_at,
@@ -153,7 +154,9 @@ impl<'a> TransactionRepo<'a> {
             FOR UPDATE SKIP LOCKED
         )
         UPDATE transactions t
-        SET tx_status = 'LOCKED'
+        SET 
+            tx_status = 'LOCKED',
+            attempts = attempts + 1
         FROM selected
         WHERE t.tx_id = selected.tx_id
         RETURNING
@@ -169,7 +172,7 @@ impl<'a> TransactionRepo<'a> {
             t.chain_id,
             t.signature,
             t.tx_hash,
-            t.retry_count,
+            t.attempts,
             t.use_operator_wallet_id,
             t.pass_value_from_operator_wallet,
             t.created_at,
@@ -182,5 +185,37 @@ impl<'a> TransactionRepo<'a> {
         .await?;
 
         Ok(rows)
+    }
+
+    pub async fn release_many(&self, ids: &Vec<String>) -> anyhow::Result<()> {
+        sqlx::query!(
+            r#"
+        UPDATE transactions
+        SET 
+            tx_status = 'SIGNED'
+        WHERE tx_id = ANY($1)
+        "#,
+            ids
+        )
+        .execute(self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn mark_as_invalid(&self, tx_id: &String) -> anyhow::Result<()> {
+        sqlx::query!(
+            r#"
+        UPDATE transactions
+        SET 
+            tx_status = 'INVALID'
+        WHERE tx_id = $1
+        "#,
+            tx_id
+        )
+        .execute(self.pool)
+        .await?;
+
+        Ok(())
     }
 }

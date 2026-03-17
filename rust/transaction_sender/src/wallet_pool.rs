@@ -1,22 +1,25 @@
-use std::collections::HashMap;
-
+use alloy::providers::Provider;
+use alloy::{eips::BlockId, primitives::U256};
+use anyhow::bail;
 use network_db::networks::Network;
-use operator_wallet_db::operator_wallets::OperatorWalletRepo;
-use ow_wallet_adapter::wallet::OwWallet;
-use transaction_assignment_db::transaction_assignments::TransactionAssignmentRepo;
+use operator_wallet_db::operator_wallets::{OperatorWallet, OperatorWalletRepo};
+use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
+use std::collections::HashMap;
+use uuid::Uuid;
+
+enum AcquireAttemptResult {
+    Acquired(OwWallet),
+    NoWalletAvailable,
+    InsufficientFunds(Uuid),
+}
 
 pub struct WalletPoolManager<'a> {
     operator_wallet_repo: OperatorWalletRepo<'a>,
-    transaction_assignment_repo: TransactionAssignmentRepo<'a>,
     networks_map: HashMap<i64, Network>,
 }
 
 impl<'a> WalletPoolManager<'a> {
-    pub fn build(
-        operator_wallet_repo: OperatorWalletRepo<'a>,
-        transaction_assignment_repo: TransactionAssignmentRepo<'a>,
-        networks: &Vec<Network>,
-    ) -> Self {
+    pub fn build(operator_wallet_repo: OperatorWalletRepo<'a>, networks: &Vec<Network>) -> Self {
         let mut networks_map: HashMap<i64, Network> = HashMap::new();
         for network in networks {
             networks_map.insert(network.chain_id, network.clone());
@@ -24,12 +27,108 @@ impl<'a> WalletPoolManager<'a> {
         Self {
             operator_wallet_repo,
             networks_map,
-            transaction_assignment_repo,
         }
     }
 
-    pub async fn acquire(&self) -> anyhow::Result<()> {
-        Ok(())
+    async fn fetch_from_db(
+        &self,
+        chain_id: i64,
+        use_operator_wallet_id: Option<Uuid>,
+    ) -> anyhow::Result<Option<OperatorWallet>> {
+        let mut operator_wallet = None;
+
+        if let Some(operator_wallet_id) = use_operator_wallet_id {
+            operator_wallet = self
+                .operator_wallet_repo
+                .lock_by_id(operator_wallet_id, chain_id)
+                .await?;
+        } else {
+            operator_wallet = self
+                .operator_wallet_repo
+                .lock_any_by_chain(chain_id)
+                .await?;
+        }
+        Ok(operator_wallet)
+    }
+
+    async fn has_enough_balance(
+        &self,
+        min_balance: i64,
+        ow_wallet: &OwWallet,
+    ) -> anyhow::Result<bool> {
+        let wallet_address = ow_wallet.get_address()?;
+        let balance = ow_wallet
+            .provider
+            .get_balance(wallet_address)
+            .block_id(BlockId::latest())
+            .await?;
+
+        if U256::from(min_balance) > balance {
+            return Ok(false);
+        } else {
+            return Ok(true);
+        }
+    }
+
+    async fn try_acquire_once(
+        &self,
+        chain_id: i64,
+        use_operator_wallet_id: Option<Uuid>,
+    ) -> anyhow::Result<AcquireAttemptResult> {
+        let Some(network) = self.networks_map.get(&chain_id) else {
+            bail!("Network not found for chain_id: {chain_id}");
+        };
+
+        let Some(operator_wallet) = self.fetch_from_db(chain_id, use_operator_wallet_id).await?
+        else {
+            return Ok(AcquireAttemptResult::NoWalletAvailable);
+        };
+
+        let ow_wallet_config = OwWalletConfig {
+            use_kms: true,
+            rpc_url: network.rpc_url.clone(),
+            signer_kms_id: Some(operator_wallet.key_ref),
+            private_key: None,
+        };
+
+        let ow_wallet = OwWallet::build(&ow_wallet_config).await?;
+
+        if !self
+            .has_enough_balance(network.min_operator_wallet_balance, &ow_wallet)
+            .await?
+        {
+            return Ok(AcquireAttemptResult::InsufficientFunds(operator_wallet.id));
+        }
+
+        Ok(AcquireAttemptResult::Acquired(ow_wallet))
+    }
+
+    pub async fn acquire(
+        &self,
+        chain_id: i64,
+        use_operator_wallet_id: Option<Uuid>,
+    ) -> anyhow::Result<Option<OwWallet>> {
+        loop {
+            match self
+                .try_acquire_once(chain_id, use_operator_wallet_id)
+                .await?
+            {
+                AcquireAttemptResult::Acquired(wallet) => return Ok(Some(wallet)),
+
+                AcquireAttemptResult::NoWalletAvailable => return Ok(None),
+
+                AcquireAttemptResult::InsufficientFunds(operator_wallet_id) => {
+                    self.operator_wallet_repo
+                        .mark_no_funds(operator_wallet_id)
+                        .await?;
+                    if use_operator_wallet_id.is_some() {
+                        return Ok(None);
+                    } else {
+                        continue;
+                    }
+                }
+            }
+        }
     }
 
     pub async fn release(&self, ow_wallet: OwWallet) -> anyhow::Result<()> {

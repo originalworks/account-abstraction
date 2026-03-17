@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS networks (
     chain_name TEXT NOT NULL,
     rpc_url TEXT NOT NULL,
     contract_address TEXT NOT NULL,
+    min_operator_wallet_balance BIGINT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

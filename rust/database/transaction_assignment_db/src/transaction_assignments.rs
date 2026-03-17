@@ -62,4 +62,27 @@ impl<'a> TransactionAssignmentRepo<'a> {
 
         Ok(transaction_assignment)
     }
+
+    pub async fn new_assignment(
+        &self,
+        transaction_sequence_id: i64,
+        operator_wallet_id: Uuid,
+    ) -> anyhow::Result<Uuid> {
+        let id = sqlx::query_scalar!(
+            r#"
+            INSERT INTO transaction_assignments (
+                transaction_sequence_id,
+                operator_wallet_id
+            )
+            VALUES ($1, $2)
+            RETURNING id
+            "#,
+            transaction_sequence_id,
+            operator_wallet_id,
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(id)
+    }
 }

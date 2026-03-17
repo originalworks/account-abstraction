@@ -12,6 +12,7 @@ pub struct OperatorWallet {
     pub nonce: i64,
     pub is_enabled: bool,
     pub in_use: bool,
+    pub no_funds: bool,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -38,6 +39,7 @@ impl<'a> OperatorWalletRepo<'a> {
                 nonce,
                 is_enabled,
                 in_use,
+                no_funds,
                 created_at,
                 updated_at
             FROM
@@ -50,5 +52,110 @@ impl<'a> OperatorWalletRepo<'a> {
         .await?;
 
         Ok(transaction)
+    }
+
+    pub async fn lock_by_id(
+        &self,
+        operator_wallet_id: Uuid,
+        chain_id: i64,
+    ) -> anyhow::Result<Option<OperatorWallet>> {
+        let wallet = sqlx::query_as!(
+            OperatorWallet,
+            r#"
+        WITH candidate AS (
+            SELECT id
+            FROM operator_wallets
+            WHERE
+                id = $1
+                AND chain_id = $2
+                AND is_enabled = true
+                AND in_use = false
+                AND no_funds = false
+            FOR UPDATE SKIP LOCKED
+        )
+        UPDATE operator_wallets ow
+        SET
+            in_use = true
+        FROM candidate
+        WHERE ow.id = candidate.id
+        RETURNING
+            ow.id,
+            ow.wallet_address,
+            ow.key_ref,
+            ow.key_type,
+            ow.chain_id,
+            ow.nonce,
+            ow.is_enabled,
+            ow.in_use,
+            ow.no_funds,
+            ow.created_at,
+            ow.updated_at
+        "#,
+            operator_wallet_id,
+            chain_id
+        )
+        .fetch_optional(self.pool)
+        .await?;
+
+        Ok(wallet)
+    }
+
+    pub async fn lock_any_by_chain(&self, chain_id: i64) -> anyhow::Result<Option<OperatorWallet>> {
+        let wallet = sqlx::query_as!(
+            OperatorWallet,
+            r#"
+        WITH candidate AS (
+            SELECT id
+            FROM operator_wallets
+            WHERE
+                chain_id = $1
+                AND is_enabled = true
+                AND in_use = false
+                AND no_funds = false
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+        )
+        UPDATE operator_wallets ow
+        SET
+            in_use = true
+        FROM candidate
+        WHERE ow.id = candidate.id
+        RETURNING
+            ow.id,
+            ow.wallet_address,
+            ow.key_ref,
+            ow.key_type,
+            ow.chain_id,
+            ow.nonce,
+            ow.is_enabled,
+            ow.in_use,
+            ow.no_funds,
+            ow.created_at,
+            ow.updated_at
+        "#,
+            chain_id
+        )
+        .fetch_optional(self.pool)
+        .await?;
+
+        Ok(wallet)
+    }
+
+    pub async fn mark_no_funds(&self, operator_wallet_id: Uuid) -> anyhow::Result<()> {
+        sqlx::query!(
+            r#"
+        UPDATE operator_wallets
+        SET
+            no_funds = true,
+            in_use = false
+        WHERE
+            id = $1
+        "#,
+            operator_wallet_id
+        )
+        .execute(self.pool)
+        .await?;
+
+        Ok(())
     }
 }
