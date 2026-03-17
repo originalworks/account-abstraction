@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS operator_wallets (
     nonce BIGINT NOT NULL,
     is_enabled BOOLEAN NOT NULL,
     in_use BOOLEAN NOT NULL,
+    no_funds BOOLEAN NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_wallet_address_per_chain UNIQUE (wallet_address, chain_id)

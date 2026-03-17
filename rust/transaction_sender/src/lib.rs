@@ -47,8 +47,7 @@ pub mod aws_lambda {
         let transaction_repo = TransactionRepo::new(&pool);
         let networks = network_repo.select_all().await?;
 
-        let wallet_pool_manager =
-            WalletPoolManager::build(operator_wallet_repo, transaction_assignment_repo, &networks);
+        let wallet_pool_manager = WalletPoolManager::build(operator_wallet_repo, &networks);
         let tx_context_builder = TxContextBuilder::build(&transaction_repo);
         let contract_manager = ContractManager::build(&networks)?;
 
@@ -61,7 +60,21 @@ pub mod aws_lambda {
 
         println!("Executing...");
         for execute_batch_context in execute_batch_context_vec {
-            println!("TODO");
+            let Some(wallet) = wallet_pool_manager
+                .acquire(
+                    execute_batch_context.chain_id,
+                    execute_batch_context.use_operator_wallet_id,
+                )
+                .await?
+            else {
+                transaction_repo
+                    .release_many(&execute_batch_context.tx_ids)
+                    .await?;
+                continue;
+            };
+
+            // next: create transaction_assignment, send transaction, mark txs in DB, release wallet
+            // ...
         }
 
         Ok(())

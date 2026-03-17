@@ -7,6 +7,7 @@ pub struct Network {
     pub chain_name: String,
     pub rpc_url: String,
     pub contract_address: String,
+    pub min_operator_wallet_balance: i64,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -16,6 +17,7 @@ pub struct InsertNetworkInput {
     pub chain_name: String,
     pub rpc_url: String,
     pub contract_address: String,
+    pub min_operator_wallet_balance: i64,
 }
 
 pub struct NetworkRepo<'a> {
@@ -36,6 +38,7 @@ impl<'a> NetworkRepo<'a> {
                 chain_name,
                 rpc_url,
                 contract_address,
+                min_operator_wallet_balance,
                 created_at,
                 updated_at
             FROM
@@ -59,6 +62,7 @@ impl<'a> NetworkRepo<'a> {
                 chain_name,
                 rpc_url,
                 contract_address,
+                min_operator_wallet_balance,
                 created_at,
                 updated_at
             FROM
@@ -80,13 +84,15 @@ impl<'a> NetworkRepo<'a> {
                 chain_id,
                 chain_name,
                 rpc_url,
-                contract_address
+                contract_address,
+                min_operator_wallet_balance
             )
-            VALUES ($1, $2, $3, $4)"#,
+            VALUES ($1, $2, $3, $4, $5)"#,
             network.chain_id,
             network.chain_name,
             network.rpc_url,
             network.contract_address,
+            network.min_operator_wallet_balance
         )
         .execute(self.pool)
         .await?;

@@ -1,15 +1,11 @@
-use std::{collections::HashMap, str::FromStr};
-
 use alloy::primitives::{Address, Uint, keccak256};
 use ow_wallet_adapter::wallet::OwWallet;
+use std::{collections::HashMap, str::FromStr};
 use transaction_db::transactions::{Transaction, TransactionRepo};
 use transaction_sender_queue::TxSenderQueueMessageBody;
 use uuid::Uuid;
 
-use crate::{
-    constants::TX_DEADLINE_IN_SEC,
-    contract::{SEOA, sEOA::ExecuteInput},
-};
+use crate::{constants::TX_DEADLINE_IN_SEC, contract::sEOA::ExecuteInput};
 
 pub struct ExecuteTxContext {
     pub execute_input: ExecuteInput,
@@ -22,7 +18,8 @@ pub struct ExecuteBatchTxContext {
     pub chain_id: i64,
     pub execute_batch_input: Vec<ExecuteInput>,
     pub use_operator_wallet_id: Option<Uuid>,
-    pub passed_tx_value: i64,
+    pub batch_tx_value: i64,
+    pub tx_ids: Vec<String>,
 }
 
 pub struct TxContextBuilder<'a> {
@@ -38,14 +35,74 @@ impl<'a> TxContextBuilder<'a> {
         &self,
         input: Vec<TxSenderQueueMessageBody>,
     ) -> anyhow::Result<Vec<ExecuteBatchTxContext>> {
-        let ids: Vec<String> = input.iter().map(|message| message.tx_id.clone()).collect();
+        let ids = input.iter().map(|message| message.tx_id.clone()).collect();
         let fetched_txs = self.transaction_repo.select_and_lock_many(&ids).await?;
 
-        let mut sorted: HashMap<i64, HashMap<Option<Uuid>, Vec<Transaction>>> =
-            HashMap::<i64, HashMap<Option<Uuid>, Vec<Transaction>>>::new();
+        let sorted = Self::group_by_chain_and_wallet(fetched_txs);
 
-        for tx in fetched_txs {
-            sorted
+        let mut batch_contexts = Vec::new();
+        for (chain_id, wallet_map) in sorted {
+            for (use_operator_wallet_id, transactions) in wallet_map {
+                let context = self
+                    .build_batch_context(chain_id, use_operator_wallet_id, transactions)
+                    .await;
+                if let Some(ctx) = context {
+                    batch_contexts.push(ctx);
+                }
+            }
+        }
+
+        Ok(batch_contexts)
+    }
+
+    async fn build_batch_context(
+        &self,
+        chain_id: i64,
+        use_operator_wallet_id: Option<Uuid>,
+        transactions: Vec<Transaction>,
+    ) -> Option<ExecuteBatchTxContext> {
+        let mut execute_batch_input = Vec::new();
+        let mut batch_tx_value = 0;
+        let mut tx_ids = Vec::new();
+
+        for transaction in &transactions {
+            if transaction.pass_value_from_operator_wallet && transaction.value_wei > 0 {
+                batch_tx_value += transaction.value_wei;
+            }
+
+            tx_ids.push(transaction.tx_id.clone());
+
+            match transaction.clone().into_execute_input() {
+                Ok(execute_input) => execute_batch_input.push(execute_input),
+                Err(_) => {
+                    self.transaction_repo
+                        .mark_as_invalid(&transaction.tx_id)
+                        .await
+                        .ok();
+                }
+            }
+        }
+
+        if execute_batch_input.is_empty() {
+            return None;
+        }
+
+        Some(ExecuteBatchTxContext {
+            chain_id,
+            use_operator_wallet_id,
+            execute_batch_input,
+            batch_tx_value,
+            tx_ids,
+        })
+    }
+
+    fn group_by_chain_and_wallet(
+        transactions: Vec<Transaction>,
+    ) -> HashMap<i64, HashMap<Option<Uuid>, Vec<Transaction>>> {
+        let mut grouped: HashMap<i64, HashMap<Option<Uuid>, Vec<Transaction>>> = HashMap::new();
+
+        for tx in transactions {
+            grouped
                 .entry(tx.chain_id)
                 .or_default()
                 .entry(tx.use_operator_wallet_id)
@@ -53,23 +110,7 @@ impl<'a> TxContextBuilder<'a> {
                 .push(tx);
         }
 
-        for (chain_id, specified_operator_wallets) in sorted {
-            for (use_operator_wallet_id, transactions) in specified_operator_wallets {
-                let execute_batch_input = transactions
-                    .iter()
-                    .map(|transaction| transaction.into_execute_input().unwrap())
-                    .collect::<Vec<ExecuteInput>>();
-
-                let context = ExecuteBatchTxContext {
-                    chain_id,
-                    use_operator_wallet_id,
-                    execute_batch_input,
-                    passed_tx_value: 0, // change this!!!!!!!!!!!!!!!!!!11!111!11111111
-                };
-            }
-        }
-
-        Ok(vec![])
+        grouped
     }
 }
 
