@@ -1,7 +1,7 @@
-use aws_lambda_events::sqs::SqsMessage;
-use lambda_runtime::tracing::log::warn;
-
-use crate::TxSenderQueueMessageBody;
+use crate::{TxSenderQueueEvent, TxSenderQueueMessage, TxSenderQueueMessageBody};
+use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
+use lambda_runtime::{LambdaEvent, tracing::log::warn};
+use std::collections::HashMap;
 
 pub struct TxSenderSqsQueue {
     client: aws_sdk_sqs::Client,
@@ -49,7 +49,7 @@ impl TxSenderQueueMessageBody {
         {
             Some(v) => v,
             None => {
-                warn!("Failed to parse queue message body body: {:?}", body);
+                warn!("Failed to parse queue message body: {:?}", body);
                 return Ok(None);
             }
         };
@@ -65,5 +65,29 @@ impl TxSenderQueueMessageBody {
             }
         }
         Ok(output)
+    }
+}
+
+impl TxSenderQueueEvent {
+    pub fn from_sqs_event(event: LambdaEvent<SqsEvent>) -> anyhow::Result<Self> {
+        let mut messages = Vec::new();
+        let mut tx_id_to_message_id = HashMap::new();
+        for record in event.payload.records {
+            let Some(message_body) = TxSenderQueueMessageBody::from_sqs_message(&record)? else {
+                continue;
+            };
+            let Some(message_id) = record.message_id else {
+                continue;
+            };
+            tx_id_to_message_id.insert(message_body.tx_id.clone(), message_id.clone());
+            messages.push(TxSenderQueueMessage {
+                message_id,
+                body: message_body,
+            });
+        }
+        Ok(Self {
+            messages,
+            tx_id_to_message_id,
+        })
     }
 }

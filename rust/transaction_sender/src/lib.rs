@@ -23,13 +23,13 @@ impl Config {
 
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
-    use aws_lambda_events::sqs::SqsEvent;
+    use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
     use transaction_assignment_db::transaction_assignments::TransactionAssignmentRepo;
     use transaction_db::transactions::TransactionRepo;
-    use transaction_sender_queue::TxSenderQueueMessageBody;
+    use transaction_sender_queue::TxSenderQueueEvent;
 
     use crate::{
         contract::ContractManager, transaction::TxContextBuilder, wallet_pool::WalletPoolManager,
@@ -38,7 +38,7 @@ pub mod aws_lambda {
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
         pool: &sqlx::Pool<sqlx::Postgres>,
-    ) -> anyhow::Result<(), lambda_runtime::Error> {
+    ) -> anyhow::Result<SqsBatchResponse, lambda_runtime::Error> {
         println!("Building...");
 
         let transaction_assignment_repo = TransactionAssignmentRepo::new(&pool);
@@ -51,11 +51,19 @@ pub mod aws_lambda {
         let tx_context_builder = TxContextBuilder::build(&transaction_repo);
         let contract_manager = ContractManager::build(&networks)?;
 
+        let mut sqs_batch_response = SqsBatchResponse::default();
+
         println!("Reading...");
-        let queue_messages =
-            TxSenderQueueMessageBody::from_sqs_message_vec(&event.payload.records)?;
+        let tx_sender_queue_event = TxSenderQueueEvent::from_sqs_event(event)?;
+
+        let tx_ids = tx_sender_queue_event
+            .messages
+            .iter()
+            .map(|message| message.message_id.clone())
+            .collect::<Vec<String>>();
+
         let execute_batch_context_vec = tx_context_builder
-            .fetch_and_sort_into_batches(queue_messages)
+            .fetch_and_sort_into_batches(&tx_ids)
             .await?;
 
         println!("Executing...");
@@ -70,6 +78,11 @@ pub mod aws_lambda {
                 transaction_repo
                     .release_many(&execute_batch_context.tx_ids)
                     .await?;
+                execute_batch_context.tx_ids.iter().for_each(|tx_id| {
+                    if let Some(message_id) = tx_sender_queue_event.tx_id_to_message_id.get(tx_id) {
+                        sqs_batch_response.add_failure(message_id);
+                    };
+                });
                 continue;
             };
 
@@ -77,6 +90,6 @@ pub mod aws_lambda {
             // ...
         }
 
-        Ok(())
+        Ok(sqs_batch_response)
     }
 }
