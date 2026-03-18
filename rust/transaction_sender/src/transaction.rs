@@ -33,10 +33,9 @@ impl<'a> TxContextBuilder<'a> {
 
     pub async fn fetch_and_sort_into_batches(
         &self,
-        input: Vec<TxSenderQueueMessageBody>,
+        tx_ids: &Vec<String>,
     ) -> anyhow::Result<Vec<ExecuteBatchTxContext>> {
-        let ids = input.iter().map(|message| message.tx_id.clone()).collect();
-        let fetched_txs = self.transaction_repo.select_and_lock_many(&ids).await?;
+        let fetched_txs = self.transaction_repo.select_and_lock_many(tx_ids).await?;
 
         let sorted = Self::group_by_chain_and_wallet(fetched_txs);
 
@@ -66,14 +65,15 @@ impl<'a> TxContextBuilder<'a> {
         let mut tx_ids = Vec::new();
 
         for transaction in &transactions {
-            if transaction.pass_value_from_operator_wallet && transaction.value_wei > 0 {
-                batch_tx_value += transaction.value_wei;
-            }
-
-            tx_ids.push(transaction.tx_id.clone());
-
             match transaction.clone().into_execute_input() {
-                Ok(execute_input) => execute_batch_input.push(execute_input),
+                Ok(execute_input) => {
+                    if transaction.pass_value_from_operator_wallet && transaction.value_wei > 0 {
+                        batch_tx_value += transaction.value_wei;
+                    }
+
+                    tx_ids.push(transaction.tx_id.clone());
+                    execute_batch_input.push(execute_input)
+                }
                 Err(_) => {
                     self.transaction_repo
                         .mark_as_invalid(&transaction.tx_id)

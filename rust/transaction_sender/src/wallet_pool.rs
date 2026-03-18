@@ -35,20 +35,17 @@ impl<'a> WalletPoolManager<'a> {
         chain_id: i64,
         use_operator_wallet_id: Option<Uuid>,
     ) -> anyhow::Result<Option<OperatorWallet>> {
-        let mut operator_wallet = None;
-
         if let Some(operator_wallet_id) = use_operator_wallet_id {
-            operator_wallet = self
+            return Ok(self
                 .operator_wallet_repo
                 .lock_by_id(operator_wallet_id, chain_id)
-                .await?;
+                .await?);
         } else {
-            operator_wallet = self
+            return Ok(self
                 .operator_wallet_repo
                 .lock_any_by_chain(chain_id)
-                .await?;
+                .await?);
         }
-        Ok(operator_wallet)
     }
 
     async fn has_enough_balance(
