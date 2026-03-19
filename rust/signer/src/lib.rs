@@ -69,7 +69,7 @@ pub mod aws_lambda {
     use lambda_runtime::LambdaEvent;
     use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
     use transaction_db::transactions::TransactionRepo;
-    use transaction_sender_queue::{TxSenderQueueMessageBody, sqs::TxSenderSqsQueue};
+    use sender_queue::{TxSenderQueueMessageBody, sqs::TxSenderSqsQueue};
 
     use crate::{Config, calldata::parse_calldata, transaction_request::RequestBody};
 

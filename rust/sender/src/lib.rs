@@ -27,9 +27,9 @@ pub mod aws_lambda {
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
+    use sender_queue::TxSenderQueueEvent;
     use transaction_assignment_db::transaction_assignments::TransactionAssignmentRepo;
     use transaction_db::transactions::TransactionRepo;
-    use transaction_sender_queue::TxSenderQueueEvent;
 
     use crate::{
         contract::ContractManager, transaction::TxContextBuilder, wallet_pool::WalletPoolManager,

@@ -1,5 +1,5 @@
 [package]
-name = "transaction_sender"
+name = "sender"
 version = "0.1.0"
 edition = "2024"
 
@@ -12,7 +12,7 @@ serde.workspace = true
 serde_json.workspace = true
 hex.workspace = true
 sqlx = { workspace = true, features = ["postgres"] }
-transaction_sender_queue = { workspace = true, features = ["aws"] }
+sender_queue = { workspace = true, features = ["aws"] }
 transaction_assignment_db.workspace = true
 operator_wallet_db.workspace = true
 network_db.workspace = true
