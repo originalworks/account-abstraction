@@ -3,7 +3,7 @@ resolver = "3"
 
 members = [
     "rust/database/operator_wallet_db",
-    "rust/database/transaction_db",
+    "rust/database/tx_request_db",
     "rust/database/transaction_assignment_db",
     "rust/database/network_db",
     "rust/database/migrator",
@@ -14,7 +14,7 @@ members = [
 ]
 
 [workspace.dependencies]
-transaction_db = { path = "./rust/database/transaction_db" }
+tx_request_db = { path = "./rust/database/tx_request_db" }
 network_db = { path = "./rust/database/network_db" }
 sender_queue = { path = "./rust/sender_queue" }
 transaction_assignment_db = { path = "./rust/database/transaction_assignment_db" }

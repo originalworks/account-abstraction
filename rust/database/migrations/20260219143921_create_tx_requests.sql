@@ -1,6 +1,6 @@
-CREATE TABLE IF NOT EXISTS transactions (
-    sequence_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    tx_id TEXT NOT NULL UNIQUE,
+CREATE TABLE IF NOT EXISTS tx_requests (
+    sequence_id BIGINT GENERATED ALWAYS AS IDENTITY UNIQUE,
+    tx_id TEXT PRIMARY KEY,
     requester_id TEXT NOT NULL,
     tx_type TEXT NOT NULL,
     tx_status TEXT NOT NULL,
@@ -26,6 +26,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE TRIGGER trg_set_updated_at
+BEFORE UPDATE ON tx_requests
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
 CREATE INDEX idx_tx_status_created
-    ON transactions (created_at)
+    ON tx_requests (tx_status, created_at)
     WHERE tx_status = 'SIGNED';

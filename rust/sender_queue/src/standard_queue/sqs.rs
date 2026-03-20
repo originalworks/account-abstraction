@@ -21,7 +21,7 @@ impl SenderStandardSqsQueue {
         })
     }
 
-    pub async fn send_new_trigger(
+    pub async fn send_new(
         &self,
         message_body: &SenderQueueStandardMessageBody,
     ) -> anyhow::Result<()> {

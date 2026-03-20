@@ -2,7 +2,7 @@
 use crate::transaction_request::RequestBody;
 use aws_lambda_events::sqs::SqsEvent;
 use lambda_runtime::{LambdaEvent, tracing::log::warn};
-use transaction_db::transactions::TxType;
+use tx_request_db::tx_requests::TxType;
 
 #[cfg(test)]
 mod tests;

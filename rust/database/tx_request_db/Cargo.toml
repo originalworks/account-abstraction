@@ -1,5 +1,5 @@
 [package]
-name = "transaction_db"
+name = "tx_request_db"
 version = "0.1.0"
 edition = "2024"
 

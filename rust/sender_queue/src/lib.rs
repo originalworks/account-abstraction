@@ -1,2 +1,2 @@
-mod blob_queue;
-mod standard_queue;
+pub mod blob_queue;
+pub mod standard_queue;

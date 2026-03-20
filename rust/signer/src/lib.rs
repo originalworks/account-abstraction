@@ -23,13 +23,15 @@ pub struct Config {
     pub rpc_url: String,
     pub private_key: Option<String>,
     pub signer_kms_id: Option<String>,
-    pub transaction_sender_queue_url: Option<String>,
+    pub sender_standard_queue_url: String,
+    pub sender_blob_queue_url: String,
     pub database_url: String,
 }
 
 impl Config {
     pub fn build() -> anyhow::Result<Self> {
-        let transaction_sender_queue_url = env::var("TRANSACTION_SENDER_QUEUE_URL").ok();
+        let sender_standard_queue_url = Self::get_env_var("SENDER_STANDARD_QUEUE_URL");
+        let sender_blob_queue_url = Self::get_env_var("SENDER_BLOB_QUEUE_URL");
         let rpc_url = Self::get_env_var("RPC_URL");
         let database_url = Self::get_env_var("DATABASE_URL");
         let mut signer_kms_id = None;
@@ -53,7 +55,8 @@ impl Config {
             private_key,
             signer_kms_id,
             database_url,
-            transaction_sender_queue_url,
+            sender_standard_queue_url,
+            sender_blob_queue_url,
         })
     }
 
@@ -68,8 +71,11 @@ pub mod aws_lambda {
     use aws_lambda_events::sqs::SqsEvent;
     use lambda_runtime::LambdaEvent;
     use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
-    use sender_queue::{SenderQueueStandardMessageBody, sqs::SenderStandardSqsQueue};
-    use transaction_db::transactions::{TransactionRepo, TxType};
+    use sender_queue::{
+        blob_queue::{SenderQueueBlobMessageBody, sqs::SenderBlobSqsQueue},
+        standard_queue::{SenderQueueStandardMessageBody, sqs::SenderStandardSqsQueue},
+    };
+    use tx_request_db::tx_requests::{TransactionRepo, TxType};
 
     use crate::{Config, calldata::parse_calldata, transaction_request::RequestBody};
 
@@ -87,12 +93,11 @@ pub mod aws_lambda {
             .region(region_provider)
             .load()
             .await;
-        let tx_sender_standard_queue = SenderStandardSqsQueue::build(
-            &aws_config,
-            &config
-                .transaction_sender_queue_url
-                .expect("Missing env var: transaction_sender_queue_url"),
-        )?;
+        let tx_sender_standard_queue =
+            SenderStandardSqsQueue::build(&aws_config, &config.sender_standard_queue_url)?;
+
+        let tx_sender_blob_queue =
+            SenderBlobSqsQueue::build(&aws_config, &config.sender_blob_queue_url)?;
 
         let tx_request_body_vec = RequestBody::from_sqs_event(event)?;
 
@@ -112,13 +117,13 @@ pub mod aws_lambda {
                     tx_id: insert_tx_input.tx_id,
                 };
 
-                tx_sender_queue.send_new_trigger(&trigger_body).await?;
+                tx_sender_standard_queue.send_new(&trigger_body).await?;
             } else {
                 let trigger_body = SenderQueueBlobMessageBody {
                     tx_id: insert_tx_input.tx_id,
                 };
 
-                tx_sender_queue.send_new_trigger(&trigger_body).await?;
+                tx_sender_blob_queue.send_new(&trigger_body).await?;
             }
         }
 

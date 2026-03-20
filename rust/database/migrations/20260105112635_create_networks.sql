@@ -16,3 +16,8 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_set_updated_at
+BEFORE UPDATE ON networks
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();

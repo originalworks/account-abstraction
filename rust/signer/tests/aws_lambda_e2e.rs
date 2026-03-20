@@ -9,8 +9,8 @@ mod tests {
     use network_db::networks::{InsertNetworkInput, NetworkRepo};
     use serde_json::json;
     use sqlx::PgPool;
-    use transaction_db::transactions::TransactionRepo;
     use transaction_signer::{Config, aws_lambda::function_handler};
+    use tx_request_db::tx_requests::TransactionRepo;
 
     async fn create_transaction_sender_queue() -> anyhow::Result<()> {
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
