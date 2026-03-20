@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS transaction_assignments (
+CREATE TABLE IF NOT EXISTS wallet_assignments (
     id UUID PRIMARY KEY,
     tx_id TEXT NOT NULL REFERENCES tx_requests(tx_id),
     operator_wallet_id UUID NOT NULL REFERENCES operator_wallets(id),
@@ -20,6 +20,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_set_updated_at
-BEFORE UPDATE ON transaction_assignments
+BEFORE UPDATE ON wallet_assignments
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();

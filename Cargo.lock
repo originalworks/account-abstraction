@@ -4268,9 +4268,9 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
- "transaction_assignment_db",
  "tx_request_db",
  "uuid",
+ "wallet_assignment_db",
 ]
 
 [[package]]
@@ -5171,19 +5171,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "transaction_assignment_db"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde",
- "serde_json",
- "sqlx",
- "time",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "transaction_signer"
 version = "0.1.0"
 dependencies = [
@@ -5367,6 +5354,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09ac3b126d3914f9849036f826e054cbabdc8519970b8998ddaf3b5bd3c65f11"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "wallet_assignment_db"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
