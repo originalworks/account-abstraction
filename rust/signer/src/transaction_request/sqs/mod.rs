@@ -1,8 +1,8 @@
 #![cfg(feature = "aws")]
 use crate::transaction_request::RequestBody;
 use aws_lambda_events::sqs::SqsEvent;
+use db_types::TxType;
 use lambda_runtime::{LambdaEvent, tracing::log::warn};
-use tx_request_db::tx_requests::TxType;
 
 #[cfg(test)]
 mod tests;

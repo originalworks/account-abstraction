@@ -11,6 +11,8 @@ members = [
     "rust/sender",
     "rust/receipt_poller",
     "rust/sender_queue",
+    "rust/database/execution_attempt_db",
+    "rust/database/db_types",
 ]
 
 [workspace.dependencies]
@@ -19,6 +21,7 @@ network_db = { path = "./rust/database/network_db" }
 sender_queue = { path = "./rust/sender_queue" }
 wallet_assignment_db = { path = "./rust/database/wallet_assignment_db" }
 operator_wallet_db = { path = "./rust/database/operator_wallet_db" }
+db_types = { path = "./rust/database/db_types" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"

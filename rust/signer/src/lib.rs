@@ -69,13 +69,14 @@ impl Config {
 pub mod aws_lambda {
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
+    use db_types::TxType;
     use lambda_runtime::LambdaEvent;
     use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
     use sender_queue::{
         blob_queue::{SenderQueueBlobMessageBody, sqs::SenderBlobSqsQueue},
         standard_queue::{SenderQueueStandardMessageBody, sqs::SenderStandardSqsQueue},
     };
-    use tx_request_db::tx_requests::{TransactionRepo, TxType};
+    use tx_request_db::tx_requests::TransactionRepo;
 
     use crate::{Config, calldata::parse_calldata, transaction_request::RequestBody};
 
