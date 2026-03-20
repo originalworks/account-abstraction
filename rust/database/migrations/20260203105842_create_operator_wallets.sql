@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS operator_wallets (
     CONSTRAINT uq_wallet_address_per_chain UNIQUE (wallet_address, chain_id)
 );
 
+
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -20,6 +21,12 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_set_updated_at
+BEFORE UPDATE ON operator_wallets
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
 
 CREATE INDEX idx_wallet_free
     ON operator_wallets (chain_id)

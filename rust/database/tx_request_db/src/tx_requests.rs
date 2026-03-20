@@ -18,7 +18,7 @@ pub enum TxStatus {
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
-pub struct Transaction {
+pub struct TxRequest {
     pub sequence_id: i64,
     pub tx_id: String,
     pub requester_id: String,
@@ -39,7 +39,7 @@ pub struct Transaction {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct InsertTransactionInput {
+pub struct InsertTxRequestInput {
     pub tx_id: String,
     pub requester_id: String,
     pub tx_type: TxType,
@@ -65,11 +65,11 @@ impl<'a> TransactionRepo<'a> {
 
     pub async fn insert_ignore_conflict(
         &self,
-        input: &InsertTransactionInput,
+        input: &InsertTxRequestInput,
     ) -> Result<bool, sqlx::Error> {
         let result = sqlx::query!(
             r#"
-            INSERT INTO transactions (
+            INSERT INTO tx_requests (
                 tx_id,
                 requester_id,
                 tx_type,
@@ -105,9 +105,9 @@ impl<'a> TransactionRepo<'a> {
         Ok(result.rows_affected() == 1)
     }
 
-    pub async fn find_by_tx_id(&self, tx_id: String) -> anyhow::Result<Transaction> {
+    pub async fn find_by_tx_id(&self, tx_id: String) -> anyhow::Result<TxRequest> {
         let transaction = sqlx::query_as!(
-            Transaction,
+            TxRequest,
             r#"
             SELECT 
                 sequence_id,
@@ -128,7 +128,7 @@ impl<'a> TransactionRepo<'a> {
                 created_at,
                 updated_at
             FROM 
-                transactions
+                tx_requests
             WHERE
                 tx_id = $1"#,
             tx_id
@@ -139,21 +139,18 @@ impl<'a> TransactionRepo<'a> {
         Ok(transaction)
     }
 
-    pub async fn select_and_lock_many(
-        &self,
-        ids: &Vec<String>,
-    ) -> anyhow::Result<Vec<Transaction>> {
+    pub async fn select_and_lock_many(&self, ids: &Vec<String>) -> anyhow::Result<Vec<TxRequest>> {
         let rows = sqlx::query_as!(
-            Transaction,
+            TxRequest,
             r#"
         WITH selected AS (
             SELECT tx_id
-            FROM transactions
+            FROM tx_requests
             WHERE tx_id = ANY($1)
               AND tx_status = 'SIGNED'
             FOR UPDATE SKIP LOCKED
         )
-        UPDATE transactions t
+        UPDATE tx_requests t
         SET 
             tx_status = 'LOCKED',
             attempts = attempts + 1
@@ -190,7 +187,7 @@ impl<'a> TransactionRepo<'a> {
     pub async fn release_many(&self, ids: &Vec<String>) -> anyhow::Result<()> {
         sqlx::query!(
             r#"
-        UPDATE transactions
+        UPDATE tx_requests
         SET 
             tx_status = 'SIGNED'
         WHERE tx_id = ANY($1)
@@ -206,7 +203,7 @@ impl<'a> TransactionRepo<'a> {
     pub async fn mark_as_invalid(&self, tx_id: &String) -> anyhow::Result<()> {
         sqlx::query!(
             r#"
-        UPDATE transactions
+        UPDATE tx_requests
         SET 
             tx_status = 'INVALID'
         WHERE tx_id = $1

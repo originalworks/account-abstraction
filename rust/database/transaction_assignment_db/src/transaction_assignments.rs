@@ -13,7 +13,7 @@ pub enum TxAssignmentOutcome {
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct TransactionAssignment {
     pub id: Uuid,
-    pub transaction_sequence_id: i64,
+    pub tx_id: String,
     pub operator_wallet_id: String,
     pub nonce_used: Option<i64>,
     pub gas_limit: Option<i64>,
@@ -42,7 +42,7 @@ impl<'a> TransactionAssignmentRepo<'a> {
             r#"
             SELECT 
                 id,
-                transaction_sequence_id, 
+                tx_id, 
                 operator_wallet_id, 
                 nonce_used,
                 gas_limit,
@@ -65,19 +65,19 @@ impl<'a> TransactionAssignmentRepo<'a> {
 
     pub async fn new_assignment(
         &self,
-        transaction_sequence_id: i64,
+        tx_id: String,
         operator_wallet_id: Uuid,
     ) -> anyhow::Result<Uuid> {
         let id = sqlx::query_scalar!(
             r#"
             INSERT INTO transaction_assignments (
-                transaction_sequence_id,
+                tx_id,
                 operator_wallet_id
             )
             VALUES ($1, $2)
             RETURNING id
             "#,
-            transaction_sequence_id,
+            tx_id,
             operator_wallet_id,
         )
         .fetch_one(self.pool)

@@ -11,7 +11,7 @@ use alloy::{
 };
 use network_db::networks::Network;
 use ow_wallet_adapter::wallet::OwWallet;
-use transaction_db::transactions::Transaction;
+use tx_request_db::tx_requests::TxRequest;
 
 use crate::transaction::ExecuteBatchTxContext;
 

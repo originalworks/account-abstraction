@@ -2,7 +2,7 @@ use alloy::primitives::{Address, Uint, keccak256};
 use ow_wallet_adapter::wallet::OwWallet;
 use sender_queue::SenderQueueStandardMessageBody;
 use std::{collections::HashMap, str::FromStr};
-use transaction_db::transactions::{Transaction, TransactionRepo};
+use tx_request_db::tx_requests::{TransactionRepo, TxRequest};
 use uuid::Uuid;
 
 use crate::{constants::TX_DEADLINE_IN_SEC, contract::sEOA::ExecuteInput};
@@ -58,7 +58,7 @@ impl<'a> TxContextBuilder<'a> {
         &self,
         chain_id: i64,
         use_operator_wallet_id: Option<Uuid>,
-        transactions: Vec<Transaction>,
+        transactions: Vec<TxRequest>,
     ) -> Option<ExecuteBatchTxContext> {
         let mut execute_batch_input = Vec::new();
         let mut batch_tx_value = 0;
@@ -97,9 +97,9 @@ impl<'a> TxContextBuilder<'a> {
     }
 
     fn group_by_chain_and_wallet(
-        transactions: Vec<Transaction>,
-    ) -> HashMap<i64, HashMap<Option<Uuid>, Vec<Transaction>>> {
-        let mut grouped: HashMap<i64, HashMap<Option<Uuid>, Vec<Transaction>>> = HashMap::new();
+        transactions: Vec<TxRequest>,
+    ) -> HashMap<i64, HashMap<Option<Uuid>, Vec<TxRequest>>> {
+        let mut grouped: HashMap<i64, HashMap<Option<Uuid>, Vec<TxRequest>>> = HashMap::new();
 
         for tx in transactions {
             grouped
@@ -118,7 +118,7 @@ trait ToExecuteInput {
     fn into_execute_input(self) -> anyhow::Result<ExecuteInput>;
 }
 
-impl ToExecuteInput for Transaction {
+impl ToExecuteInput for TxRequest {
     fn into_execute_input(self) -> anyhow::Result<ExecuteInput> {
         Ok(ExecuteInput {
             target: Address::from_str(self.to_address.as_str())?,
