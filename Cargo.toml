@@ -13,6 +13,7 @@ members = [
     "rust/sender_queue",
     "rust/database/execution_attempt_db",
     "rust/database/db_types",
+    "rust/database/execution_attempt_item_db",
 ]
 
 [workspace.dependencies]

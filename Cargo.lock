@@ -2119,6 +2119,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "execution_attempt_item_db"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "db_types",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
