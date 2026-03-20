@@ -1,8 +1,9 @@
 #[cfg(feature = "aws")]
 pub mod sqs;
 
+use db_types::TxType;
 use serde::{Deserialize, Serialize};
-use tx_request_db::tx_requests::{InsertTxRequestInput, TxStatus, TxType};
+use tx_request_db::tx_requests::{InsertTxRequestInput, TxStatus};
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug)]

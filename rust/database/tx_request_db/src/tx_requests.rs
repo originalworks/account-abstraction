@@ -1,14 +1,8 @@
+use db_types::TxType;
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
 use sqlx::{PgPool, types::time::OffsetDateTime};
 use uuid::Uuid;
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]
-#[sqlx(type_name = "text")]
-pub enum TxType {
-    STANDARD,
-    BLOB,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[sqlx(type_name = "text")]
@@ -30,7 +24,6 @@ pub struct TxRequest {
     pub chain_id: i64,
     pub signature: Vec<u8>,
     pub attempts: i32,
-    pub tx_hash: Option<String>,
     pub blob_file_path: Option<String>,
     pub use_operator_wallet_id: Option<Uuid>,
     pub pass_value_from_operator_wallet: bool,
@@ -121,7 +114,6 @@ impl<'a> TransactionRepo<'a> {
                 value_wei,
                 chain_id,
                 signature,
-                tx_hash,
                 attempts,
                 pass_value_from_operator_wallet,
                 use_operator_wallet_id,
@@ -168,7 +160,6 @@ impl<'a> TransactionRepo<'a> {
             t.value_wei,
             t.chain_id,
             t.signature,
-            t.tx_hash,
             t.attempts,
             t.use_operator_wallet_id,
             t.pass_value_from_operator_wallet,

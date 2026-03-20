@@ -1,5 +1,5 @@
 [package]
-name = "tx_request_db"
+name = "execution_attempt_db"
 version = "0.1.0"
 edition = "2024"
 
@@ -14,8 +14,6 @@ sqlx = { workspace = true, features = [
     "tls-rustls",
     "macros",
     "time",
-    'uuid',
 ] }
 time = { workspace = true, features = ["serde"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
-uuid = { workspace = true, features = ["serde", "v4"] }
