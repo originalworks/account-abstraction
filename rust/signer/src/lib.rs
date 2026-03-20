@@ -68,8 +68,8 @@ pub mod aws_lambda {
     use aws_lambda_events::sqs::SqsEvent;
     use lambda_runtime::LambdaEvent;
     use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
-    use transaction_db::transactions::TransactionRepo;
-    use sender_queue::{TxSenderQueueMessageBody, sqs::TxSenderSqsQueue};
+    use sender_queue::{SenderQueueStandardMessageBody, sqs::SenderStandardSqsQueue};
+    use transaction_db::transactions::{TransactionRepo, TxType};
 
     use crate::{Config, calldata::parse_calldata, transaction_request::RequestBody};
 
@@ -87,7 +87,7 @@ pub mod aws_lambda {
             .region(region_provider)
             .load()
             .await;
-        let tx_sender_queue = TxSenderSqsQueue::build(
+        let tx_sender_standard_queue = SenderStandardSqsQueue::build(
             &aws_config,
             &config
                 .transaction_sender_queue_url
@@ -107,12 +107,19 @@ pub mod aws_lambda {
             transaction_repo
                 .insert_ignore_conflict(&insert_tx_input)
                 .await?;
+            if tx_request_body.tx_type == TxType::STANDARD {
+                let trigger_body = SenderQueueStandardMessageBody {
+                    tx_id: insert_tx_input.tx_id,
+                };
 
-            let trigger_body = TxSenderQueueMessageBody {
-                tx_id: insert_tx_input.tx_id,
-            };
+                tx_sender_queue.send_new_trigger(&trigger_body).await?;
+            } else {
+                let trigger_body = SenderQueueBlobMessageBody {
+                    tx_id: insert_tx_input.tx_id,
+                };
 
-            tx_sender_queue.send_new_trigger(&trigger_body).await?;
+                tx_sender_queue.send_new_trigger(&trigger_body).await?;
+            }
         }
 
         Ok(())

@@ -1,6 +1,6 @@
 use alloy::primitives::{Address, Uint, keccak256};
 use ow_wallet_adapter::wallet::OwWallet;
-use sender_queue::TxSenderQueueMessageBody;
+use sender_queue::SenderQueueStandardMessageBody;
 use std::{collections::HashMap, str::FromStr};
 use transaction_db::transactions::{Transaction, TransactionRepo};
 use uuid::Uuid;
