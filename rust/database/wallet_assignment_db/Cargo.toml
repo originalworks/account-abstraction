@@ -1,5 +1,5 @@
 [package]
-name = "transaction_assignment_db"
+name = "wallet_assignment_db"
 version = "0.1.0"
 edition = "2024"
 

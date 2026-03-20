@@ -52,7 +52,7 @@ impl<'a> TransactionAssignmentRepo<'a> {
                 created_at,
                 updated_at
             FROM 
-                transaction_assignments
+                wallet_assignments
             WHERE
                 id = $1"#,
             tx_assignment_id
@@ -70,7 +70,7 @@ impl<'a> TransactionAssignmentRepo<'a> {
     ) -> anyhow::Result<Uuid> {
         let id = sqlx::query_scalar!(
             r#"
-            INSERT INTO transaction_assignments (
+            INSERT INTO wallet_assignments (
                 tx_id,
                 operator_wallet_id
             )

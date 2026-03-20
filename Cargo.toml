@@ -4,7 +4,7 @@ resolver = "3"
 members = [
     "rust/database/operator_wallet_db",
     "rust/database/tx_request_db",
-    "rust/database/transaction_assignment_db",
+    "rust/database/wallet_assignment_db",
     "rust/database/network_db",
     "rust/database/migrator",
     "rust/signer",
@@ -17,7 +17,7 @@ members = [
 tx_request_db = { path = "./rust/database/tx_request_db" }
 network_db = { path = "./rust/database/network_db" }
 sender_queue = { path = "./rust/sender_queue" }
-transaction_assignment_db = { path = "./rust/database/transaction_assignment_db" }
+wallet_assignment_db = { path = "./rust/database/wallet_assignment_db" }
 operator_wallet_db = { path = "./rust/database/operator_wallet_db" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
