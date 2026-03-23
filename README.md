@@ -2,7 +2,7 @@ Example of JSON input for TX request:
 
 ```json
 {
-  "tx_id": "ERC20", // externally assigned unique transaction identifier
+  "tx_id": "xyz123", // externally assigned unique transaction identifier
   "requester_id": "payment-worker-321",
   "tx_type": "STANDARD", // "STANDARD" or "BLOB"
   "calldata": "0x01",
