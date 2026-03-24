@@ -26,7 +26,7 @@ lambda_runtime = { workspace = true, optional = true }
 
 [dev-dependencies]
 network_db.workspace = true
-alloy = { version = "1.6.3", features = ["node-bindings"] }
+alloy = { workspace = true, features = ["node-bindings"] }
 
 [features]
 aws = [
