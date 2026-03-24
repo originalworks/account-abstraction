@@ -46,13 +46,13 @@ pub mod aws_lambda {
         let wallet_assignment_repo = WalletAssignmentRepo::new(&pool);
         let operator_wallet_repo = OperatorWalletRepo::new(&pool);
         let network_repo = NetworkRepo::new(&pool);
-        let transaction_repo = TxRequestRepo::new(&pool);
+        let tx_request_repo = TxRequestRepo::new(&pool);
         let execution_attempt_repo = ExecutionAttemptRepo::new(&pool);
         let execution_attempt_item_repo = ExecutionAttemptItemRepo::new(&pool);
         let networks = network_repo.select_all().await?;
 
         let wallet_pool_manager = WalletPoolManager::build(operator_wallet_repo, &networks);
-        let tx_context_builder = TxContextBuilder::build(&transaction_repo);
+        let tx_context_builder = TxContextBuilder::build(&tx_request_repo);
         let contract_manager = ContractManager::build(&networks).await?;
 
         let mut sqs_batch_response = SqsBatchResponse::default();
@@ -79,7 +79,7 @@ pub mod aws_lambda {
                 )
                 .await?
             else {
-                transaction_repo
+                tx_request_repo
                     .release_many(&execute_batch_context.tx_ids)
                     .await?;
                 execute_batch_context.tx_ids.iter().for_each(|tx_id| {
@@ -98,19 +98,24 @@ pub mod aws_lambda {
 
             if i64::try_from(pending_nonce)? != wallet.operator_wallet_db.nonce {
                 panic!("disco time!");
-                // here use abstracted function that will emergency release transctions
+                // TODO: here use abstracted function that will emergency release transctions
             }
 
             let free_nonce = pending_nonce + 1;
 
             let new_execution_attempt = contract_manager
-                .send_batch(execute_batch_context, wallet, free_nonce)
+                .send_batch(&execute_batch_context, wallet, free_nonce)
                 .await?;
 
-            execution_attempt_repo.insert(new_execution_attempt).await?;
+            let execution_attempt = execution_attempt_repo.insert(new_execution_attempt).await?;
 
-            // next: insert execution attempt item, mark txs in DB, release wallet
-            // ...
+            execution_attempt_item_repo
+                .insert_many(execution_attempt.id, &execute_batch_context.tx_ids)
+                .await?;
+
+            tx_request_repo
+                .mark_many_as_broadcasted(&execute_batch_context.tx_ids)
+                .await?;
         }
 
         Ok(sqs_batch_response)

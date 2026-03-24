@@ -41,4 +41,24 @@ impl<'a> ExecutionAttemptItemRepo<'a> {
 
         Ok(attempt_item)
     }
+
+    pub async fn insert_many(
+        &self,
+        execution_attempt_id: Uuid,
+        tx_ids: &Vec<String>,
+    ) -> anyhow::Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO execution_attempt_items (execution_attempt_id, tx_id)
+            SELECT $1, tx_id
+            FROM UNNEST($2::text[]) AS tx_id
+            "#,
+            execution_attempt_id,
+            tx_ids
+        )
+        .execute(self.pool)
+        .await?;
+
+        Ok(())
+    }
 }

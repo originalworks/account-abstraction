@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS execution_attempts (
     operator_wallet_id UUID NOT NULL REFERENCES operator_wallets(id),
     chain_id BIGINT NOT NULL REFERENCES networks(chain_id),
     nonce_used BIGINT NOT NULL,
+    tx_value BIGINT NOT NULL,
     tx_type TEXT NOT NULL,
     tx_hash TEXT NOT NULL,
     gas_limit BIGINT NOT NULL,

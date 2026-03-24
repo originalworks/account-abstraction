@@ -1,7 +1,7 @@
 use crate::{transaction::ExecuteBatchTxContext, wallet_pool::Wallet};
 use alloy::{
     eips::eip1559::Eip1559Estimation,
-    primitives::Address,
+    primitives::{Address, Uint},
     providers::{
         Provider, ProviderBuilder,
         fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller},
@@ -31,6 +31,7 @@ trait BuildNewExecutionAttempt {
         nonce: u64,
         operator_wallet_id: Uuid,
         chain_id: i64,
+        tx_value: i64,
     ) -> anyhow::Result<NewExecutionAttempt>;
 }
 
@@ -42,6 +43,7 @@ impl BuildNewExecutionAttempt for NewExecutionAttempt {
         nonce: u64,
         operator_wallet_id: Uuid,
         chain_id: i64,
+        tx_value: i64,
     ) -> anyhow::Result<Self> {
         Ok(NewExecutionAttempt {
             chain_id,
@@ -53,6 +55,7 @@ impl BuildNewExecutionAttempt for NewExecutionAttempt {
             max_fee_per_gas: i64::try_from(fees.max_fee_per_gas)?,
             max_priority_fee: i64::try_from(fees.max_priority_fee_per_gas)?,
             max_fee_per_blob_gas: None,
+            tx_value,
         })
     }
 }
@@ -96,7 +99,7 @@ impl ContractManager {
 
     pub async fn send_batch(
         &self,
-        tx_context: ExecuteBatchTxContext,
+        tx_context: &ExecuteBatchTxContext,
         wallet: Wallet,
         nonce: u64,
     ) -> anyhow::Result<NewExecutionAttempt> {
@@ -117,9 +120,12 @@ impl ContractManager {
             &provider,
         );
 
+        let tx_value = Uint::<256, 4>::from(tx_context.batch_tx_value);
+
         let fees = provider.estimate_eip1559_fees().await?;
         let call_builder = contract
-            .executeBatch(tx_context.execute_batch_input)
+            .executeBatch(tx_context.execute_batch_input.clone())
+            .value(tx_value)
             .nonce(nonce)
             .max_fee_per_gas(fees.max_fee_per_gas)
             .max_priority_fee_per_gas(fees.max_priority_fee_per_gas);
@@ -137,6 +143,7 @@ impl ContractManager {
             nonce,
             wallet.operator_wallet_db.id,
             tx_context.chain_id,
+            tx_context.batch_tx_value,
         )?;
 
         Ok(new_execution_attempt)

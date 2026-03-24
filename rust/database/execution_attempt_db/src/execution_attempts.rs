@@ -19,6 +19,7 @@ pub struct ExecutionAttempt {
     pub chain_id: i64,
     pub operator_wallet_id: Uuid,
     pub nonce_used: i64,
+    pub tx_value: i64,
     pub tx_type: TxType,
     pub tx_hash: String,
     pub gas_limit: i64,
@@ -34,6 +35,7 @@ pub struct NewExecutionAttempt {
     pub chain_id: i64,
     pub operator_wallet_id: Uuid,
     pub nonce_used: i64,
+    pub tx_value: i64,
     pub tx_type: TxType,
     pub tx_hash: String,
     pub gas_limit: i64,
@@ -61,6 +63,7 @@ impl<'a> ExecutionAttemptRepo<'a> {
                 operator_wallet_id,
                 tx_type as "tx_type: TxType", 
                 nonce_used,
+                tx_value,
                 tx_hash,
                 gas_limit,
                 max_fee_per_gas,
@@ -93,10 +96,11 @@ impl<'a> ExecutionAttemptRepo<'a> {
                 gas_limit,
                 max_fee_per_gas,
                 max_priority_fee,
-                max_fee_per_blob_gas
+                max_fee_per_blob_gas,
+                tx_value
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
             )
             RETURNING
                 id,
@@ -104,6 +108,7 @@ impl<'a> ExecutionAttemptRepo<'a> {
                 operator_wallet_id,
                 tx_type as "tx_type: TxType",
                 nonce_used,
+                tx_value,
                 tx_hash,
                 gas_limit,
                 max_fee_per_gas,
@@ -122,6 +127,7 @@ impl<'a> ExecutionAttemptRepo<'a> {
             input.max_fee_per_gas,
             input.max_priority_fee,
             input.max_fee_per_blob_gas,
+            input.tx_value
         )
         .fetch_one(self.pool)
         .await?;
