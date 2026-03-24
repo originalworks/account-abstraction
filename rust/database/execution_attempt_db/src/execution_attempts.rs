@@ -7,7 +7,7 @@ use sqlx::{
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]
 #[sqlx(type_name = "text")]
-enum TxExecutionOutcome {
+pub enum TxExecutionOutcome {
     SUCCEED,
     FAILED,
     REVERTED,

@@ -11,7 +11,7 @@ pub enum TxAssignmentOutcome {
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
-pub struct TransactionAssignment {
+pub struct WalletAssignment {
     pub id: Uuid,
     pub tx_id: String,
     pub operator_wallet_id: String,
@@ -19,21 +19,18 @@ pub struct TransactionAssignment {
     pub updated_at: OffsetDateTime,
 }
 
-pub struct TransactionAssignmentRepo<'a> {
+pub struct WalletAssignmentRepo<'a> {
     pool: &'a PgPool,
 }
 
-impl<'a> TransactionAssignmentRepo<'a> {
+impl<'a> WalletAssignmentRepo<'a> {
     pub fn new(pool: &'a PgPool) -> Self {
         Self { pool }
     }
 
-    pub async fn find_by_id(
-        &self,
-        tx_assignment_id: Uuid,
-    ) -> anyhow::Result<TransactionAssignment> {
+    pub async fn find_by_id(&self, tx_assignment_id: Uuid) -> anyhow::Result<WalletAssignment> {
         let transaction_assignment = sqlx::query_as!(
-            TransactionAssignment,
+            WalletAssignment,
             r#"
             SELECT 
                 id,

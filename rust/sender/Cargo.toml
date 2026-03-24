@@ -16,7 +16,7 @@ sender_queue = { workspace = true, features = ["aws"] }
 wallet_assignment_db.workspace = true
 operator_wallet_db.workspace = true
 network_db.workspace = true
-alloy = "1.6.3"
+alloy.workspace = true
 uuid.workspace = true
 
 # aws

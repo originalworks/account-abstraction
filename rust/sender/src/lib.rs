@@ -29,7 +29,7 @@ pub mod aws_lambda {
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
     use sender_queue::SenderQueueStandardEvent;
     use tx_request_db::tx_requests::TransactionRepo;
-    use wallet_assignment_db::wallet_assignments::TransactionAssignmentRepo;
+    use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
 
     use crate::{
         contract::ContractManager, transaction::TxContextBuilder, wallet_pool::WalletPoolManager,
@@ -41,7 +41,7 @@ pub mod aws_lambda {
     ) -> anyhow::Result<SqsBatchResponse, lambda_runtime::Error> {
         println!("Building...");
 
-        let transaction_assignment_repo = TransactionAssignmentRepo::new(&pool);
+        let transaction_assignment_repo = WalletAssignmentRepo::new(&pool);
         let operator_wallet_repo = OperatorWalletRepo::new(&pool);
         let network_repo = NetworkRepo::new(&pool);
         let transaction_repo = TransactionRepo::new(&pool);
