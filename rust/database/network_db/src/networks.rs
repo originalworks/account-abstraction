@@ -8,6 +8,7 @@ pub struct Network {
     pub rpc_url: String,
     pub contract_address: String,
     pub min_operator_wallet_balance: i64,
+    pub gas_estimation_buffer_ppm: i64,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -18,6 +19,7 @@ pub struct InsertNetworkInput {
     pub rpc_url: String,
     pub contract_address: String,
     pub min_operator_wallet_balance: i64,
+    pub gas_estimation_buffer_ppm: i64,
 }
 
 pub struct NetworkRepo<'a> {
@@ -39,6 +41,7 @@ impl<'a> NetworkRepo<'a> {
                 rpc_url,
                 contract_address,
                 min_operator_wallet_balance,
+                gas_estimation_buffer_ppm,
                 created_at,
                 updated_at
             FROM
@@ -63,6 +66,7 @@ impl<'a> NetworkRepo<'a> {
                 rpc_url,
                 contract_address,
                 min_operator_wallet_balance,
+                gas_estimation_buffer_ppm,
                 created_at,
                 updated_at
             FROM
@@ -85,14 +89,16 @@ impl<'a> NetworkRepo<'a> {
                 chain_name,
                 rpc_url,
                 contract_address,
-                min_operator_wallet_balance
+                min_operator_wallet_balance,
+                gas_estimation_buffer_ppm
             )
-            VALUES ($1, $2, $3, $4, $5)"#,
+            VALUES ($1, $2, $3, $4, $5, $6)"#,
             network.chain_id,
             network.chain_name,
             network.rpc_url,
             network.contract_address,
-            network.min_operator_wallet_balance
+            network.min_operator_wallet_balance,
+            network.gas_estimation_buffer_ppm
         )
         .execute(self.pool)
         .await?;

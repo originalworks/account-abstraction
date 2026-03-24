@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 #![cfg(feature = "aws")]
 use lambda_runtime::{run, service_fn, tracing};
 use sqlx::PgPool;
