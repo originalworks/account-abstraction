@@ -13,7 +13,7 @@ pub struct Network {
     pub updated_at: OffsetDateTime,
 }
 
-pub struct InsertNetworkInput {
+pub struct NewNetwork {
     pub chain_id: i64,
     pub chain_name: String,
     pub rpc_url: String,
@@ -78,10 +78,7 @@ impl<'a> NetworkRepo<'a> {
         Ok(networks)
     }
 
-    pub async fn insert_new_network(
-        &self,
-        network: &InsertNetworkInput,
-    ) -> Result<bool, sqlx::Error> {
+    pub async fn insert_new_network(&self, network: &NewNetwork) -> Result<bool, sqlx::Error> {
         let result = sqlx::query!(
             r#"
             INSERT INTO networks (

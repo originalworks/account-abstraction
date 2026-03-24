@@ -30,6 +30,18 @@ pub struct ExecutionAttempt {
     pub updated_at: OffsetDateTime,
 }
 
+pub struct NewExecutionAttempt {
+    pub chain_id: i64,
+    pub operator_wallet_id: Uuid,
+    pub nonce_used: i64,
+    pub tx_type: TxType,
+    pub tx_hash: String,
+    pub gas_limit: i64,
+    pub max_fee_per_gas: i64,
+    pub max_priority_fee: i64,
+    pub max_fee_per_blob_gas: Option<i64>,
+}
+
 pub struct ExecutionAttemptRepo<'a> {
     pool: &'a PgPool,
 }
@@ -62,6 +74,54 @@ impl<'a> ExecutionAttemptRepo<'a> {
             WHERE
                 id = $1"#,
             id
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(attempt)
+    }
+    pub async fn insert(&self, input: NewExecutionAttempt) -> anyhow::Result<ExecutionAttempt> {
+        let attempt = sqlx::query_as!(
+            ExecutionAttempt,
+            r#"
+            INSERT INTO execution_attempts (
+                chain_id,
+                operator_wallet_id,
+                nonce_used,
+                tx_type,
+                tx_hash,
+                gas_limit,
+                max_fee_per_gas,
+                max_priority_fee,
+                max_fee_per_blob_gas
+            )
+            VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9
+            )
+            RETURNING
+                id,
+                chain_id,
+                operator_wallet_id,
+                tx_type as "tx_type: TxType",
+                nonce_used,
+                tx_hash,
+                gas_limit,
+                max_fee_per_gas,
+                max_priority_fee,
+                max_fee_per_blob_gas,
+                outcome as "outcome: TxExecutionOutcome",
+                created_at,
+                updated_at
+            "#,
+            input.chain_id,
+            input.operator_wallet_id,
+            input.nonce_used,
+            input.tx_type as TxType,
+            input.tx_hash,
+            input.gas_limit,
+            input.max_fee_per_gas,
+            input.max_priority_fee,
+            input.max_fee_per_blob_gas,
         )
         .fetch_one(self.pool)
         .await?;

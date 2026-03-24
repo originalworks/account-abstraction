@@ -24,11 +24,13 @@ impl Config {
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
     use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
+    use execution_attempt_db::execution_attempts::ExecutionAttemptRepo;
+    use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo;
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
-    use sender_queue::SenderQueueStandardEvent;
-    use tx_request_db::tx_requests::TransactionRepo;
+    use sender_queue::standard_queue::SenderQueueStandardEvent;
+    use tx_request_db::tx_requests::TxRequestRepo;
     use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
 
     use crate::{
@@ -41,15 +43,17 @@ pub mod aws_lambda {
     ) -> anyhow::Result<SqsBatchResponse, lambda_runtime::Error> {
         println!("Building...");
 
-        let transaction_assignment_repo = WalletAssignmentRepo::new(&pool);
+        let wallet_assignment_repo = WalletAssignmentRepo::new(&pool);
         let operator_wallet_repo = OperatorWalletRepo::new(&pool);
         let network_repo = NetworkRepo::new(&pool);
-        let transaction_repo = TransactionRepo::new(&pool);
+        let transaction_repo = TxRequestRepo::new(&pool);
+        let execution_attempt_repo = ExecutionAttemptRepo::new(&pool);
+        let execution_attempt_item_repo = ExecutionAttemptItemRepo::new(&pool);
         let networks = network_repo.select_all().await?;
 
         let wallet_pool_manager = WalletPoolManager::build(operator_wallet_repo, &networks);
         let tx_context_builder = TxContextBuilder::build(&transaction_repo);
-        let contract_manager = ContractManager::build(&networks)?;
+        let contract_manager = ContractManager::build(&networks).await?;
 
         let mut sqs_batch_response = SqsBatchResponse::default();
 
@@ -86,7 +90,26 @@ pub mod aws_lambda {
                 continue;
             };
 
-            // next: create transaction_assignment, send transaction, mark txs in DB, release wallet
+            let assignment_ids = wallet_assignment_repo
+                .new_assignments(&execute_batch_context.tx_ids, wallet.operator_wallet_db.id)
+                .await?;
+
+            let pending_nonce = wallet.ow_wallet.get_pending_nonce().await?;
+
+            if i64::try_from(pending_nonce)? != wallet.operator_wallet_db.nonce {
+                panic!("disco time!");
+                // here use abstracted function that will emergency release transctions
+            }
+
+            let free_nonce = pending_nonce + 1;
+
+            let new_execution_attempt = contract_manager
+                .send_batch(execute_batch_context, wallet, free_nonce)
+                .await?;
+
+            execution_attempt_repo.insert(new_execution_attempt).await?;
+
+            // next: insert execution attempt item, mark txs in DB, release wallet
             // ...
         }
 

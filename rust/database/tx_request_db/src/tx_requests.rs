@@ -32,7 +32,7 @@ pub struct TxRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct InsertTxRequestInput {
+pub struct NewTxRequest {
     pub tx_id: String,
     pub requester_id: String,
     pub tx_type: TxType,
@@ -47,19 +47,16 @@ pub struct InsertTxRequestInput {
     pub use_operator_wallet_id: Option<Uuid>,
 }
 
-pub struct TransactionRepo<'a> {
+pub struct TxRequestRepo<'a> {
     pool: &'a PgPool,
 }
 
-impl<'a> TransactionRepo<'a> {
+impl<'a> TxRequestRepo<'a> {
     pub fn new(pool: &'a PgPool) -> Self {
         Self { pool }
     }
 
-    pub async fn insert_ignore_conflict(
-        &self,
-        input: &InsertTxRequestInput,
-    ) -> Result<bool, sqlx::Error> {
+    pub async fn insert_ignore_conflict(&self, input: &NewTxRequest) -> Result<bool, sqlx::Error> {
         let result = sqlx::query!(
             r#"
             INSERT INTO tx_requests (

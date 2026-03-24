@@ -1,18 +1,10 @@
 use alloy::primitives::{Address, Uint, keccak256};
 use ow_wallet_adapter::wallet::OwWallet;
-use sender_queue::SenderQueueStandardMessageBody;
 use std::{collections::HashMap, str::FromStr};
-use tx_request_db::tx_requests::{TransactionRepo, TxRequest};
+use tx_request_db::tx_requests::{TxRequest, TxRequestRepo};
 use uuid::Uuid;
 
 use crate::{constants::TX_DEADLINE_IN_SEC, contract::sEOA::ExecuteInput};
-
-pub struct ExecuteTxContext {
-    pub execute_input: ExecuteInput,
-    pub wallet: OwWallet,
-    pub use_operator_wallet_id: Option<Uuid>,
-    pub pass_value_from_operator_wallet: bool,
-}
 
 pub struct ExecuteBatchTxContext {
     pub chain_id: i64,
@@ -23,11 +15,11 @@ pub struct ExecuteBatchTxContext {
 }
 
 pub struct TxContextBuilder<'a> {
-    transaction_repo: &'a TransactionRepo<'a>,
+    transaction_repo: &'a TxRequestRepo<'a>,
 }
 
 impl<'a> TxContextBuilder<'a> {
-    pub fn build(transaction_repo: &'a TransactionRepo) -> Self {
+    pub fn build(transaction_repo: &'a TxRequestRepo) -> Self {
         Self { transaction_repo }
     }
 
@@ -114,11 +106,11 @@ impl<'a> TxContextBuilder<'a> {
     }
 }
 
-trait ToExecuteInput {
+trait IntoExecuteInput {
     fn into_execute_input(self) -> anyhow::Result<ExecuteInput>;
 }
 
-impl ToExecuteInput for TxRequest {
+impl IntoExecuteInput for TxRequest {
     fn into_execute_input(self) -> anyhow::Result<ExecuteInput> {
         Ok(ExecuteInput {
             target: Address::from_str(self.to_address.as_str())?,
