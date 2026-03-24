@@ -9,6 +9,8 @@ use uuid::Uuid;
 pub enum TxStatus {
     SIGNED,
     LOCKED,
+    BROADCASTED,
+    INVALID,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -197,6 +199,22 @@ impl<'a> TxRequestRepo<'a> {
         WHERE tx_id = $1
         "#,
             tx_id
+        )
+        .execute(self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn mark_many_as_broadcasted(&self, tx_ids: &Vec<String>) -> anyhow::Result<()> {
+        sqlx::query!(
+            r#"
+        UPDATE tx_requests
+        SET 
+            tx_status = 'SIGNED'
+        WHERE tx_id = ANY($1)
+        "#,
+            tx_ids
         )
         .execute(self.pool)
         .await?;
