@@ -72,4 +72,33 @@ impl<'a> WalletAssignmentRepo<'a> {
 
         Ok(id)
     }
+
+    pub async fn new_assignments(
+        &self,
+        tx_ids: &Vec<String>,
+        operator_wallet_id: Uuid,
+    ) -> anyhow::Result<Vec<Uuid>> {
+        let mut tx = self.pool.begin().await?;
+
+        let ids = sqlx::query_scalar!(
+            r#"
+            INSERT INTO wallet_assignments (
+                tx_id,
+                operator_wallet_id
+            )
+            SELECT 
+                unnest($1::text[]),
+                $2
+            RETURNING id
+            "#,
+            &tx_ids,
+            operator_wallet_id,
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(ids)
+    }
 }

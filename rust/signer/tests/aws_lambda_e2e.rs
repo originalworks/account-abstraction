@@ -6,11 +6,11 @@ mod tests {
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
     use lambda_runtime::{Context, LambdaEvent};
-    use network_db::networks::{InsertNetworkInput, NetworkRepo};
+    use network_db::networks::{NetworkRepo, NewNetwork};
     use serde_json::json;
     use sqlx::PgPool;
     use transaction_signer::{Config, aws_lambda::function_handler};
-    use tx_request_db::tx_requests::TransactionRepo;
+    use tx_request_db::tx_requests::TxRequestRepo;
 
     async fn create_transaction_sender_queue() -> anyhow::Result<()> {
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
@@ -32,7 +32,7 @@ mod tests {
         let pool = PgPool::connect(&Config::get_env_var("DATABASE_URL")).await?;
         let network_repo = NetworkRepo::new(&pool);
         network_repo
-            .insert_new_network(&InsertNetworkInput {
+            .insert_new_network(&NewNetwork {
                 rpc_url,
                 chain_id,
                 contract_address: "0x0123".to_string(),
@@ -88,7 +88,7 @@ mod tests {
             }
         };
 
-        let transaction_repo = TransactionRepo::new(&pool);
+        let transaction_repo = TxRequestRepo::new(&pool);
         let inserted_transaction = transaction_repo.find_by_tx_id(tx_id.to_string()).await?;
 
         assert!(inserted_transaction.signature.is_empty() == false);

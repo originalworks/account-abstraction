@@ -26,6 +26,9 @@ aws-config = { workspace = true, features = [
 ], optional = true }
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
+execution_attempt_db.workspace = true
+execution_attempt_item_db.workspace = true
+db_types.workspace = true
 
 
 [features]

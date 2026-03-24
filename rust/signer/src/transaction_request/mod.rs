@@ -3,7 +3,7 @@ pub mod sqs;
 
 use db_types::TxType;
 use serde::{Deserialize, Serialize};
-use tx_request_db::tx_requests::{InsertTxRequestInput, TxStatus};
+use tx_request_db::tx_requests::{NewTxRequest, TxStatus};
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -21,8 +21,8 @@ pub struct RequestBody {
 }
 
 impl RequestBody {
-    pub fn into_db_input(&self, signature: Vec<u8>) -> anyhow::Result<InsertTxRequestInput> {
-        Ok(InsertTxRequestInput {
+    pub fn into_db_input(&self, signature: Vec<u8>) -> anyhow::Result<NewTxRequest> {
+        Ok(NewTxRequest {
             tx_id: self.tx_id.clone(),
             requester_id: self.requester_id.clone(),
             tx_type: self.tx_type.clone(),

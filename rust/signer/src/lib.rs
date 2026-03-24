@@ -76,7 +76,7 @@ pub mod aws_lambda {
         blob_queue::{SenderQueueBlobMessageBody, sqs::SenderBlobSqsQueue},
         standard_queue::{SenderQueueStandardMessageBody, sqs::SenderStandardSqsQueue},
     };
-    use tx_request_db::tx_requests::TransactionRepo;
+    use tx_request_db::tx_requests::TxRequestRepo;
 
     use crate::{Config, calldata::parse_calldata, transaction_request::RequestBody};
 
@@ -88,7 +88,7 @@ pub mod aws_lambda {
         let config = Config::build()?;
         let wallet_config = OwWalletConfig::from(&config)?;
         let wallet = OwWallet::build(&wallet_config).await?;
-        let transaction_repo = TransactionRepo::new(&pool);
+        let transaction_repo = TxRequestRepo::new(&pool);
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
         let aws_config = aws_config::defaults(BehaviorVersion::latest())
             .region(region_provider)

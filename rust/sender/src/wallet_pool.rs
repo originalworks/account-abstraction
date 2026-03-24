@@ -7,8 +7,13 @@ use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+pub struct Wallet {
+    pub operator_wallet_db: OperatorWallet,
+    pub ow_wallet: OwWallet,
+}
+
 enum AcquireAttemptResult {
-    Acquired(OwWallet),
+    Acquired(Wallet),
     NoWalletAvailable,
     InsufficientFunds(Uuid),
 }
@@ -84,7 +89,7 @@ impl<'a> WalletPoolManager<'a> {
         let ow_wallet_config = OwWalletConfig {
             use_kms: true,
             rpc_url: network.rpc_url.clone(),
-            signer_kms_id: Some(operator_wallet.key_ref),
+            signer_kms_id: Some(operator_wallet.key_ref.clone()),
             private_key: None,
         };
 
@@ -97,14 +102,17 @@ impl<'a> WalletPoolManager<'a> {
             return Ok(AcquireAttemptResult::InsufficientFunds(operator_wallet.id));
         }
 
-        Ok(AcquireAttemptResult::Acquired(ow_wallet))
+        Ok(AcquireAttemptResult::Acquired(Wallet {
+            operator_wallet_db: operator_wallet,
+            ow_wallet,
+        }))
     }
 
     pub async fn acquire(
         &self,
         chain_id: i64,
         use_operator_wallet_id: Option<Uuid>,
-    ) -> anyhow::Result<Option<OwWallet>> {
+    ) -> anyhow::Result<Option<Wallet>> {
         loop {
             match self
                 .try_acquire_once(chain_id, use_operator_wallet_id)
