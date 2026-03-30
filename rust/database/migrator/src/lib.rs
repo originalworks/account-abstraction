@@ -1,9 +1,8 @@
-use sqlx::{PgPool, migrate::Migrator};
+use sqlx::migrate::Migrator;
 
 static MIGRATOR: Migrator = sqlx::migrate!("../migrations");
 
-pub async fn run_migration(database_url: &String) -> anyhow::Result<()> {
-    let pool = PgPool::connect(database_url).await?;
-    MIGRATOR.run(&pool).await?;
+pub async fn run_migration(pool: &sqlx::Pool<sqlx::Postgres>) -> anyhow::Result<()> {
+    MIGRATOR.run(pool).await?;
     Ok(())
 }
