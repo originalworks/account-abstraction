@@ -19,14 +19,6 @@ mod tests {
     }
 
     #[test]
-    fn fails_if_empty() {
-        let input = "0x".to_string();
-        let err = parse_calldata(&input).unwrap_err();
-
-        assert_eq!(err.to_string(), "CALLDATA is empty");
-    }
-
-    #[test]
     fn fails_if_odd_length() {
         let input = "0xabc".to_string();
         let err = parse_calldata(&input).unwrap_err();
@@ -47,6 +39,9 @@ mod tests {
         let input = "0xdead".to_string(); // 2 bytes only
         let err = parse_calldata(&input).unwrap_err();
 
-        assert_eq!(err.to_string(), "CALLDATA shorter than 4-byte selector");
+        assert_eq!(
+            err.to_string(),
+            "CALLDATA must be empty or at least 4 bytes"
+        );
     }
 }

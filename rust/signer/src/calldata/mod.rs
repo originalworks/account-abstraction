@@ -6,10 +6,6 @@ mod tests;
 pub fn parse_calldata(input: &String) -> anyhow::Result<Vec<u8>> {
     let hex = input.strip_prefix("0x").unwrap_or(input);
 
-    if hex.is_empty() {
-        return Err(anyhow!("CALLDATA is empty"));
-    }
-
     if hex.len() % 2 != 0 {
         return Err(anyhow!("CALLDATA has odd-length"));
     }
@@ -18,8 +14,8 @@ pub fn parse_calldata(input: &String) -> anyhow::Result<Vec<u8>> {
         return Err(anyhow!("CALLDATA contains non-hex characters"));
     }
 
-    if hex.len() < 8 {
-        return Err(anyhow!("CALLDATA shorter than 4-byte selector"));
+    if hex.len() > 0 && hex.len() < 8 {
+        return Err(anyhow!("CALLDATA must be empty or at least 4 bytes"));
     }
 
     let bytes = hex::decode(hex).map_err(|_| anyhow!("failed to decode CALLDATA hex"))?;
