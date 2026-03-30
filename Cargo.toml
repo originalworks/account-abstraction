@@ -14,6 +14,7 @@ members = [
     "rust/database/execution_attempt_db",
     "rust/database/db_types",
     "rust/database/execution_attempt_item_db",
+    "rust/signer_queue",
 ]
 
 [workspace.dependencies]
@@ -25,6 +26,7 @@ operator_wallet_db = { path = "./rust/database/operator_wallet_db" }
 execution_attempt_db = { path = "./rust/database/execution_attempt_db" }
 execution_attempt_item_db = { path = "./rust/database/execution_attempt_item_db" }
 db_types = { path = "./rust/database/db_types" }
+signer_queue = { path = "./rust/signer_queue" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"

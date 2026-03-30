@@ -15,6 +15,7 @@ sqlx = { workspace = true, features = ["postgres"] }
 uuid.workspace = true
 sender_queue = { workspace = true, features = ["aws"] }
 db_types.workspace = true
+signer_queue = { workspace = true, features = ["aws"] }
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }

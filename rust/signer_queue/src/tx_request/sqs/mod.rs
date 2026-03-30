@@ -1,5 +1,5 @@
 #![cfg(feature = "aws")]
-use crate::transaction_request::RequestBody;
+use crate::tx_request::TxRequestBody;
 use aws_lambda_events::sqs::SqsEvent;
 use db_types::TxType;
 use lambda_runtime::{LambdaEvent, tracing::log::warn};
@@ -7,9 +7,9 @@ use lambda_runtime::{LambdaEvent, tracing::log::warn};
 #[cfg(test)]
 mod tests;
 
-impl RequestBody {
+impl TxRequestBody {
     pub fn from_sqs_event(event: LambdaEvent<SqsEvent>) -> anyhow::Result<Vec<Self>> {
-        let requests: Vec<RequestBody> = event
+        let requests: Vec<TxRequestBody> = event
             .payload
             .records
             .into_iter()
@@ -21,7 +21,7 @@ impl RequestBody {
                         return None;
                     }
                 };
-                let tx_request_body = match serde_json::from_str::<RequestBody>(&body).ok() {
+                let tx_request_body = match serde_json::from_str::<TxRequestBody>(&body).ok() {
                     Some(v) => v,
                     None => {
                         warn!("Failed to parse to transaction request body: {:?}", body);
