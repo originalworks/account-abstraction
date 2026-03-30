@@ -7,7 +7,7 @@ use tx_request_db::tx_requests::{NewTxRequest, TxStatus};
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct RequestBody {
+pub struct TxRequestBody {
     pub tx_id: String,
     pub requester_id: String,
     pub tx_type: TxType,
@@ -20,7 +20,7 @@ pub struct RequestBody {
     pub use_operator_wallet_id: Option<Uuid>,
 }
 
-impl RequestBody {
+impl TxRequestBody {
     pub fn into_db_input(&self, signature: Vec<u8>) -> anyhow::Result<NewTxRequest> {
         Ok(NewTxRequest {
             tx_id: self.tx_id.clone(),

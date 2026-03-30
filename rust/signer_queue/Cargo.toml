@@ -1,0 +1,19 @@
+[package]
+name = "signer_queue"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+db_types.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tx_request_db.workspace = true
+uuid.workspace = true
+anyhow.workspace = true
+hex.workspace = true
+
+aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
+lambda_runtime = { workspace = true, optional = true }
+
+[features]
+aws = ["dep:aws_lambda_events", "dep:lambda_runtime"]

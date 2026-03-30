@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::transaction_request::RequestBody;
+    use crate::tx_request::TxRequestBody;
     use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
     use lambda_runtime::Context;
     use lambda_runtime::LambdaEvent;
@@ -57,7 +57,7 @@ mod tests {
     fn parses_single_valid_blob_type_message() {
         let json = valid_blob_json();
         let event = build_lambda_event(vec![message_with_body(&json)]);
-        let result = RequestBody::from_sqs_event(event).unwrap();
+        let result = TxRequestBody::from_sqs_event(event).unwrap();
 
         assert_eq!(result.len(), 1);
     }
@@ -74,7 +74,7 @@ mod tests {
             "tx_type": "BLOB",
         }"#;
         let event = build_lambda_event(vec![message_with_body(json)]);
-        let result = RequestBody::from_sqs_event(event).unwrap();
+        let result = TxRequestBody::from_sqs_event(event).unwrap();
 
         assert_eq!(result.len(), 0);
     }
@@ -83,7 +83,7 @@ mod tests {
     fn parses_single_valid_standard_type_message() {
         let json = valid_standard_json();
         let event = build_lambda_event(vec![message_with_body(&json)]);
-        let result = RequestBody::from_sqs_event(event).unwrap();
+        let result = TxRequestBody::from_sqs_event(event).unwrap();
 
         assert_eq!(result.len(), 1);
     }
@@ -94,7 +94,7 @@ mod tests {
         let json2 = valid_blob_json();
 
         let event = build_lambda_event(vec![message_with_body(&json1), message_with_body(&json2)]);
-        let result = RequestBody::from_sqs_event(event).unwrap();
+        let result = TxRequestBody::from_sqs_event(event).unwrap();
 
         assert_eq!(result.len(), 2);
     }
@@ -104,7 +104,7 @@ mod tests {
         let json = valid_standard_json();
 
         let event = build_lambda_event(vec![message_with_body(&json), message_without_body()]);
-        let result = RequestBody::from_sqs_event(event).unwrap();
+        let result = TxRequestBody::from_sqs_event(event).unwrap();
 
         assert_eq!(result.len(), 1);
     }
@@ -115,7 +115,7 @@ mod tests {
         let invalid = r#"not-json"#;
 
         let event = build_lambda_event(vec![message_with_body(&valid), message_with_body(invalid)]);
-        let result = RequestBody::from_sqs_event(event).unwrap();
+        let result = TxRequestBody::from_sqs_event(event).unwrap();
 
         assert_eq!(result.len(), 1);
     }
@@ -124,7 +124,7 @@ mod tests {
     fn returns_empty_vec_if_all_invalid() {
         let event = build_lambda_event(vec![message_without_body(), message_with_body("not-json")]);
 
-        let result = RequestBody::from_sqs_event(event).unwrap();
+        let result = TxRequestBody::from_sqs_event(event).unwrap();
 
         assert!(result.is_empty());
     }

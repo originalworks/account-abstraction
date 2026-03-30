@@ -4520,6 +4520,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "signer_queue"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws_lambda_events",
+ "db_types",
+ "hex",
+ "lambda_runtime",
+ "serde",
+ "serde_json",
+ "tx_request_db",
+ "uuid",
+]
+
+[[package]]
 name = "simd-adler32"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5225,6 +5240,7 @@ dependencies = [
  "sender_queue",
  "serde",
  "serde_json",
+ "signer_queue",
  "sqlx",
  "tokio",
  "tx_request_db",

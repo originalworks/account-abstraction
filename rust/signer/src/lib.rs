@@ -1,5 +1,4 @@
 pub mod calldata;
-pub mod transaction_request;
 use ow_wallet_adapter::HasOwWalletFields;
 use std::env;
 
@@ -67,6 +66,7 @@ impl Config {
 
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
+    use crate::{Config, calldata::parse_calldata};
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
     use db_types::TxType;
@@ -76,9 +76,8 @@ pub mod aws_lambda {
         blob_queue::{SenderQueueBlobMessageBody, sqs::SenderBlobSqsQueue},
         standard_queue::{SenderQueueStandardMessageBody, sqs::SenderStandardSqsQueue},
     };
+    use signer_queue::tx_request::TxRequestBody;
     use tx_request_db::tx_requests::TxRequestRepo;
-
-    use crate::{Config, calldata::parse_calldata, transaction_request::RequestBody};
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
@@ -100,7 +99,7 @@ pub mod aws_lambda {
         let tx_sender_blob_queue =
             SenderBlobSqsQueue::build(&aws_config, &config.sender_blob_queue_url)?;
 
-        let tx_request_body_vec = RequestBody::from_sqs_event(event)?;
+        let tx_request_body_vec = TxRequestBody::from_sqs_event(event)?;
 
         for tx_request_body in tx_request_body_vec {
             println!("Signing: {tx_request_body:?}");
