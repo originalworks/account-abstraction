@@ -1,0 +1,88 @@
+volumes:
+  contracts_artifacts:
+  localstack_data:
+  postgres_data:
+
+
+services:
+  e2e_test_runner:
+    build: .
+    depends_on:
+      contracts_builder:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      anvil:
+        condition: service_healthy
+    working_dir: /account-abstraction
+    volumes:
+      - ../../:/account-abstraction
+      - contracts_artifacts:/account-abstraction/contracts/artifacts
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - RPC_URL=http://anvil:8545
+      - USE_KMS=false
+      - PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #anvil PK
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+    command: ["cargo", "test", "-p", "e2e_test", "--features", "aws"]
+
+  anvil:
+    image: ghcr.io/foundry-rs/foundry
+    platform: linux/amd64
+    entrypoint: anvil
+    command: ["--host", "0.0.0.0"]
+    ports:
+      - "8545:8545"
+    healthcheck:
+      test: ["CMD", "cast", "block-number", "--rpc-url", "http://localhost:8545"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  contracts_builder:
+    build: .
+    working_dir: /account-abstraction/contracts
+    volumes:
+      - ../../:/account-abstraction
+      - contracts_artifacts:/account-abstraction/contracts/artifacts
+    command: ["npm", "i"]
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs
+      - AWS_DEFAULT_REGION=us-east-1
+      - DEBUG=1
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:17
+    container_name: local-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: $POSTGRES_USER
+      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+      POSTGRES_DB: $POSTGRES_DB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
