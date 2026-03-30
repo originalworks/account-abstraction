@@ -4,7 +4,31 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+alloy = { workspace = true, features = ["getrandom"] }
+anyhow.workspace = true
+db_types.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tx_request_db.workspace = true
+uuid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+migrator.workspace = true
+sqlx = { workspace = true, features = ["postgres"] }
+network_db.workspace = true
+signer_queue = { workspace = true, features = ["aws"] }
+signer = { workspace = true, features = ["aws"] }
 
+aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
+lambda_runtime = { workspace = true, optional = true }
+aws-sdk-sqs = { workspace = true, optional = true }
+aws-config = { workspace = true, features = [
+    "behavior-version-latest",
+], optional = true }
 
 [features]
-aws = []
+aws = [
+    "dep:aws_lambda_events",
+    "dep:lambda_runtime",
+    "dep:aws-sdk-sqs",
+    "dep:aws-config",
+]

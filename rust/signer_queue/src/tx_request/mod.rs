@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tx_request_db::tx_requests::{NewTxRequest, TxStatus};
 use uuid::Uuid;
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct TxRequestBody {
     pub tx_id: String,
     pub requester_id: String,

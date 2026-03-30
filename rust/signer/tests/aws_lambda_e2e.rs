@@ -8,8 +8,8 @@ mod tests {
     use lambda_runtime::{Context, LambdaEvent};
     use network_db::networks::{NetworkRepo, NewNetwork};
     use serde_json::json;
+    use signer::{Config, aws_lambda::function_handler};
     use sqlx::PgPool;
-    use transaction_signer::{Config, aws_lambda::function_handler};
     use tx_request_db::tx_requests::TxRequestRepo;
 
     async fn create_transaction_sender_queue() -> anyhow::Result<()> {

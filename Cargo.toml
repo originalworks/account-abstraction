@@ -28,6 +28,8 @@ execution_attempt_db = { path = "./rust/database/execution_attempt_db" }
 execution_attempt_item_db = { path = "./rust/database/execution_attempt_item_db" }
 db_types = { path = "./rust/database/db_types" }
 signer_queue = { path = "./rust/signer_queue" }
+migrator = { path = "./rust/database/migrator" }
+signer = { path = "./rust/signer" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"

@@ -97,7 +97,7 @@ impl<'a> TxRequestRepo<'a> {
         Ok(result.rows_affected() == 1)
     }
 
-    pub async fn find_by_tx_id(&self, tx_id: String) -> anyhow::Result<TxRequest> {
+    pub async fn find_by_tx_id(&self, tx_id: &String) -> anyhow::Result<TxRequest> {
         let transaction = sqlx::query_as!(
             TxRequest,
             r#"
