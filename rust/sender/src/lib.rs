@@ -60,6 +60,8 @@ pub mod aws_lambda {
         println!("Reading...");
         let tx_sender_queue_event = SenderQueueStandardEvent::from_sqs_event(event)?;
 
+        println!("dup[a {tx_sender_queue_event:?}");
+
         let tx_ids = tx_sender_queue_event
             .messages
             .iter()

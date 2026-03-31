@@ -8,16 +8,19 @@ use std::collections::HashMap;
 pub struct SenderStandardSqsQueue {
     client: aws_sdk_sqs::Client,
     transaction_sender_queue_url: String,
+    message_group_id: String,
 }
 
 impl SenderStandardSqsQueue {
     pub fn build(
         aws_config: &aws_config::SdkConfig,
         transaction_sender_queue_url: &String,
+        message_group_id: &String,
     ) -> anyhow::Result<Self> {
         Ok(Self {
             client: aws_sdk_sqs::Client::new(aws_config),
             transaction_sender_queue_url: transaction_sender_queue_url.clone(),
+            message_group_id: message_group_id.clone(),
         })
     }
 
@@ -31,6 +34,7 @@ impl SenderStandardSqsQueue {
             .send_message()
             .queue_url(&self.transaction_sender_queue_url)
             .message_body(sqs_message_body)
+            .message_group_id(&self.message_group_id)
             .send()
             .await?;
         println!("{response:?}");

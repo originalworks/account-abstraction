@@ -1,7 +1,12 @@
 volumes:
-  contracts_artifacts:
+  # contracts_artifacts:
+  # contracts_node_modules:
+  # contracts_cache:
+  # contracts_typechain:
+  # contracts:
   localstack_data:
   postgres_data:
+
 
 
 services:
@@ -21,7 +26,6 @@ services:
     working_dir: /account-abstraction
     volumes:
       - ../../:/account-abstraction
-      - contracts_artifacts:/account-abstraction/contracts/artifacts
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - RPC_URL=http://anvil:${ANVIL_PORT}
@@ -32,7 +36,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_REGION=us-east-1
       - AWS_ENDPOINT_URL=http://localstack:4566
-    command: ["cargo", "test", "-p", "e2e_test", "--features", "aws"]
+      - BLOB_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-blob-queue"
+      - STANDARD_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-standard-queue"
+    command: ["cargo", "test", "-p", "e2e_test", "--features", "aws", "--", "--no-capture"]
 
 
   migration_runner:
@@ -46,6 +52,7 @@ services:
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     command: ["cargo", "run", "-p", "migrator", "--bin", "migrate"]
+
   anvil:
     image: ghcr.io/foundry-rs/foundry
     platform: linux/amd64
@@ -69,8 +76,7 @@ services:
     working_dir: /account-abstraction/contracts
     volumes:
       - ../../:/account-abstraction
-      - contracts_artifacts:/account-abstraction/contracts/artifacts
-    command: ["npm", "i"]
+    command: ["sh", "-c", "npm ci && npx hardhat compile"]
 
   localstack:
     image: localstack/localstack:latest
