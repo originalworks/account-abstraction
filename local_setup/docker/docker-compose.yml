@@ -1,9 +1,4 @@
 volumes:
-  # contracts_artifacts:
-  # contracts_node_modules:
-  # contracts_cache:
-  # contracts_typechain:
-  # contracts:
   localstack_data:
   postgres_data:
 

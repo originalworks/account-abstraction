@@ -1,13 +1,8 @@
-use crate::tx_request::CreateTestTxRequestBody;
-use crate::{
-    constants::{SENDER_BLOB_QUEUE_NAME, SENDER_STANDARD_QUEUE_NAME},
-    tx_request::TxRequestBodyOptional,
-};
+use crate::constants::{SENDER_BLOB_QUEUE_NAME, SENDER_STANDARD_QUEUE_NAME};
 use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
 use aws_sdk_sqs::types::QueueAttributeName;
 use db_types::TxType;
 use lambda_runtime::{Context, LambdaEvent};
-use signer_queue::tx_request::TxRequestBody;
 use std::env;
 
 pub struct SenderQueueTestHelper {
@@ -85,21 +80,6 @@ impl SenderQueueTestHelper {
         return Ok(lambda_sqs_event);
     }
 }
-
-// pub fn build_sqs_event(messages_body: Vec<String>) -> anyhow::Result<LambdaEvent<SqsEvent>> {
-//     let mut sqs_event = SqsEvent::default();
-
-//     for message_body in messages_body {
-//         let mut sqs_message = SqsMessage::default();
-//         sqs_message.body = Some(message_body);
-//         // sqs_message.message_id
-//         sqs_event.records.push(sqs_message);
-//     }
-
-//     let event = LambdaEvent::<SqsEvent>::new(sqs_event, Context::default());
-
-//     Ok(event)
-// }
 
 pub fn build_lambda_sqs_event(
     messages: Vec<TestEventMessage>,
