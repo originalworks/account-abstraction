@@ -2,10 +2,10 @@ FROM ubuntu:24.04
 
 RUN apt-get update && apt install curl libpq-dev pkg-config build-essential ca-certificates -y
 
-# node 20
+# node 22
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
 ENV NVM_DIR=/root/.nvm
-RUN bash -c "source $NVM_DIR/nvm.sh && nvm install 20"
+RUN bash -c "source $NVM_DIR/nvm.sh && nvm install 22"
 ENTRYPOINT ["bash", "-c", "source $NVM_DIR/nvm.sh && exec \"$@\"", "--"]
 
 # rust

@@ -1,5 +1,7 @@
 use alloy::primitives::Address;
+use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
 use db_types::TxType;
+use lambda_runtime::{Context, LambdaEvent};
 use signer_queue::tx_request::TxRequestBody;
 use uuid::Uuid;
 
@@ -35,6 +37,7 @@ impl TxRequestBodyOptional {
 
 pub trait CreateTestTxRequestBody {
     fn build_test_tx_request_body(input: TxRequestBodyOptional) -> anyhow::Result<TxRequestBody>;
+    fn to_string(&self) -> String;
 }
 
 impl CreateTestTxRequestBody for TxRequestBody {
@@ -54,5 +57,9 @@ impl CreateTestTxRequestBody for TxRequestBody {
             blob_file_path: input.blob_file_path,
             use_operator_wallet_id: input.use_operator_wallet_id,
         })
+    }
+
+    fn to_string(&self) -> String {
+        serde_json::json!(self).to_string()
     }
 }

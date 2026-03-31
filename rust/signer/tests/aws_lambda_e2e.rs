@@ -89,7 +89,7 @@ mod tests {
         };
 
         let transaction_repo = TxRequestRepo::new(&pool);
-        let inserted_transaction = transaction_repo.find_by_tx_id(tx_id.to_string()).await?;
+        let inserted_transaction = transaction_repo.find_by_tx_id(&tx_id.to_string()).await?;
 
         assert!(inserted_transaction.signature.is_empty() == false);
         Ok(())

@@ -6,13 +6,19 @@ use std::collections::HashMap;
 pub struct SenderBlobSqsQueue {
     client: aws_sdk_sqs::Client,
     queue_url: String,
+    message_group_id: String,
 }
 
 impl SenderBlobSqsQueue {
-    pub fn build(aws_config: &aws_config::SdkConfig, queue_url: &String) -> anyhow::Result<Self> {
+    pub fn build(
+        aws_config: &aws_config::SdkConfig,
+        queue_url: &String,
+        message_group_id: &String,
+    ) -> anyhow::Result<Self> {
         Ok(Self {
             client: aws_sdk_sqs::Client::new(aws_config),
             queue_url: queue_url.clone(),
+            message_group_id: message_group_id.clone(),
         })
     }
 
@@ -23,6 +29,7 @@ impl SenderBlobSqsQueue {
             .send_message()
             .queue_url(&self.queue_url)
             .message_body(sqs_message_body)
+            .message_group_id(&self.message_group_id)
             .send()
             .await?;
         println!("{response:?}");
