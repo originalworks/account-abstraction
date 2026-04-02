@@ -60,17 +60,17 @@ pub mod aws_lambda {
         println!("Reading...");
         let tx_sender_queue_event = SenderQueueStandardEvent::from_sqs_event(event)?;
 
-        println!("dup[a {tx_sender_queue_event:?}");
-
         let tx_ids = tx_sender_queue_event
             .messages
             .iter()
-            .map(|message| message.message_id.clone())
+            .map(|message| message.body.tx_id.clone())
             .collect::<Vec<String>>();
 
         let execute_batch_context_vec = tx_context_builder
             .fetch_and_sort_into_batches(&tx_ids)
             .await?;
+
+        println!("{execute_batch_context_vec:#?}");
 
         println!("Executing...");
         for execute_batch_context in execute_batch_context_vec {
@@ -93,12 +93,12 @@ pub mod aws_lambda {
             };
 
             let assignment_ids = wallet_assignment_repo
-                .new_assignments(&execute_batch_context.tx_ids, wallet.operator_wallet_db.id)
+                .new_assignments(&execute_batch_context.tx_ids, wallet.db_record.id)
                 .await?;
 
             let pending_nonce = wallet.ow_wallet.get_pending_nonce().await?;
 
-            if i64::try_from(pending_nonce)? != wallet.operator_wallet_db.nonce {
+            if i64::try_from(pending_nonce)? != wallet.db_record.nonce {
                 panic!("disco time!");
                 // TODO: here use abstracted function that will emergency release transctions
             }

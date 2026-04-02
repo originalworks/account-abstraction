@@ -1,7 +1,5 @@
 use alloy::primitives::Address;
-use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
 use db_types::TxType;
-use lambda_runtime::{Context, LambdaEvent};
 use signer_queue::tx_request::TxRequestBody;
 use uuid::Uuid;
 
@@ -44,7 +42,7 @@ impl CreateTestTxRequestBody for TxRequestBody {
     fn build_test_tx_request_body(input: TxRequestBodyOptional) -> anyhow::Result<TxRequestBody> {
         let tx_id = Uuid::new_v4().to_string();
         let random_address = Address::random();
-        let default_tx = "0x".to_string();
+        let default_tx = "".to_string();
         Ok(TxRequestBody {
             tx_id: input.tx_id.unwrap_or(tx_id),
             requester_id: input.requester_id.unwrap_or("requester-1".to_string()),

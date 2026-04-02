@@ -33,6 +33,7 @@ services:
       - AWS_ENDPOINT_URL=http://localstack:4566
       - BLOB_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-blob-queue"
       - STANDARD_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-standard-queue"
+      - ANVIL_MNEMONIC=${ANVIL_MNEMONIC}
     command: ["cargo", "test", "-p", "e2e_test", "--features", "aws", "--", "--no-capture"]
 
 
@@ -56,7 +57,10 @@ services:
       [
         "--host", "0.0.0.0",
         "--port", "${ANVIL_PORT}",
-        "--chain-id", "${ANVIL_CHAIN_ID}"
+        "--chain-id", "${ANVIL_CHAIN_ID}",
+        "--mnemonic", "${ANVIL_MNEMONIC}",
+        "--accounts", "10000",
+        "--balance", "10000"
       ]
     ports:
       - "${ANVIL_PORT}:${ANVIL_PORT}"
