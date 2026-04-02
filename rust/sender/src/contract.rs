@@ -12,13 +12,13 @@ use anyhow::bail;
 use db_types::TxType;
 use execution_attempt_db::execution_attempts::NewExecutionAttempt;
 use network_db::networks::Network;
-use ow_wallet_adapter::wallet::OwWallet;
 use std::{collections::HashMap, str::FromStr};
 use uuid::Uuid;
 
 sol!(
     #[allow(missing_docs)]
     #[sol(rpc)]
+    #[derive(Debug)]
     SEOA,
     "../../contracts/artifacts/contracts/sEOA.sol/sEOA.json"
 );
@@ -141,7 +141,7 @@ impl ContractManager {
             gas_with_buffer,
             tx_hash,
             nonce,
-            wallet.operator_wallet_db.id,
+            wallet.db_record.id,
             tx_context.chain_id,
             tx_context.batch_tx_value,
         )?;

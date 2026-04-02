@@ -1,4 +1,5 @@
 pub mod network;
+pub mod operator_wallet;
 
 use sqlx::PgPool;
 use std::env;

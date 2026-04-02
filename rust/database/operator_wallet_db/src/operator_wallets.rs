@@ -1,13 +1,31 @@
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, types::time::OffsetDateTime};
+use sqlx::{PgPool, Type, types::time::OffsetDateTime};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]
+#[sqlx(type_name = "text")]
+pub enum KeyType {
+    AwsKms,
+    #[cfg(feature = "test-keys")]
+    TestPrivateKey,
+}
+
+#[derive(Debug)]
+pub struct NewOperatorWallet {
+    pub id: Uuid,
+    pub wallet_address: String,
+    pub key_ref: String,
+    pub key_type: KeyType,
+    pub chain_id: i64,
+    pub current_nonce: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct OperatorWallet {
     pub id: Uuid,
     pub wallet_address: String,
     pub key_ref: String,
-    pub key_type: String,
+    pub key_type: KeyType,
     pub chain_id: i64,
     pub nonce: i64,
     pub is_enabled: bool,
@@ -34,7 +52,7 @@ impl<'a> OperatorWalletRepo<'a> {
                 id,
                 wallet_address,
                 key_ref,
-                key_type,
+                key_type as "key_type: KeyType",
                 chain_id,
                 nonce,
                 is_enabled,
@@ -82,7 +100,7 @@ impl<'a> OperatorWalletRepo<'a> {
             ow.id,
             ow.wallet_address,
             ow.key_ref,
-            ow.key_type,
+            ow.key_type as "key_type: KeyType",
             ow.chain_id,
             ow.nonce,
             ow.is_enabled,
@@ -124,7 +142,7 @@ impl<'a> OperatorWalletRepo<'a> {
             ow.id,
             ow.wallet_address,
             ow.key_ref,
-            ow.key_type,
+            ow.key_type as "key_type: KeyType",
             ow.chain_id,
             ow.nonce,
             ow.is_enabled,
@@ -157,5 +175,56 @@ impl<'a> OperatorWalletRepo<'a> {
         .await?;
 
         Ok(())
+    }
+    pub async fn insert(&self, new_wallet: NewOperatorWallet) -> anyhow::Result<OperatorWallet> {
+        let wallet = sqlx::query_as!(
+            OperatorWallet,
+            r#"
+        INSERT INTO operator_wallets (
+            id,
+            wallet_address,
+            key_ref,
+            key_type,
+            chain_id,
+            nonce,
+            is_enabled,
+            in_use,
+            no_funds
+        )
+        VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            true,
+            false,
+            false
+        )
+        RETURNING
+            id,
+            wallet_address,
+            key_ref,
+            key_type as "key_type: KeyType",
+            chain_id,
+            nonce,
+            is_enabled,
+            in_use,
+            no_funds,
+            created_at,
+            updated_at
+        "#,
+            new_wallet.id,
+            new_wallet.wallet_address,
+            new_wallet.key_ref,
+            new_wallet.key_type as KeyType,
+            new_wallet.chain_id,
+            new_wallet.current_nonce
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(wallet)
     }
 }

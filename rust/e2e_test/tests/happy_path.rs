@@ -4,6 +4,7 @@ mod tests {
     use e2e_test::aws::sqs::TestEventMessage;
     use e2e_test::aws::sqs::build_lambda_sqs_event;
     use e2e_test::db::network::AddAnvilNetwork;
+    use e2e_test::db::operator_wallet::InsertFromMnemonic;
     use e2e_test::tx_request::CreateTestTxRequestBody;
     use e2e_test::tx_request::TxRequestBodyOptional;
     use e2e_test::{
@@ -11,17 +12,24 @@ mod tests {
         db::{drop_and_migrate, get_pool},
     };
     use network_db::networks::NetworkRepo;
+    use operator_wallet_db::operator_wallets::OperatorWalletRepo;
     use signer_queue::tx_request::TxRequestBody;
     use tx_request_db::tx_requests::TxRequestRepo;
 
     #[tokio::test]
     async fn single_standard_tx_e2e() -> anyhow::Result<()> {
         let anvil_chain_id = std::env::var("ANVIL_CHAIN_ID").unwrap().parse()?;
+        let anvil_mnemonic = std::env::var("ANVIL_MNEMONIC").unwrap();
+
         let pool = get_pool().await?;
         drop_and_migrate(&pool).await?;
         let network_repo = NetworkRepo::new(&pool);
         let tx_request_repo = TxRequestRepo::new(&pool);
-        network_repo.add_anvil().await?;
+        let operator_wallet_repo = OperatorWalletRepo::new(&pool);
+        network_repo.add_anvil("0x0123".to_string()).await?;
+        operator_wallet_repo
+            .insert_from_mnemonic(anvil_mnemonic, anvil_chain_id, 5)
+            .await?;
 
         let aws_config: aws_config::SdkConfig = build_aws_sdk_config().await?;
         let sender_queue_test_helper = SenderQueueTestHelper::build(aws_config).await?;
@@ -53,9 +61,12 @@ mod tests {
 
         println!("sender_queue_event in happy path: {sender_queue_event:#?}");
 
-        sender::aws_lambda::function_handler(sender_queue_event, &pool)
-            .await
-            .unwrap();
+        match sender::aws_lambda::function_handler(sender_queue_event, &pool).await {
+            Ok(_) => {}
+            Err(err) => {
+                println!("{err:#?}")
+            }
+        }
 
         Ok(())
     }

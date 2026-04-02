@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-alloy = { workspace = true, features = ["getrandom"] }
+alloy = { workspace = true, features = ["getrandom", "signer-mnemonic"] }
 anyhow.workspace = true
 db_types.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
@@ -24,7 +24,9 @@ aws-sdk-sqs = { workspace = true, optional = true }
 aws-config = { workspace = true, features = [
     "behavior-version-latest",
 ], optional = true }
-sender = { workspace = true, features = ["aws"] }
+sender = { workspace = true, features = ["aws", "test-keys"] }
+operator_wallet_db = { workspace = true, features = ["test-keys"] }
+hex.workspace = true
 
 [features]
 aws = [

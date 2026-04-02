@@ -58,12 +58,14 @@ impl<'a> WalletAssignmentRepo<'a> {
         let id = sqlx::query_scalar!(
             r#"
             INSERT INTO wallet_assignments (
+                id,
                 tx_id,
                 operator_wallet_id
             )
-            VALUES ($1, $2)
+            VALUES ($1, $2, $3)
             RETURNING id
             "#,
+            uuid::Uuid::new_v4(),
             tx_id,
             operator_wallet_id,
         )
@@ -83,14 +85,20 @@ impl<'a> WalletAssignmentRepo<'a> {
         let ids = sqlx::query_scalar!(
             r#"
             INSERT INTO wallet_assignments (
+                id,
                 tx_id,
                 operator_wallet_id
             )
             SELECT 
-                unnest($1::text[]),
-                $2
+                unnest($1::uuid[]),
+                unnest($2::text[]),
+                $3
             RETURNING id
             "#,
+            &tx_ids
+                .iter()
+                .map(|_| uuid::Uuid::new_v4())
+                .collect::<Vec<Uuid>>(),
             &tx_ids,
             operator_wallet_id,
         )

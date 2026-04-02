@@ -1,11 +1,11 @@
-use alloy::primitives::{Address, Uint, keccak256};
-use ow_wallet_adapter::wallet::OwWallet;
+use alloy::primitives::{Address, Bytes, Uint, keccak256};
 use std::{collections::HashMap, str::FromStr};
 use tx_request_db::tx_requests::{TxRequest, TxRequestRepo};
 use uuid::Uuid;
 
 use crate::{constants::TX_DEADLINE_IN_SEC, contract::sEOA::ExecuteInput};
 
+#[derive(Debug)]
 pub struct ExecuteBatchTxContext {
     pub chain_id: i64,
     pub execute_batch_input: Vec<ExecuteInput>,
@@ -27,7 +27,10 @@ impl<'a> TxContextBuilder<'a> {
         &self,
         tx_ids: &Vec<String>,
     ) -> anyhow::Result<Vec<ExecuteBatchTxContext>> {
+        println!("tx_ids: {tx_ids:#?}");
         let fetched_txs = self.transaction_repo.select_and_lock_many(tx_ids).await?;
+
+        println!("fetched_txs: {fetched_txs:#?}");
 
         let sorted = Self::group_by_chain_and_wallet(fetched_txs);
 
