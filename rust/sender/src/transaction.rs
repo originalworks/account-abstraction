@@ -3,7 +3,7 @@ use std::{collections::HashMap, str::FromStr};
 use tx_request_db::tx_requests::{TxRequest, TxRequestRepo};
 use uuid::Uuid;
 
-use crate::{constants::TX_DEADLINE_IN_SEC, contract::sEOA::ExecuteInput};
+use crate::contract::sEOA::ExecuteInput;
 
 #[derive(Debug)]
 pub struct ExecuteBatchTxContext {
@@ -120,7 +120,7 @@ impl IntoExecuteInput for TxRequest {
             payload: self.calldata.into(),
             value: Uint::<256, 4>::from(self.value_wei as u64),
             salt: keccak256(self.tx_id.into_bytes()),
-            deadline: Uint::<256, 4>::from(TX_DEADLINE_IN_SEC as u64),
+            deadline: Uint::<256, 4>::from(self.deadline_timestamp as u64),
             signature: self.signature.into(),
         })
     }

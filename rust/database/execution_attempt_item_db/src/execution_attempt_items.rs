@@ -47,13 +47,16 @@ impl<'a> ExecutionAttemptItemRepo<'a> {
         execution_attempt_id: Uuid,
         tx_ids: &Vec<String>,
     ) -> anyhow::Result<()> {
+        let ids: Vec<Uuid> = tx_ids.iter().map(|_| Uuid::new_v4()).collect();
+
         sqlx::query!(
             r#"
-            INSERT INTO execution_attempt_items (execution_attempt_id, tx_id)
-            SELECT $1, tx_id
-            FROM UNNEST($2::text[]) AS tx_id
+            INSERT INTO execution_attempt_items (id, execution_attempt_id, tx_id)
+            SELECT id, $1, tx_id
+            FROM UNNEST($2::uuid[], $3::text[]) AS t(id, tx_id)
             "#,
             execution_attempt_id,
+            &ids,
             tx_ids
         )
         .execute(self.pool)

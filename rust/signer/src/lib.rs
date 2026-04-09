@@ -1,4 +1,6 @@
 pub mod calldata;
+pub mod constants;
+pub mod signature;
 pub mod wallet;
 
 use std::env;
@@ -55,15 +57,13 @@ impl Config {
 
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
-    use std::collections::HashMap;
 
-    use crate::{Config, calldata::parse_calldata, wallet::WalletManager};
+    use crate::{Config, signature::sign_tx_request, wallet::WalletManager};
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
     use db_types::TxType;
     use lambda_runtime::LambdaEvent;
-    use network_db::networks::{Network, NetworkRepo};
-    use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
+    use network_db::networks::NetworkRepo;
     use sender_queue::{
         blob_queue::{SenderQueueBlobMessageBody, sqs::SenderBlobSqsQueue},
         standard_queue::{SenderQueueStandardMessageBody, sqs::SenderStandardSqsQueue},
@@ -81,10 +81,6 @@ pub mod aws_lambda {
         let transaction_repo = TxRequestRepo::new(&pool);
         let network_repo = NetworkRepo::new(&pool);
         let networks = network_repo.select_all().await?;
-        // let mut networks_by_chain_id = HashMap::<i64, Network>::new();
-        // for network in networks {
-        //     networks_by_chain_id.insert(network.chain_id, network.clone());
-        // }
 
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
         let aws_config = aws_config::defaults(BehaviorVersion::latest())
@@ -110,10 +106,7 @@ pub mod aws_lambda {
             println!("Signing: {tx_request_body:?}");
 
             let wallet = wallet_manager.get_wallet(tx_request_body.chain_id).await?;
-
-            let calldata = parse_calldata(&tx_request_body.calldata)?;
-
-            let signature = wallet.sign_message(calldata.as_slice()).await?;
+            let signature = sign_tx_request(&tx_request_body, wallet).await?;
 
             println!("Saving...");
             let insert_tx_input = tx_request_body.into_db_input(signature.as_bytes().to_vec())?;

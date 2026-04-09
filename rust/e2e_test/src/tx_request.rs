@@ -36,12 +36,12 @@ impl TxRequestBodyOptional {
 }
 
 pub trait CreateTestTxRequestBody {
-    fn build_test_tx_request_body(input: TxRequestBodyOptional) -> anyhow::Result<TxRequestBody>;
+    fn test_build(input: TxRequestBodyOptional) -> anyhow::Result<TxRequestBody>;
     fn to_string(&self) -> String;
 }
 
 impl CreateTestTxRequestBody for TxRequestBody {
-    fn build_test_tx_request_body(input: TxRequestBodyOptional) -> anyhow::Result<TxRequestBody> {
+    fn test_build(input: TxRequestBodyOptional) -> anyhow::Result<TxRequestBody> {
         let tx_id = Uuid::new_v4().to_string();
         let random_address = Address::random();
         let default_tx = "".to_string();
@@ -49,6 +49,7 @@ impl CreateTestTxRequestBody for TxRequestBody {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
+
         let deadline_timestamp = current_timestamp + 3600;
 
         Ok(TxRequestBody {
