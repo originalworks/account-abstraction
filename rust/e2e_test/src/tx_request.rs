@@ -50,9 +50,6 @@ impl CreateTestTxRequestBody for TxRequestBody {
             .unwrap()
             .as_secs();
 
-        println!(
-            "-------------------------------------------------------------------------{current_timestamp}"
-        );
         let deadline_timestamp = current_timestamp + 3600;
 
         Ok(TxRequestBody {
