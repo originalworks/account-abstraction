@@ -1,22 +1,7 @@
 pub mod calldata;
-use network_db::networks::Network;
-use ow_wallet_adapter::OwWalletConfig;
+pub mod wallet;
+
 use std::env;
-
-pub trait OwWalletConfigForNetwork {
-    fn get_ow_wallet_for_network(&self, network: &Network) -> anyhow::Result<OwWalletConfig>;
-}
-
-impl OwWalletConfigForNetwork for Config {
-    fn get_ow_wallet_for_network(&self, network: &Network) -> anyhow::Result<OwWalletConfig> {
-        Ok(OwWalletConfig {
-            rpc_url: network.rpc_url.clone(),
-            use_kms: self.use_kms,
-            private_key: self.private_key.clone(),
-            signer_kms_id: self.signer_kms_id.clone(),
-        })
-    }
-}
 
 pub struct Config {
     pub use_kms: bool,
@@ -72,7 +57,7 @@ impl Config {
 pub mod aws_lambda {
     use std::collections::HashMap;
 
-    use crate::{Config, OwWalletConfigForNetwork, calldata::parse_calldata};
+    use crate::{Config, calldata::parse_calldata, wallet::WalletManager};
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
     use db_types::TxType;
@@ -96,10 +81,10 @@ pub mod aws_lambda {
         let transaction_repo = TxRequestRepo::new(&pool);
         let network_repo = NetworkRepo::new(&pool);
         let networks = network_repo.select_all().await?;
-        let mut networks_by_chain_id = HashMap::<i64, Network>::new();
-        for network in networks {
-            networks_by_chain_id.insert(network.chain_id, network.clone());
-        }
+        // let mut networks_by_chain_id = HashMap::<i64, Network>::new();
+        // for network in networks {
+        //     networks_by_chain_id.insert(network.chain_id, network.clone());
+        // }
 
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
         let aws_config = aws_config::defaults(BehaviorVersion::latest())
@@ -119,15 +104,12 @@ pub mod aws_lambda {
         )?;
 
         let tx_request_body_vec = TxRequestBody::from_sqs_event(event)?;
+        let mut wallet_manager = WalletManager::build(&networks, &config)?;
 
         for tx_request_body in tx_request_body_vec {
             println!("Signing: {tx_request_body:?}");
-            let network = networks_by_chain_id
-                .get(&tx_request_body.chain_id)
-                .expect(format!("Network not found for {}", tx_request_body.chain_id).as_str());
 
-            let wallet_config = config.get_ow_wallet_for_network(network)?;
-            let wallet = OwWallet::build(&wallet_config).await?;
+            let wallet = wallet_manager.get_wallet(tx_request_body.chain_id).await?;
 
             let calldata = parse_calldata(&tx_request_body.calldata)?;
 
