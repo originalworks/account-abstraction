@@ -9,6 +9,7 @@ Example of JSON input for TX request:
   "to_address": "0xAA",
   "value_wei": 100,
   "chain_id": 1,
+  "deadline_timestamp: "1772460383",
   "pass_value_from_operator_wallet": true,      // "true" -> tx value ("value_wei") covered from operator wallet balance
                                                 // "false" -> tx value covered from sEOA balance
   "blob_file_path": "s3://some-bucket", // optional, needed only when "tx_type": "BLOB"
