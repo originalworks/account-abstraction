@@ -88,6 +88,7 @@ impl<'a> ExecutionAttemptRepo<'a> {
             ExecutionAttempt,
             r#"
             INSERT INTO execution_attempts (
+                id,
                 chain_id,
                 operator_wallet_id,
                 nonce_used,
@@ -100,7 +101,7 @@ impl<'a> ExecutionAttemptRepo<'a> {
                 tx_value
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
             )
             RETURNING
                 id,
@@ -118,6 +119,7 @@ impl<'a> ExecutionAttemptRepo<'a> {
                 created_at,
                 updated_at
             "#,
+            uuid::Uuid::new_v4(),
             input.chain_id,
             input.operator_wallet_id,
             input.nonce_used,

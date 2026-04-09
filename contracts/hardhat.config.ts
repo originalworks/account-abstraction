@@ -1,17 +1,25 @@
 import type { HardhatUserConfig } from "hardhat/config";
 
-import hardhatEthers from '@nomicfoundation/hardhat-ethers'
-import hardhatEthersChaiMatchers from '@nomicfoundation/hardhat-ethers-chai-matchers' 
-import hardhatKeystore from '@nomicfoundation/hardhat-keystore' 
-import hardhatMocha from '@nomicfoundation/hardhat-mocha' 
-import hardhatNetworkHelpers from '@nomicfoundation/hardhat-network-helpers' 
-import hardhatTypechain from '@nomicfoundation/hardhat-typechain' 
-import hardhatVerify from '@nomicfoundation/hardhat-verify'
+import hardhatEthers from "@nomicfoundation/hardhat-ethers";
+import hardhatEthersChaiMatchers from "@nomicfoundation/hardhat-ethers-chai-matchers";
+import hardhatKeystore from "@nomicfoundation/hardhat-keystore";
+import hardhatMocha from "@nomicfoundation/hardhat-mocha";
+import hardhatNetworkHelpers from "@nomicfoundation/hardhat-network-helpers";
+import hardhatTypechain from "@nomicfoundation/hardhat-typechain";
+import hardhatVerify from "@nomicfoundation/hardhat-verify";
 
 import { configVariable } from "hardhat/config";
 
 const config: HardhatUserConfig = {
-  plugins: [hardhatEthers, hardhatEthersChaiMatchers, hardhatKeystore, hardhatMocha, hardhatNetworkHelpers, hardhatTypechain, hardhatVerify],
+  plugins: [
+    hardhatEthers,
+    hardhatEthersChaiMatchers,
+    hardhatKeystore,
+    hardhatMocha,
+    hardhatNetworkHelpers,
+    hardhatTypechain,
+    hardhatVerify,
+  ],
   solidity: {
     profiles: {
       default: {
@@ -29,15 +37,24 @@ const config: HardhatUserConfig = {
     },
   },
   typechain: {
-    outDir: 'typechain',
-    
+    outDir: "typechain",
   },
   networks: {
     localhost: {
       type: "http",
-      chainType: 'l1',
-      url: 'http://127.0.0.1:8545',
-      accounts: {mnemonic: "test test test test test test test test test test test junk"}
+      chainType: "l1",
+      url: "http://127.0.0.1:8545",
+      accounts: {
+        mnemonic: "test test test test test test test test test test test junk",
+      },
+    },
+    anvilDocker: {
+      type: "http",
+      chainType: "l1",
+      url: "http://anvil:8545",
+      accounts: {
+        mnemonic: "test test test test test test test test test test test junk",
+      },
     },
     hardhatMainnet: {
       type: "edr-simulated",
@@ -50,11 +67,11 @@ const config: HardhatUserConfig = {
     sepolia: {
       type: "http",
       chainType: "l1",
-      url: 'https://eth-sepolia.g.alchemy.com/v2/PlbpBvp7JeNHwWFG0TY1X',
+      url: "https://eth-sepolia.g.alchemy.com/v2/PlbpBvp7JeNHwWFG0TY1X",
       accounts: [
         configVariable("WALLET_ONE_PK"),
-        configVariable("WALLET_TWO_PK")
-      ]
+        configVariable("WALLET_TWO_PK"),
+      ],
     },
   },
 };

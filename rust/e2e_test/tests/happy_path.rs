@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use alloy::{primitives::Address, signers::local::PrivateKeySigner};
     use e2e_test::aws::sqs::SenderQueueTestHelper;
     use e2e_test::aws::sqs::TestEventMessage;
     use e2e_test::aws::sqs::build_lambda_sqs_event;
@@ -16,6 +17,13 @@ mod tests {
     use signer_queue::tx_request::TxRequestBody;
     use tx_request_db::tx_requests::TxRequestRepo;
 
+    pub fn get_seoa_address() -> anyhow::Result<Address> {
+        let seoa_private_key = std::env::var("PRIVATE_KEY").unwrap();
+        let pk_signer: PrivateKeySigner = seoa_private_key.parse().unwrap();
+
+        Ok(pk_signer.address())
+    }
+
     #[tokio::test]
     async fn single_standard_tx_e2e() -> anyhow::Result<()> {
         let anvil_chain_id = std::env::var("ANVIL_CHAIN_ID").unwrap().parse()?;
@@ -26,7 +34,8 @@ mod tests {
         let network_repo = NetworkRepo::new(&pool);
         let tx_request_repo = TxRequestRepo::new(&pool);
         let operator_wallet_repo = OperatorWalletRepo::new(&pool);
-        network_repo.add_anvil("0x0123".to_string()).await?;
+        let seoa_address = get_seoa_address()?;
+        network_repo.add_anvil(seoa_address.to_string()).await?;
         operator_wallet_repo
             .insert_from_mnemonic(anvil_mnemonic, anvil_chain_id, 5)
             .await?;
@@ -34,9 +43,10 @@ mod tests {
         let aws_config: aws_config::SdkConfig = build_aws_sdk_config().await?;
         let sender_queue_test_helper = SenderQueueTestHelper::build(aws_config).await?;
 
-        let tx_request_body = TxRequestBody::build_test_tx_request_body(
-            TxRequestBodyOptional::default(db_types::TxType::STANDARD, anvil_chain_id),
-        )?;
+        let tx_request_body = TxRequestBody::test_build(TxRequestBodyOptional::default(
+            db_types::TxType::STANDARD,
+            anvil_chain_id,
+        ))?;
 
         let tx_request_event = build_lambda_sqs_event(vec![TestEventMessage::new(
             &tx_request_body.to_string(),
