@@ -3,7 +3,6 @@ import { SEOA__factory } from "../typechain/factories/SEOA__factory.js";
 import { expect } from "chai";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/types";
 import { SEOA } from "../typechain/SEOA.js";
-// import { ExecuteInputStruct } from "../typechain/SEOA.js/";
 import { HDNodeWallet } from "ethers";
 import { ERC20TokenMock, ERC20TokenMock__factory } from "../typechain/index.js";
 
@@ -94,7 +93,7 @@ async function buildAndSign(input: BuildAndSignInput) {
   };
 
   const types = {
-    Execute: [
+    SignedCall: [
       { name: "target", type: "address" },
       { name: "payloadHash", type: "bytes32" },
       { name: "value", type: "uint256" },
