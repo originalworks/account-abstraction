@@ -28,9 +28,17 @@ contract sEOA is EIP712 {
         bytes signature;
     }
 
-    bytes32 private constant EXECUTE_TYPEHASH =
+    struct SignedCall {
+        address target;
+        bytes32 payloadHash;
+        uint256 value;
+        bytes32 salt;
+        uint256 deadline;
+    }
+
+    bytes32 private constant SIGNED_CALL_TYPEHASH =
         keccak256(
-            "Execute(address target,bytes32 payloadHash,uint256 value,bytes32 salt,uint256 deadline)"
+            "SignedCall(address target,bytes32 payloadHash,uint256 value,bytes32 salt,uint256 deadline)"
         );
 
     mapping(bytes32 => bool) public usedSalts;
@@ -83,7 +91,7 @@ contract sEOA is EIP712 {
             _hashTypedDataV4(
                 keccak256(
                     abi.encode(
-                        EXECUTE_TYPEHASH,
+                        SIGNED_CALL_TYPEHASH,
                         target,
                         keccak256(payload),
                         value,
@@ -97,6 +105,8 @@ contract sEOA is EIP712 {
     function domainSeparator() external view returns (bytes32) {
         return _domainSeparatorV4();
     }
+
+    function _exposeStruct(SignedCall calldata) external pure {}
 
     receive() external payable {}
 }

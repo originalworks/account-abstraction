@@ -144,6 +144,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-sol-type-parser",
  "alloy-sol-types",
+ "derive_more",
  "itoa",
  "serde",
  "serde_json",
@@ -523,11 +524,13 @@ dependencies = [
 
 [[package]]
 name = "alloy-signer"
-version = "1.7.3"
+version = "1.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2425c6f314522c78e8198979c8cbf6769362be4da381d4152ea8eefce383535d"
+checksum = "43f447aefab0f1c0649f71edc33f590992d4e122bc35fb9cdbbf67d4421ace85"
 dependencies = [
+ "alloy-dyn-abi",
  "alloy-primitives",
+ "alloy-sol-types",
  "async-trait",
  "auto_impl",
  "either",
@@ -3474,12 +3477,14 @@ checksum = "1a80800c0488c3a21695ea981a54918fbb37abf04f4d0720c453632255e2ff0e"
 
 [[package]]
 name = "ow_wallet_adapter"
-version = "0.1.5"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d936d7d48ca01f7ee879f9061622b1f5eec1dfcf4caa8849a218d4a075ef3e3"
+checksum = "0df3a8d426ae329deb40b138da19e2d07adb48ac7b3e48f7a34d1576c2d90410"
 dependencies = [
  "alloy",
+ "alloy-signer",
  "alloy-signer-aws",
+ "alloy-sol-types",
  "anyhow",
  "aws-config",
  "aws-sdk-kms",
