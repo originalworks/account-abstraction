@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS tx_requests (
     to_address TEXT NOT NULL,
     value_wei BIGINT NOT NULL,
     chain_id BIGINT NOT NULL REFERENCES networks(chain_id),
+    deadline_timestamp BIGINT NOT NULL,
     pass_value_from_operator_wallet BOOLEAN NOT NULL,
     signature BYTEA NOT NULL,
     blob_file_path TEXT,

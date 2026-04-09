@@ -24,6 +24,7 @@ pub struct TxRequest {
     pub to_address: String,
     pub value_wei: i64,
     pub chain_id: i64,
+    pub deadline_timestamp: i64,
     pub signature: Vec<u8>,
     pub attempts: i32,
     pub blob_file_path: Option<String>,
@@ -43,6 +44,7 @@ pub struct NewTxRequest {
     pub to_address: String,
     pub value_wei: i64,
     pub chain_id: i64,
+    pub deadline_timestamp: i64,
     pub pass_value_from_operator_wallet: bool,
     pub signature: Vec<u8>,
     pub blob_file_path: Option<String>,
@@ -70,12 +72,13 @@ impl<'a> TxRequestRepo<'a> {
                 to_address,
                 value_wei,
                 chain_id,
+                deadline_timestamp,
                 pass_value_from_operator_wallet,
                 signature,
                 blob_file_path,
                 use_operator_wallet_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             ON CONFLICT (tx_id) DO NOTHING
             "#,
             input.tx_id,
@@ -86,6 +89,7 @@ impl<'a> TxRequestRepo<'a> {
             input.to_address,
             input.value_wei,
             input.chain_id,
+            input.deadline_timestamp,
             input.pass_value_from_operator_wallet,
             input.signature,
             input.blob_file_path,
@@ -112,6 +116,7 @@ impl<'a> TxRequestRepo<'a> {
                 to_address,
                 value_wei,
                 chain_id,
+                deadline_timestamp,
                 signature,
                 attempts,
                 pass_value_from_operator_wallet,
@@ -158,6 +163,7 @@ impl<'a> TxRequestRepo<'a> {
             t.to_address,
             t.value_wei,
             t.chain_id,
+            t.deadline_timestamp,
             t.signature,
             t.attempts,
             t.use_operator_wallet_id,

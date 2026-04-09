@@ -1,8 +1,8 @@
 use alloy::primitives::Address;
 use db_types::TxType;
 use signer_queue::tx_request::TxRequestBody;
+use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
-
 pub struct TxRequestBodyOptional {
     pub tx_id: Option<String>,
     pub requester_id: Option<String>,
@@ -11,6 +11,7 @@ pub struct TxRequestBodyOptional {
     pub to_address: Option<String>,
     pub value_wei: Option<i64>,
     pub chain_id: i64,
+    pub deadline_timestamp: Option<i64>,
     pub pass_value_from_operator_wallet: Option<bool>,
     pub blob_file_path: Option<String>,
     pub use_operator_wallet_id: Option<Uuid>,
@@ -26,6 +27,7 @@ impl TxRequestBodyOptional {
             to_address: None,
             value_wei: None,
             chain_id,
+            deadline_timestamp: None,
             pass_value_from_operator_wallet: None,
             blob_file_path: None,
             use_operator_wallet_id: None,
@@ -43,6 +45,12 @@ impl CreateTestTxRequestBody for TxRequestBody {
         let tx_id = Uuid::new_v4().to_string();
         let random_address = Address::random();
         let default_tx = "".to_string();
+        let current_timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let deadline_timestamp = current_timestamp + 3600;
+
         Ok(TxRequestBody {
             tx_id: input.tx_id.unwrap_or(tx_id),
             requester_id: input.requester_id.unwrap_or("requester-1".to_string()),
@@ -51,6 +59,9 @@ impl CreateTestTxRequestBody for TxRequestBody {
             to_address: input.to_address.unwrap_or(random_address.to_string()),
             value_wei: input.value_wei.unwrap_or(0),
             chain_id: input.chain_id,
+            deadline_timestamp: input
+                .deadline_timestamp
+                .unwrap_or(deadline_timestamp.try_into()?),
             pass_value_from_operator_wallet: input.pass_value_from_operator_wallet.unwrap_or(false),
             blob_file_path: input.blob_file_path,
             use_operator_wallet_id: input.use_operator_wallet_id,
