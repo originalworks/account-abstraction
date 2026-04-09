@@ -1,25 +1,25 @@
 pub mod calldata;
-use ow_wallet_adapter::HasOwWalletFields;
+use network_db::networks::Network;
+use ow_wallet_adapter::OwWalletConfig;
 use std::env;
 
-impl HasOwWalletFields for Config {
-    fn use_kms(&self) -> bool {
-        self.use_kms
-    }
-    fn rpc_url(&self) -> String {
-        self.rpc_url.clone()
-    }
-    fn private_key(&self) -> Option<String> {
-        self.private_key.clone()
-    }
-    fn signer_kms_id(&self) -> Option<String> {
-        self.signer_kms_id.clone()
+pub trait OwWalletConfigForNetwork {
+    fn get_ow_wallet_for_network(&self, network: &Network) -> anyhow::Result<OwWalletConfig>;
+}
+
+impl OwWalletConfigForNetwork for Config {
+    fn get_ow_wallet_for_network(&self, network: &Network) -> anyhow::Result<OwWalletConfig> {
+        Ok(OwWalletConfig {
+            rpc_url: network.rpc_url.clone(),
+            use_kms: self.use_kms,
+            private_key: self.private_key.clone(),
+            signer_kms_id: self.signer_kms_id.clone(),
+        })
     }
 }
 
 pub struct Config {
     pub use_kms: bool,
-    pub rpc_url: String,
     pub private_key: Option<String>,
     pub signer_kms_id: Option<String>,
     pub sender_standard_queue_url: String,
@@ -33,10 +33,8 @@ impl Config {
     pub fn build() -> anyhow::Result<Self> {
         let blob_queue_message_group_id = Self::get_env_var("BLOB_QUEUE_MESSAGE_GROUP_ID");
         let standard_queue_message_group_id = Self::get_env_var("STANDARD_QUEUE_MESSAGE_GROUP_ID");
-
         let sender_standard_queue_url = Self::get_env_var("SENDER_STANDARD_QUEUE_URL");
         let sender_blob_queue_url = Self::get_env_var("SENDER_BLOB_QUEUE_URL");
-        let rpc_url = Self::get_env_var("RPC_URL");
         let database_url = Self::get_env_var("DATABASE_URL");
         let mut signer_kms_id = None;
         let mut private_key = None;
@@ -55,7 +53,6 @@ impl Config {
 
         Ok(Self {
             use_kms,
-            rpc_url,
             private_key,
             signer_kms_id,
             database_url,
@@ -73,11 +70,14 @@ impl Config {
 
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
-    use crate::{Config, calldata::parse_calldata};
+    use std::collections::HashMap;
+
+    use crate::{Config, OwWalletConfigForNetwork, calldata::parse_calldata};
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
     use db_types::TxType;
     use lambda_runtime::LambdaEvent;
+    use network_db::networks::{Network, NetworkRepo};
     use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
     use sender_queue::{
         blob_queue::{SenderQueueBlobMessageBody, sqs::SenderBlobSqsQueue},
@@ -92,9 +92,15 @@ pub mod aws_lambda {
     ) -> anyhow::Result<(), lambda_runtime::Error> {
         println!("Building...");
         let config = Config::build()?;
-        let wallet_config = OwWalletConfig::from(&config)?;
-        let wallet = OwWallet::build(&wallet_config).await?;
+
         let transaction_repo = TxRequestRepo::new(&pool);
+        let network_repo = NetworkRepo::new(&pool);
+        let networks = network_repo.select_all().await?;
+        let mut networks_by_chain_id = HashMap::<i64, Network>::new();
+        for network in networks {
+            networks_by_chain_id.insert(network.chain_id, network.clone());
+        }
+
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
         let aws_config = aws_config::defaults(BehaviorVersion::latest())
             .region(region_provider)
@@ -116,6 +122,13 @@ pub mod aws_lambda {
 
         for tx_request_body in tx_request_body_vec {
             println!("Signing: {tx_request_body:?}");
+            let network = networks_by_chain_id
+                .get(&tx_request_body.chain_id)
+                .expect(format!("Network not found for {}", tx_request_body.chain_id).as_str());
+
+            let wallet_config = config.get_ow_wallet_for_network(network)?;
+            let wallet = OwWallet::build(&wallet_config).await?;
+
             let calldata = parse_calldata(&tx_request_body.calldata)?;
 
             let signature = wallet.sign_message(calldata.as_slice()).await?;
