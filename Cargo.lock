@@ -2080,6 +2080,8 @@ dependencies = [
  "migrator",
  "network_db",
  "operator_wallet_db",
+ "receipt_poller",
+ "receipt_poller_queue",
  "sender",
  "serde",
  "serde_json",
@@ -3940,6 +3942,29 @@ dependencies = [
 [[package]]
 name = "receipt_poller"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws-config",
+ "aws-sdk-sqs",
+ "aws_lambda_events",
+ "lambda_runtime",
+ "receipt_poller_queue",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
+name = "receipt_poller_queue"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws-config",
+ "aws-sdk-sqs",
+ "aws_lambda_events",
+ "lambda_runtime",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "redox_syscall"
@@ -4424,6 +4449,7 @@ dependencies = [
  "network_db",
  "operator_wallet_db",
  "ow_wallet_adapter",
+ "receipt_poller_queue",
  "sender_queue",
  "serde",
  "serde_json",

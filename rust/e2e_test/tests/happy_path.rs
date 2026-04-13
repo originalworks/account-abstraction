@@ -1,9 +1,10 @@
 #[cfg(test)]
 mod tests {
     use alloy::{primitives::Address, signers::local::PrivateKeySigner};
-    use e2e_test::aws::sqs::SenderQueueTestHelper;
     use e2e_test::aws::sqs::TestEventMessage;
     use e2e_test::aws::sqs::build_lambda_sqs_event;
+    use e2e_test::aws::sqs::receipt_poller_queue::ReceiptPollerTestQueue;
+    use e2e_test::aws::sqs::sender_queue::SenderQueueTestHelper;
     use e2e_test::db::network::AddAnvilNetwork;
     use e2e_test::db::operator_wallet::InsertFromMnemonic;
     use e2e_test::tx_request::CreateTestTxRequestBody;
@@ -14,6 +15,7 @@ mod tests {
     };
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
+    use receipt_poller_queue::queue::sqs::ReceiptPollerSqsQueue;
     use signer_queue::tx_request::TxRequestBody;
     use tx_request_db::tx_requests::TxRequestRepo;
 
@@ -41,7 +43,8 @@ mod tests {
             .await?;
 
         let aws_config: aws_config::SdkConfig = build_aws_sdk_config().await?;
-        let sender_queue_test_helper = SenderQueueTestHelper::build(aws_config).await?;
+        let sender_queue_test_helper = SenderQueueTestHelper::build(&aws_config).await?;
+        let receipt_poller_queue = ReceiptPollerSqsQueue::create_and_build(&aws_config).await?;
 
         let tx_request_body = TxRequestBody::test_build(TxRequestBodyOptional::default(
             db_types::TxType::STANDARD,
@@ -72,6 +75,18 @@ mod tests {
         println!("sender_queue_event in happy path: {sender_queue_event:#?}");
 
         match sender::aws_lambda::function_handler(sender_queue_event, &pool).await {
+            Ok(_) => {}
+            Err(err) => {
+                println!("{err:#?}")
+            }
+        }
+
+        let receipt_poller_queue_event = receipt_poller_queue.receive_messages(5).await?;
+
+        println!("receipt_poller_queue_event: {receipt_poller_queue_event:?}");
+
+        match receipt_poller::aws_lambda::function_handler(receipt_poller_queue_event, &pool).await
+        {
             Ok(_) => {}
             Err(err) => {
                 println!("{err:#?}")

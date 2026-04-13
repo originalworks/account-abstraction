@@ -18,6 +18,10 @@ operator_wallet_db.workspace = true
 network_db.workspace = true
 alloy.workspace = true
 uuid.workspace = true
+execution_attempt_db.workspace = true
+execution_attempt_item_db.workspace = true
+db_types.workspace = true
+receipt_poller_queue = { workspace = true, features = ["aws"] }
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }
@@ -26,9 +30,6 @@ aws-config = { workspace = true, features = [
 ], optional = true }
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
-execution_attempt_db.workspace = true
-execution_attempt_item_db.workspace = true
-db_types.workspace = true
 
 
 [features]
