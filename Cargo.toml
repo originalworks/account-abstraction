@@ -16,12 +16,14 @@ members = [
     "rust/database/execution_attempt_item_db",
     "rust/signer_queue",
     "rust/e2e_test",
+    "rust/receipt_poller_queue",
 ]
 
 [workspace.dependencies]
 tx_request_db = { path = "./rust/database/tx_request_db" }
 network_db = { path = "./rust/database/network_db" }
 sender_queue = { path = "./rust/sender_queue" }
+receipt_poller_queue = { path = "./rust/receipt_poller_queue" }
 wallet_assignment_db = { path = "./rust/database/wallet_assignment_db" }
 operator_wallet_db = { path = "./rust/database/operator_wallet_db" }
 execution_attempt_db = { path = "./rust/database/execution_attempt_db" }

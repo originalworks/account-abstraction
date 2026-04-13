@@ -11,15 +11,17 @@ pub struct Config {
     pub signer_kms_id: Option<String>,
     pub sender_standard_queue_url: String,
     pub sender_blob_queue_url: String,
-    pub blob_queue_message_group_id: String,
-    pub standard_queue_message_group_id: String,
+    pub blob_sender_queue_message_group_id: String,
+    pub standard_sender_queue_message_group_id: String,
     pub database_url: String,
 }
 
 impl Config {
     pub fn build() -> anyhow::Result<Self> {
-        let blob_queue_message_group_id = Self::get_env_var("BLOB_QUEUE_MESSAGE_GROUP_ID");
-        let standard_queue_message_group_id = Self::get_env_var("STANDARD_QUEUE_MESSAGE_GROUP_ID");
+        let blob_sender_queue_message_group_id =
+            Self::get_env_var("BLOB_SENDER_QUEUE_MESSAGE_GROUP_ID");
+        let standard_sender_queue_message_group_id =
+            Self::get_env_var("STANDARD_SENDER_QUEUE_MESSAGE_GROUP_ID");
         let sender_standard_queue_url = Self::get_env_var("SENDER_STANDARD_QUEUE_URL");
         let sender_blob_queue_url = Self::get_env_var("SENDER_BLOB_QUEUE_URL");
         let database_url = Self::get_env_var("DATABASE_URL");
@@ -45,8 +47,8 @@ impl Config {
             database_url,
             sender_standard_queue_url,
             sender_blob_queue_url,
-            blob_queue_message_group_id,
-            standard_queue_message_group_id,
+            blob_sender_queue_message_group_id,
+            standard_sender_queue_message_group_id,
         })
     }
 
@@ -90,13 +92,13 @@ pub mod aws_lambda {
         let tx_sender_standard_queue = SenderStandardSqsQueue::build(
             &aws_config,
             &config.sender_standard_queue_url,
-            &config.standard_queue_message_group_id,
+            &config.standard_sender_queue_message_group_id,
         )?;
 
         let tx_sender_blob_queue = SenderBlobSqsQueue::build(
             &aws_config,
             &config.sender_blob_queue_url,
-            &config.blob_queue_message_group_id,
+            &config.blob_sender_queue_message_group_id,
         )?;
 
         let tx_request_body_vec = TxRequestBody::from_sqs_event(event)?;

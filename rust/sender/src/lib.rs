@@ -6,13 +6,22 @@ use std::env;
 
 pub struct Config {
     pub database_url: String,
+    pub receipt_poller_queue_url: String,
+    pub receipt_poller_queue_message_group_id: String,
 }
 
 impl Config {
     pub fn build() -> anyhow::Result<Self> {
         let database_url = Self::get_env_var("DATABASE_URL");
+        let receipt_poller_queue_message_group_id =
+            Self::get_env_var("RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID");
+        let receipt_poller_queue_url = Self::get_env_var("RECEIPT_POLLER_QUEUE_URL");
 
-        Ok(Self { database_url })
+        Ok(Self {
+            database_url,
+            receipt_poller_queue_message_group_id,
+            receipt_poller_queue_url,
+        })
     }
 
     pub fn get_env_var(key: &str) -> String {
@@ -22,18 +31,21 @@ impl Config {
 
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
+    use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
     use execution_attempt_db::execution_attempts::ExecutionAttemptRepo;
     use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo;
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
+    use receipt_poller_queue::queue::{ReceiptPollerQueueMessageBody, sqs::ReceiptPollerSqsQueue};
     use sender_queue::standard_queue::SenderQueueStandardEvent;
     use tx_request_db::tx_requests::TxRequestRepo;
     use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
 
     use crate::{
-        contract::ContractManager, transaction::TxContextBuilder, wallet_pool::WalletPoolManager,
+        Config, contract::ContractManager, transaction::TxContextBuilder,
+        wallet_pool::WalletPoolManager,
     };
 
     pub async fn function_handler(
@@ -41,6 +53,14 @@ pub mod aws_lambda {
         pool: &sqlx::Pool<sqlx::Postgres>,
     ) -> anyhow::Result<SqsBatchResponse, lambda_runtime::Error> {
         println!("Building...");
+
+        let config = Config::build()?;
+
+        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+        let aws_config = aws_config::defaults(BehaviorVersion::latest())
+            .region(region_provider)
+            .load()
+            .await;
 
         let wallet_assignment_repo = WalletAssignmentRepo::new(&pool);
         let operator_wallet_repo = OperatorWalletRepo::new(&pool);
@@ -58,6 +78,11 @@ pub mod aws_lambda {
 
         println!("Reading...");
         let tx_sender_queue_event = SenderQueueStandardEvent::from_sqs_event(event)?;
+        let receipt_poller_queue = ReceiptPollerSqsQueue::build(
+            &aws_config,
+            &config.receipt_poller_queue_url,
+            &config.receipt_poller_queue_message_group_id,
+        )?;
 
         let tx_ids = tx_sender_queue_event
             .messages
@@ -116,6 +141,14 @@ pub mod aws_lambda {
 
             tx_request_repo
                 .mark_many_as_broadcasted(&execute_batch_context.tx_ids)
+                .await?;
+
+            let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
+                execution_attempt_id: execution_attempt.id.to_string(),
+            };
+
+            receipt_poller_queue
+                .send_new(&receipt_poller_queue_message_body)
                 .await?;
         }
 

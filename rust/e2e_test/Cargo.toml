@@ -17,6 +17,13 @@ sqlx = { workspace = true, features = ["postgres"] }
 network_db.workspace = true
 signer_queue = { workspace = true, features = ["aws"] }
 signer = { workspace = true, features = ["aws"] }
+sender = { workspace = true, features = ["aws", "test-keys"] }
+operator_wallet_db = { workspace = true, features = ["test-keys"] }
+hex.workspace = true
+receipt_poller_queue = { workspace = true, features = ["aws"] }
+receipt_poller = { version = "0.1.0", path = "../receipt_poller", features = [
+    "aws",
+] }
 
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
@@ -24,9 +31,7 @@ aws-sdk-sqs = { workspace = true, optional = true }
 aws-config = { workspace = true, features = [
     "behavior-version-latest",
 ], optional = true }
-sender = { workspace = true, features = ["aws", "test-keys"] }
-operator_wallet_db = { workspace = true, features = ["test-keys"] }
-hex.workspace = true
+
 
 [features]
 aws = [

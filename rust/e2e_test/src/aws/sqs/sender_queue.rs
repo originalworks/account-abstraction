@@ -1,8 +1,11 @@
-use crate::constants::{SENDER_BLOB_QUEUE_NAME, SENDER_STANDARD_QUEUE_NAME};
-use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
+use crate::{
+    aws::sqs::{TestEventMessage, build_lambda_sqs_event},
+    constants::{SENDER_BLOB_QUEUE_NAME, SENDER_STANDARD_QUEUE_NAME},
+};
+use aws_lambda_events::sqs::SqsEvent;
 use aws_sdk_sqs::types::QueueAttributeName;
 use db_types::TxType;
-use lambda_runtime::{Context, LambdaEvent};
+use lambda_runtime::LambdaEvent;
 use std::env;
 
 pub struct SenderQueueTestHelper {
@@ -12,7 +15,7 @@ pub struct SenderQueueTestHelper {
 }
 
 impl SenderQueueTestHelper {
-    pub async fn build(aws_config: aws_config::SdkConfig) -> anyhow::Result<Self> {
+    pub async fn build(aws_config: &aws_config::SdkConfig) -> anyhow::Result<Self> {
         let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
         let create_blob_queue_response = sqs_client
             .create_queue()
@@ -78,39 +81,5 @@ impl SenderQueueTestHelper {
         let lambda_sqs_event = build_lambda_sqs_event(messages)?;
 
         return Ok(lambda_sqs_event);
-    }
-}
-
-pub fn build_lambda_sqs_event(
-    messages: Vec<TestEventMessage>,
-) -> anyhow::Result<LambdaEvent<SqsEvent>> {
-    let mut sqs_event = SqsEvent::default();
-    for message in messages {
-        sqs_event.records.push(message.into_sqs_message());
-    }
-    let event = LambdaEvent::<SqsEvent>::new(sqs_event, Context::default());
-
-    Ok(event)
-}
-
-pub struct TestEventMessage {
-    body: String,
-    message_id: String,
-}
-
-impl TestEventMessage {
-    pub fn new(body: &String, message_id: Option<String>) -> Self {
-        Self {
-            body: body.clone(),
-            message_id: message_id
-                .clone()
-                .unwrap_or(uuid::Uuid::new_v4().to_string()),
-        }
-    }
-    pub fn into_sqs_message(&self) -> SqsMessage {
-        let mut sqs_message = SqsMessage::default();
-        sqs_message.body = Some(self.body.clone());
-        sqs_message.message_id = Some(self.message_id.clone());
-        sqs_message
     }
 }

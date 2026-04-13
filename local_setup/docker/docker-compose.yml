@@ -31,8 +31,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_REGION=us-east-1
       - AWS_ENDPOINT_URL=http://localstack:4566
-      - BLOB_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-blob-queue"
-      - STANDARD_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-standard-queue"
+      - BLOB_SENDER_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-blob-queue"
+      - STANDARD_SENDER_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-standard-queue"
+      - RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID="aa-receipt-poller-queue"
       - ANVIL_MNEMONIC=${ANVIL_MNEMONIC}
     command: ["cargo", "test", "-p", "e2e_test", "--features", "aws", "--", "--no-capture"]
 
