@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 anyhow.workspace = true
-ow_wallet_adapter.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tx_request_db = { workspace = true }
 serde.workspace = true
@@ -22,6 +21,7 @@ execution_attempt_db.workspace = true
 execution_attempt_item_db.workspace = true
 db_types.workspace = true
 receipt_poller_queue = { workspace = true, features = ["aws"] }
+wallet_pool.workspace = true
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }
@@ -39,4 +39,4 @@ aws = [
     "dep:aws_lambda_events",
     "dep:lambda_runtime",
 ]
-test-keys = []
+test-keys = ["wallet_pool/test-keys"]

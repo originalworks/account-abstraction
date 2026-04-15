@@ -1,6 +1,6 @@
+#![recursion_limit = "256"]
 mod contract;
 mod transaction;
-mod wallet_pool;
 
 use std::env;
 
@@ -42,11 +42,9 @@ pub mod aws_lambda {
     use sender_queue::standard_queue::SenderQueueStandardEvent;
     use tx_request_db::tx_requests::TxRequestRepo;
     use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
+    use wallet_pool::manager::WalletPoolManager;
 
-    use crate::{
-        Config, contract::ContractManager, transaction::TxContextBuilder,
-        wallet_pool::WalletPoolManager,
-    };
+    use crate::{Config, contract::ContractManager, transaction::TxContextBuilder};
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
@@ -93,8 +91,6 @@ pub mod aws_lambda {
         let execute_batch_context_vec = tx_context_builder
             .fetch_and_sort_into_batches(&tx_ids)
             .await?;
-
-        println!("{execute_batch_context_vec:#?}");
 
         println!("Executing...");
         for execute_batch_context in execute_batch_context_vec {
