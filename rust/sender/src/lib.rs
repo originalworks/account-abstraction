@@ -116,7 +116,7 @@ pub mod aws_lambda {
                 .new_assignments(&execute_batch_context.tx_ids, wallet.db_record.id)
                 .await?;
 
-            let pending_nonce = wallet.ow_wallet.get_pending_nonce().await?;
+            let pending_nonce = wallet.get_pending_nonce().await?;
 
             if i64::try_from(pending_nonce)? != wallet.db_record.nonce {
                 panic!("disco time!");
