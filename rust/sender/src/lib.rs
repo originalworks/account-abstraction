@@ -73,16 +73,16 @@ pub mod aws_lambda {
         let wallet_pool_manager = WalletPoolManager::build(operator_wallet_repo, &networks);
         let tx_context_builder = TxContextBuilder::build(&tx_request_repo);
         let contract_manager = ContractManager::build(&networks).await?;
-
-        let mut sqs_batch_response = SqsBatchResponse::default();
-
-        println!("Reading...");
-        let tx_sender_queue_event = SenderQueueStandardEvent::from_sqs_event(event)?;
         let receipt_poller_queue = ReceiptPollerSqsQueue::build(
             &aws_config,
             &config.receipt_poller_queue_url,
             &config.receipt_poller_queue_message_group_id,
         )?;
+
+        let mut sqs_batch_response = SqsBatchResponse::default();
+
+        println!("Reading...");
+        let tx_sender_queue_event = SenderQueueStandardEvent::from_sqs_event(event)?;
 
         let tx_ids = tx_sender_queue_event
             .messages
@@ -127,7 +127,11 @@ pub mod aws_lambda {
                 // TODO: here use abstracted function that will emergency release transctions
             }
 
-            let free_nonce = pending_nonce + 1;
+            let free_nonce = if pending_nonce == 0 {
+                pending_nonce
+            } else {
+                pending_nonce + 1
+            };
 
             let new_execution_attempt = contract_manager
                 .send_batch(&execute_batch_context, wallet, free_nonce)

@@ -1,6 +1,7 @@
 use crate::{transaction::ExecuteBatchTxContext, wallet_pool::Wallet};
 use alloy::{
     eips::eip1559::Eip1559Estimation,
+    network::ReceiptResponse,
     primitives::{Address, Uint},
     providers::{
         Provider, ProviderBuilder,
@@ -133,7 +134,11 @@ impl ContractManager {
         let gas = i64::try_from(call_builder.estimate_gas().await?)?;
         let gas_with_buffer = gas + gas * network.gas_estimation_buffer_ppm / 1_000_000;
 
-        let pending_tx = call_builder.gas(u64::try_from(gas)?).send().await?;
+        let pending_tx = call_builder
+            .gas(u64::try_from(gas_with_buffer)?)
+            .send()
+            .await?;
+
         let tx_hash = pending_tx.tx_hash().to_string();
 
         let new_execution_attempt = NewExecutionAttempt::build_standard(

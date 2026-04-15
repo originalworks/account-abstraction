@@ -34,6 +34,7 @@ services:
       - BLOB_SENDER_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-blob-queue"
       - STANDARD_SENDER_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-standard-queue"
       - RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID="aa-receipt-poller-queue"
+      - TX_MAX_AGE_SEC=3600
       - ANVIL_MNEMONIC=${ANVIL_MNEMONIC}
     command: ["cargo", "test", "-p", "e2e_test", "--features", "aws", "--", "--no-capture"]
 

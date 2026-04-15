@@ -1,4 +1,4 @@
-use db_types::TxType;
+use db_types::{TxStatus, TxType};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     PgPool, Type,
@@ -8,9 +8,9 @@ use sqlx::{
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]
 #[sqlx(type_name = "text")]
 pub enum TxExecutionOutcome {
+    DROPPED,
     SUCCEED,
     FAILED,
-    REVERTED,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -135,5 +135,79 @@ impl<'a> ExecutionAttemptRepo<'a> {
         .await?;
 
         Ok(attempt)
+    }
+
+    pub async fn propagate_success(
+        &self,
+        execution_attempt_id: Uuid,
+        outcome: TxExecutionOutcome,
+    ) -> anyhow::Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        let attempt = sqlx::query_as!(
+            ExecutionAttempt,
+            r#"
+            UPDATE execution_attempts
+            SET
+                outcome = $2
+            WHERE
+                id = $1
+            RETURNING
+                id,
+                chain_id,
+                operator_wallet_id,
+                tx_type as "tx_type: TxType",
+                nonce_used,
+                tx_value,
+                tx_hash,
+                gas_limit,
+                max_fee_per_gas,
+                max_priority_fee,
+                max_fee_per_blob_gas,
+                outcome as "outcome: TxExecutionOutcome",
+                created_at,
+                updated_at
+            "#,
+            execution_attempt_id,
+            outcome as TxExecutionOutcome
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+            UPDATE tx_requests tr
+            SET
+                tx_status = $2
+            FROM execution_attempt_items eai
+            JOIN execution_attempts ea
+                ON ea.id = eai.execution_attempt_id
+            WHERE
+                tr.tx_id = eai.tx_id
+                AND ea.id = $1
+                AND ea.outcome IS NOT NULL
+            "#,
+            execution_attempt_id,
+            TxStatus::EXECUTED as TxStatus
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+            UPDATE operator_wallets
+            SET
+                in_use = FALSE
+            WHERE
+                id = $1
+            "#,
+            attempt.operator_wallet_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(())
     }
 }

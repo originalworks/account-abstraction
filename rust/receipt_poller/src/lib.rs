@@ -1,14 +1,21 @@
+pub mod receipt;
+
 use std::env;
 
 pub struct Config {
     pub database_url: String,
+    pub tx_max_age_sec: u64,
 }
 
 impl Config {
     pub fn build() -> anyhow::Result<Self> {
         let database_url = Self::get_env_var("DATABASE_URL");
+        let tx_max_age_sec = Self::get_env_var("TX_MAX_AGE_SEC").parse()?;
 
-        Ok(Self { database_url })
+        Ok(Self {
+            database_url,
+            tx_max_age_sec,
+        })
     }
 
     pub fn get_env_var(key: &str) -> String {
@@ -18,24 +25,55 @@ impl Config {
 
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
-
-    use crate::Config;
-
+    use crate::{Config, receipt::ReceiptReader};
     use aws_lambda_events::sqs::SqsEvent;
-
+    use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, TxExecutionOutcome};
     use lambda_runtime::LambdaEvent;
+    use network_db::networks::NetworkRepo;
     use receipt_poller_queue::queue::ReceiptPollerEvent;
+    use std::str::FromStr;
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
         pool: &sqlx::Pool<sqlx::Postgres>,
     ) -> anyhow::Result<(), lambda_runtime::Error> {
         println!("Building...");
-        let config = Config::build()?;
-
         let event = ReceiptPollerEvent::from_sqs_event(event)?;
 
-        println!("event received by poller: {event:?}");
+        let config = Config::build()?;
+        let network_repo = NetworkRepo::new(&pool);
+        let execution_attempt_repo = ExecutionAttemptRepo::new(&pool);
+        let networks = network_repo.select_all().await?;
+
+        let receipt_reader = ReceiptReader::build(&networks, config.tx_max_age_sec).await?;
+
+        for queue_message in event.messages {
+            let execution_attempt_uuid =
+                uuid::Uuid::from_str(queue_message.body.execution_attempt_id.as_str())?;
+            let execution_attempt = execution_attempt_repo
+                .find_by_id(execution_attempt_uuid)
+                .await?;
+
+            let execution_outcome = receipt_reader
+                .check_execution_outcome(&execution_attempt)
+                .await?;
+
+            if let Some(outcome) = execution_outcome {
+                match outcome {
+                    TxExecutionOutcome::SUCCEED => {
+                        execution_attempt_repo
+                            .propagate_success(execution_attempt.id, outcome)
+                            .await?;
+                    }
+                    TxExecutionOutcome::DROPPED => {
+                        // put into retry_queue with marked as dropped (then retry with higher gas)
+                    }
+                    TxExecutionOutcome::FAILED => {
+                        // put into retry_queue marked as failed
+                    }
+                }
+            }
+        }
 
         Ok(())
     }

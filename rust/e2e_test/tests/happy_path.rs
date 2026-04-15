@@ -72,8 +72,6 @@ mod tests {
             .receive_messages(db_types::TxType::STANDARD, 5)
             .await?;
 
-        println!("sender_queue_event in happy path: {sender_queue_event:#?}");
-
         match sender::aws_lambda::function_handler(sender_queue_event, &pool).await {
             Ok(_) => {}
             Err(err) => {
@@ -82,8 +80,6 @@ mod tests {
         }
 
         let receipt_poller_queue_event = receipt_poller_queue.receive_messages(5).await?;
-
-        println!("receipt_poller_queue_event: {receipt_poller_queue_event:?}");
 
         match receipt_poller::aws_lambda::function_handler(receipt_poller_queue_event, &pool).await
         {
