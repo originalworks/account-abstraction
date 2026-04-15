@@ -32,7 +32,7 @@ impl SenderBlobSqsQueue {
             .message_group_id(&self.message_group_id)
             .send()
             .await?;
-        println!("{response:?}");
+
         Ok(())
     }
 }

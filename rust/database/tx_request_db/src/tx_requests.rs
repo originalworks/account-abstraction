@@ -1,17 +1,7 @@
-use db_types::TxType;
+use db_types::{TxStatus, TxType};
 use serde::{Deserialize, Serialize};
-use sqlx::Type;
 use sqlx::{PgPool, types::time::OffsetDateTime};
 use uuid::Uuid;
-
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "text")]
-pub enum TxStatus {
-    SIGNED,
-    LOCKED,
-    BROADCASTED,
-    INVALID,
-}
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct TxRequest {
@@ -217,7 +207,7 @@ impl<'a> TxRequestRepo<'a> {
             r#"
         UPDATE tx_requests
         SET 
-            tx_status = 'SIGNED'
+            tx_status = 'BROADCASTED'
         WHERE tx_id = ANY($1)
         "#,
             tx_ids

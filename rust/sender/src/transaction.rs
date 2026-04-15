@@ -27,10 +27,7 @@ impl<'a> TxContextBuilder<'a> {
         &self,
         tx_ids: &Vec<String>,
     ) -> anyhow::Result<Vec<ExecuteBatchTxContext>> {
-        println!("tx_ids: {tx_ids:#?}");
         let fetched_txs = self.transaction_repo.select_and_lock_many(tx_ids).await?;
-
-        println!("fetched_txs: {fetched_txs:#?}");
 
         let sorted = Self::group_by_chain_and_wallet(fetched_txs);
 

@@ -7,3 +7,13 @@ pub enum TxType {
     STANDARD,
     BLOB,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "text")]
+pub enum TxStatus {
+    SIGNED,
+    LOCKED,
+    BROADCASTED,
+    EXECUTED,
+    INVALID,
+}

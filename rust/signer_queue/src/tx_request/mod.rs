@@ -1,9 +1,9 @@
 #[cfg(feature = "aws")]
 pub mod sqs;
 
-use db_types::TxType;
+use db_types::{TxStatus, TxType};
 use serde::{Deserialize, Serialize};
-use tx_request_db::tx_requests::{NewTxRequest, TxStatus};
+use tx_request_db::tx_requests::NewTxRequest;
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

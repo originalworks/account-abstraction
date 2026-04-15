@@ -5,8 +5,14 @@ edition = "2024"
 
 [dependencies]
 anyhow.workspace = true
-sqlx = { workspace = true, features = ["postgres"] }
+sqlx = { workspace = true, features = ["postgres", "time"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+execution_attempt_db.workspace = true
+uuid.workspace = true
+alloy.workspace = true
+receipt_poller_queue = { workspace = true, features = ["aws"] }
+network_db.workspace = true
+
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }
@@ -15,7 +21,6 @@ aws-config = { workspace = true, features = [
 ], optional = true }
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
-receipt_poller_queue = { workspace = true, features = ["aws"] }
 
 
 [features]

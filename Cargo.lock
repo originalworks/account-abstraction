@@ -3943,14 +3943,18 @@ dependencies = [
 name = "receipt_poller"
 version = "0.1.0"
 dependencies = [
+ "alloy",
  "anyhow",
  "aws-config",
  "aws-sdk-sqs",
  "aws_lambda_events",
+ "execution_attempt_db",
  "lambda_runtime",
+ "network_db",
  "receipt_poller_queue",
  "sqlx",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

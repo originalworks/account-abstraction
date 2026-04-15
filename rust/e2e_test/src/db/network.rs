@@ -13,7 +13,7 @@ impl AddAnvilNetwork for NetworkRepo<'_> {
             contract_address,
             chain_name: "anvil".to_string(),
             min_operator_wallet_balance: 1_000_000,
-            gas_estimation_buffer_ppm: 120_000,
+            gas_estimation_buffer_ppm: 1_200_000,
         })
         .await?;
         Ok(())
