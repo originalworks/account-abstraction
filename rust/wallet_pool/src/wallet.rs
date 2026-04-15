@@ -64,4 +64,17 @@ impl Wallet {
             return Ok(true);
         }
     }
+
+    pub async fn get_pending_nonce(&self) -> anyhow::Result<u64> {
+        let address = self.ow_wallet.get_address()?;
+
+        let nonce = self
+            .ow_wallet
+            .provider
+            .get_transaction_count(address)
+            .block_id(BlockId::pending())
+            .await?;
+
+        Ok(nonce)
+    }
 }

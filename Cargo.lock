@@ -3480,9 +3480,9 @@ checksum = "1a80800c0488c3a21695ea981a54918fbb37abf04f4d0720c453632255e2ff0e"
 
 [[package]]
 name = "ow_wallet_adapter"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0df3a8d426ae329deb40b138da19e2d07adb48ac7b3e48f7a34d1576c2d90410"
+checksum = "f10ac48a1bbf757e2031cc3be5fc2b614384177ff3c6384bbfc03fb9c9c2c1e0"
 dependencies = [
  "alloy",
  "alloy-signer",
