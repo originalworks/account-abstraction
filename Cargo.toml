@@ -7,30 +7,30 @@ members = [
     "rust/database/wallet_assignment_db",
     "rust/database/network_db",
     "rust/database/migrator",
+    "rust/database/execution_attempt_db",
+    "rust/database/execution_attempt_item_db",
+    "rust/database/db_types",
+    "rust/queues/sender_queue",
+    "rust/queues/signer_queue",
+    "rust/queues/receipt_poller_queue",
     "rust/signer",
     "rust/sender",
     "rust/receipt_poller",
-    "rust/sender_queue",
-    "rust/database/execution_attempt_db",
-    "rust/database/db_types",
-    "rust/database/execution_attempt_item_db",
-    "rust/signer_queue",
     "rust/e2e_test",
-    "rust/receipt_poller_queue",
 ]
 
 [workspace.dependencies]
 tx_request_db = { path = "./rust/database/tx_request_db" }
 network_db = { path = "./rust/database/network_db" }
-sender_queue = { path = "./rust/sender_queue" }
-receipt_poller_queue = { path = "./rust/receipt_poller_queue" }
 wallet_assignment_db = { path = "./rust/database/wallet_assignment_db" }
 operator_wallet_db = { path = "./rust/database/operator_wallet_db" }
 execution_attempt_db = { path = "./rust/database/execution_attempt_db" }
 execution_attempt_item_db = { path = "./rust/database/execution_attempt_item_db" }
 db_types = { path = "./rust/database/db_types" }
-signer_queue = { path = "./rust/signer_queue" }
 migrator = { path = "./rust/database/migrator" }
+sender_queue = { path = "./rust/queues/sender_queue" }
+receipt_poller_queue = { path = "./rust/queues/receipt_poller_queue" }
+signer_queue = { path = "./rust/queues/signer_queue" }
 signer = { path = "./rust/signer" }
 sender = { path = "./rust/sender" }
 anyhow = "1.0.102"
