@@ -1,7 +1,6 @@
-use crate::{transaction::ExecuteBatchTxContext, wallet_pool::Wallet};
+use crate::transaction::ExecuteBatchTxContext;
 use alloy::{
     eips::eip1559::Eip1559Estimation,
-    network::ReceiptResponse,
     primitives::{Address, Uint},
     providers::{
         Provider, ProviderBuilder,
@@ -15,6 +14,7 @@ use execution_attempt_db::execution_attempts::NewExecutionAttempt;
 use network_db::networks::Network;
 use std::{collections::HashMap, str::FromStr};
 use uuid::Uuid;
+use wallet_pool::wallet::Wallet;
 
 sol!(
     #[allow(missing_docs)]

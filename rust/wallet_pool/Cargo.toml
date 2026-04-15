@@ -1,0 +1,17 @@
+[package]
+name = "wallet_pool"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow.workspace = true
+uuid.workspace = true
+ow_wallet_adapter.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+sqlx = { workspace = true, features = ["postgres"] }
+alloy.workspace = true
+operator_wallet_db.workspace = true
+network_db.workspace = true
+
+[features]
+test-keys = []

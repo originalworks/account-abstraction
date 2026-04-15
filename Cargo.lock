@@ -4452,7 +4452,6 @@ dependencies = [
  "lambda_runtime",
  "network_db",
  "operator_wallet_db",
- "ow_wallet_adapter",
  "receipt_poller_queue",
  "sender_queue",
  "serde",
@@ -4462,6 +4461,7 @@ dependencies = [
  "tx_request_db",
  "uuid",
  "wallet_assignment_db",
+ "wallet_pool",
 ]
 
 [[package]]
@@ -5595,6 +5595,20 @@ dependencies = [
  "serde_json",
  "sqlx",
  "time",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "wallet_pool"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "anyhow",
+ "network_db",
+ "operator_wallet_db",
+ "ow_wallet_adapter",
+ "sqlx",
  "tokio",
  "uuid",
 ]

@@ -17,6 +17,7 @@ members = [
     "rust/sender",
     "rust/receipt_poller",
     "rust/e2e_test",
+    "rust/wallet_pool",
 ]
 
 [workspace.dependencies]
@@ -28,6 +29,7 @@ execution_attempt_db = { path = "./rust/database/execution_attempt_db" }
 execution_attempt_item_db = { path = "./rust/database/execution_attempt_item_db" }
 db_types = { path = "./rust/database/db_types" }
 migrator = { path = "./rust/database/migrator" }
+wallet_pool = { path = "./rust/wallet_pool" }
 sender_queue = { path = "./rust/queues/sender_queue" }
 receipt_poller_queue = { path = "./rust/queues/receipt_poller_queue" }
 signer_queue = { path = "./rust/queues/signer_queue" }
