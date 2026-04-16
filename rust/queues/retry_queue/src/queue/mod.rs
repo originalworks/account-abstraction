@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Deserialize, Serialize, Debug)]
 pub struct RetryQueueMessageBody {
     pub execution_attempt_id: String,
-    pub execution_outcome: TxExecutionOutcome,
 }
 
 #[derive(Debug)]

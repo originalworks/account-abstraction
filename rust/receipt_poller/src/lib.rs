@@ -4,6 +4,8 @@ use std::env;
 
 pub struct Config {
     pub database_url: String,
+    pub retry_queue_message_group_id: String,
+    pub retry_queue_url: String,
     pub tx_max_age_sec: u64,
 }
 
@@ -11,10 +13,14 @@ impl Config {
     pub fn build() -> anyhow::Result<Self> {
         let database_url = Self::get_env_var("DATABASE_URL");
         let tx_max_age_sec = Self::get_env_var("TX_MAX_AGE_SEC").parse()?;
+        let retry_queue_message_group_id = Self::get_env_var("RETRY_QUEUE_MESSAGE_GROUP_ID");
+        let retry_queue_url = Self::get_env_var("RETRY_QUEUE_URL");
 
         Ok(Self {
             database_url,
             tx_max_age_sec,
+            retry_queue_message_group_id,
+            retry_queue_url,
         })
     }
 
@@ -26,12 +32,14 @@ impl Config {
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
     use crate::{Config, receipt::ReceiptReader};
+    use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
     use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, TxExecutionOutcome};
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
     use receipt_poller_queue::queue::ReceiptPollerEvent;
+    use retry_queue::queue::{RetryQueueMessageBody, sqs::RetrySqsQueue};
     use std::str::FromStr;
     use wallet_pool::manager::WalletPoolManager;
 
@@ -43,6 +51,13 @@ pub mod aws_lambda {
         let event = ReceiptPollerEvent::from_sqs_event(event)?;
 
         let config = Config::build()?;
+
+        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+        let aws_config = aws_config::defaults(BehaviorVersion::latest())
+            .region(region_provider)
+            .load()
+            .await;
+
         let network_repo = NetworkRepo::new(&pool);
         let execution_attempt_repo = ExecutionAttemptRepo::new(&pool);
         let operator_wallet_repo = OperatorWalletRepo::new(&pool);
@@ -50,6 +65,11 @@ pub mod aws_lambda {
 
         let receipt_reader = ReceiptReader::build(&networks, config.tx_max_age_sec).await?;
         let wallet_pool = WalletPoolManager::build(operator_wallet_repo, &networks);
+        let retry_queue = RetrySqsQueue::build(
+            &aws_config,
+            &config.retry_queue_url,
+            &config.retry_queue_message_group_id,
+        )?;
 
         for queue_message in event.messages {
             let execution_attempt_uuid =
@@ -73,11 +93,12 @@ pub mod aws_lambda {
                             .release(execution_attempt.operator_wallet_id)
                             .await?;
                     }
-                    TxExecutionOutcome::DROPPED => {
-                        // put into retry_queue with marked as dropped (then retry with higher gas)
-                    }
-                    TxExecutionOutcome::FAILED => {
-                        // put into retry_queue marked as failed
+                    TxExecutionOutcome::DROPPED | TxExecutionOutcome::FAILED => {
+                        retry_queue
+                            .send_new(&RetryQueueMessageBody {
+                                execution_attempt_id: execution_attempt.id.to_string(),
+                            })
+                            .await?;
                     }
                 }
             }

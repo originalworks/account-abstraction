@@ -2082,6 +2082,8 @@ dependencies = [
  "operator_wallet_db",
  "receipt_poller",
  "receipt_poller_queue",
+ "retry_handler",
+ "retry_queue",
  "sender",
  "serde",
  "serde_json",
@@ -3953,6 +3955,7 @@ dependencies = [
  "network_db",
  "operator_wallet_db",
  "receipt_poller_queue",
+ "retry_queue",
  "sqlx",
  "tokio",
  "uuid",
@@ -4069,6 +4072,21 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "webpki-roots 1.0.6",
+]
+
+[[package]]
+name = "retry_handler"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "anyhow",
+ "aws-config",
+ "aws-sdk-sqs",
+ "aws_lambda_events",
+ "lambda_runtime",
+ "retry_queue",
+ "sqlx",
+ "tokio",
 ]
 
 [[package]]
