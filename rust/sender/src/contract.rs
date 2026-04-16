@@ -101,8 +101,7 @@ impl ContractManager {
     pub async fn send_batch(
         &self,
         tx_context: &ExecuteBatchTxContext,
-        wallet: Wallet,
-        nonce: u64,
+        mut wallet: Wallet,
     ) -> anyhow::Result<NewExecutionAttempt> {
         let Some(network) = self.networks_by_chain_id.get(&tx_context.chain_id) else {
             bail!(
@@ -113,6 +112,7 @@ impl ContractManager {
         let Some(root_provider) = self.providers_by_chain_id.get(&tx_context.chain_id) else {
             bail!("Provider not found for chain id: {}", tx_context.chain_id);
         };
+        let nonce = wallet.use_nonce()?;
         let provider = ProviderBuilder::new()
             .wallet(wallet.ow_wallet.wallet)
             .connect_provider(root_provider);

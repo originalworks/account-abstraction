@@ -29,7 +29,7 @@ impl<'a> WalletPoolManager<'a> {
         }
     }
 
-    async fn fetch_from_db(
+    async fn fetch_and_lock(
         &self,
         chain_id: i64,
         use_operator_wallet_id: Option<Uuid>,
@@ -56,16 +56,20 @@ impl<'a> WalletPoolManager<'a> {
             bail!("Network not found for chain_id: {chain_id}");
         };
 
-        let Some(operator_wallet) = self.fetch_from_db(chain_id, use_operator_wallet_id).await?
+        let Some(operator_wallet) = self
+            .fetch_and_lock(chain_id, use_operator_wallet_id)
+            .await?
         else {
             return Ok(AcquireAttemptResult::NoWalletAvailable);
         };
 
-        let wallet = Wallet::build(&operator_wallet, &network).await?;
+        let mut wallet = Wallet::build(&operator_wallet, &network).await?;
 
         if wallet.has_enough_balance().await? == false {
             return Ok(AcquireAttemptResult::InsufficientFunds(operator_wallet.id));
         }
+
+        wallet.set_next_nonce().await?;
 
         Ok(AcquireAttemptResult::Acquired(wallet))
     }
@@ -98,7 +102,10 @@ impl<'a> WalletPoolManager<'a> {
         }
     }
 
-    pub async fn release(&self, ow_wallet: OwWallet) -> anyhow::Result<()> {
+    pub async fn release(&self, operator_wallet_id: Uuid) -> anyhow::Result<()> {
+        self.operator_wallet_repo
+            .release(operator_wallet_id)
+            .await?;
         Ok(())
     }
 }

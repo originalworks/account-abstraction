@@ -39,7 +39,7 @@ mod tests {
         let seoa_address = get_seoa_address()?;
         network_repo.add_anvil(seoa_address.to_string()).await?;
         operator_wallet_repo
-            .insert_from_mnemonic(anvil_mnemonic, anvil_chain_id, 5)
+            .insert_from_mnemonic(anvil_mnemonic, anvil_chain_id, 1)
             .await?;
 
         let aws_config: aws_config::SdkConfig = build_aws_sdk_config().await?;

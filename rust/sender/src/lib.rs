@@ -116,21 +116,8 @@ pub mod aws_lambda {
                 .new_assignments(&execute_batch_context.tx_ids, wallet.db_record.id)
                 .await?;
 
-            let pending_nonce = wallet.get_pending_nonce().await?;
-
-            if i64::try_from(pending_nonce)? != wallet.db_record.nonce {
-                panic!("disco time!");
-                // TODO: here use abstracted function that will emergency release transctions
-            }
-
-            let free_nonce = if pending_nonce == 0 {
-                pending_nonce
-            } else {
-                pending_nonce + 1
-            };
-
             let new_execution_attempt = contract_manager
-                .send_batch(&execute_batch_context, wallet, free_nonce)
+                .send_batch(&execute_batch_context, wallet)
                 .await?;
 
             let execution_attempt = execution_attempt_repo.insert(new_execution_attempt).await?;

@@ -193,19 +193,6 @@ impl<'a> ExecutionAttemptRepo<'a> {
         .execute(&mut *tx)
         .await?;
 
-        sqlx::query!(
-            r#"
-            UPDATE operator_wallets
-            SET
-                in_use = FALSE
-            WHERE
-                id = $1
-            "#,
-            attempt.operator_wallet_id
-        )
-        .execute(&mut *tx)
-        .await?;
-
         tx.commit().await?;
 
         Ok(())
