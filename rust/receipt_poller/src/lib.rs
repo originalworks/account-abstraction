@@ -30,8 +30,10 @@ pub mod aws_lambda {
     use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, TxExecutionOutcome};
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
+    use operator_wallet_db::operator_wallets::OperatorWalletRepo;
     use receipt_poller_queue::queue::ReceiptPollerEvent;
     use std::str::FromStr;
+    use wallet_pool::manager::WalletPoolManager;
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
@@ -43,9 +45,11 @@ pub mod aws_lambda {
         let config = Config::build()?;
         let network_repo = NetworkRepo::new(&pool);
         let execution_attempt_repo = ExecutionAttemptRepo::new(&pool);
+        let operator_wallet_repo = OperatorWalletRepo::new(&pool);
         let networks = network_repo.select_all().await?;
 
         let receipt_reader = ReceiptReader::build(&networks, config.tx_max_age_sec).await?;
+        let wallet_pool = WalletPoolManager::build(operator_wallet_repo, &networks);
 
         for queue_message in event.messages {
             let execution_attempt_uuid =
@@ -63,6 +67,10 @@ pub mod aws_lambda {
                     TxExecutionOutcome::SUCCEED => {
                         execution_attempt_repo
                             .propagate_success(execution_attempt.id, outcome)
+                            .await?;
+
+                        wallet_pool
+                            .release(execution_attempt.operator_wallet_id)
                             .await?;
                     }
                     TxExecutionOutcome::DROPPED => {

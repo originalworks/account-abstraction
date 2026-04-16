@@ -3951,10 +3951,12 @@ dependencies = [
  "execution_attempt_db",
  "lambda_runtime",
  "network_db",
+ "operator_wallet_db",
  "receipt_poller_queue",
  "sqlx",
  "tokio",
  "uuid",
+ "wallet_pool",
 ]
 
 [[package]]

@@ -81,7 +81,7 @@ impl<'a> OperatorWalletRepo<'a> {
             OperatorWallet,
             r#"
         WITH candidate AS (
-            SELECT id
+            SELECT id, nonce AS current_nonce
             FROM operator_wallets
             WHERE
                 id = $1
@@ -93,7 +93,8 @@ impl<'a> OperatorWalletRepo<'a> {
         )
         UPDATE operator_wallets ow
         SET
-            in_use = true
+            in_use = true,
+            nonce = nonce + 1
         FROM candidate
         WHERE ow.id = candidate.id
         RETURNING
@@ -102,7 +103,7 @@ impl<'a> OperatorWalletRepo<'a> {
             ow.key_ref,
             ow.key_type as "key_type: KeyType",
             ow.chain_id,
-            ow.nonce,
+            candidate.current_nonce AS nonce,
             ow.is_enabled,
             ow.in_use,
             ow.no_funds,
@@ -123,7 +124,7 @@ impl<'a> OperatorWalletRepo<'a> {
             OperatorWallet,
             r#"
         WITH candidate AS (
-            SELECT id
+            SELECT id, nonce AS current_nonce
             FROM operator_wallets
             WHERE
                 chain_id = $1
@@ -135,7 +136,8 @@ impl<'a> OperatorWalletRepo<'a> {
         )
         UPDATE operator_wallets ow
         SET
-            in_use = true
+            in_use = true,
+            nonce = nonce + 1
         FROM candidate
         WHERE ow.id = candidate.id
         RETURNING
@@ -144,7 +146,7 @@ impl<'a> OperatorWalletRepo<'a> {
             ow.key_ref,
             ow.key_type as "key_type: KeyType",
             ow.chain_id,
-            ow.nonce,
+            candidate.current_nonce AS nonce,
             ow.is_enabled,
             ow.in_use,
             ow.no_funds,
@@ -226,5 +228,27 @@ impl<'a> OperatorWalletRepo<'a> {
         .await?;
 
         Ok(wallet)
+    }
+
+    pub async fn release(&self, operator_wallet_id: Uuid) -> anyhow::Result<()> {
+        let result = sqlx::query!(
+            r#"
+        UPDATE operator_wallets
+        SET
+            in_use = false
+        WHERE
+            id = $1
+            AND in_use = true
+        "#,
+            operator_wallet_id
+        )
+        .execute(self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            anyhow::bail!("wallet not found or not in use");
+        }
+
+        Ok(())
     }
 }
