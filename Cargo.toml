@@ -13,6 +13,7 @@ members = [
     "rust/queues/sender_queue",
     "rust/queues/signer_queue",
     "rust/queues/receipt_poller_queue",
+    "rust/queues/retry_queue",
     "rust/signer",
     "rust/sender",
     "rust/receipt_poller",
