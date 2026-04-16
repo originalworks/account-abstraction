@@ -19,6 +19,7 @@ members = [
     "rust/receipt_poller",
     "rust/e2e_test",
     "rust/wallet_pool",
+    "rust/retry_handler",
 ]
 
 [workspace.dependencies]
@@ -34,8 +35,10 @@ wallet_pool = { path = "./rust/wallet_pool" }
 sender_queue = { path = "./rust/queues/sender_queue" }
 receipt_poller_queue = { path = "./rust/queues/receipt_poller_queue" }
 signer_queue = { path = "./rust/queues/signer_queue" }
+retry_queue = { path = "./rust/queues/retry_queue" }
 signer = { path = "./rust/signer" }
 sender = { path = "./rust/sender" }
+retry_handler = { path = "./rust/retry_handler" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"

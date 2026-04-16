@@ -1,4 +1,5 @@
 pub mod receipt_poller_queue;
+pub mod retry_queue;
 pub mod sender_queue;
 
 use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
