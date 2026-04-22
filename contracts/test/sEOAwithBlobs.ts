@@ -61,7 +61,7 @@ async function buildSignature(input: BuildSignatureInput) {
   return input.signer.signTypedData(domain, types, value);
 }
 
-describe.only("sEOA.sol (BLOB transactions)", () => {
+describe("sEOA.sol (BLOB transactions)", () => {
   let deployer: HardhatEthersSigner;
   let gasSponsorA: HDNodeWallet;
   let gasSponsorB: HDNodeWallet;
