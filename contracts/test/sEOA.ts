@@ -5,6 +5,12 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/types";
 import { SEOA } from "../typechain/SEOA.js";
 import { HDNodeWallet } from "ethers";
 import { ERC20TokenMock, ERC20TokenMock__factory } from "../typechain/index.js";
+import {
+  futureDeadline,
+  getCurrentTimestamp,
+  randomSalt,
+  setNextBlockTimestamp,
+} from "./helpers.js";
 
 const { ethers } = await network.connect();
 
@@ -19,30 +25,11 @@ interface BuildAndSignInput {
   value?: number;
 }
 
-async function getCurrentTimestamp(): Promise<number> {
-  const block = await ethers.provider.getBlock("latest");
-  return block!.timestamp;
-}
-
-async function setNextBlockTimestamp(timestamp: number) {
-  await ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
-}
-
 function buildERC20MintToPayload(receiver: string, amount: number): string {
   return ERC20TokenMock__factory.createInterface().encodeFunctionData(
     "mintTo",
     [receiver, amount],
   );
-}
-
-function randomSalt(): string {
-  return ethers.hexlify(ethers.randomBytes(32));
-}
-
-async function futureDeadline(secFromNow: number): Promise<number> {
-  const latestBlock = await ethers.provider.getBlock("latest");
-  const { timestamp } = latestBlock!;
-  return timestamp + secFromNow;
 }
 
 async function buildRandomBatchInput(
@@ -123,9 +110,15 @@ describe("sEOA.sol", () => {
   let sEOAimplementation: SEOA;
   let erc20Mock: ERC20TokenMock;
   let sEoa: SEOA;
+  let ddexSequencerAddress: string;
 
   before(async () => {
     [deployer, gasSponsorA, gasSponsorB] = await ethers.getSigners();
+    const FakeDdexSequencer = await ethers.getContractFactory(
+      "FakeDdexSequencer",
+    );
+    const fakeDdexSequencer = await FakeDdexSequencer.deploy();
+    ddexSequencerAddress = await fakeDdexSequencer.getAddress();
     const sEOA_factory = new SEOA__factory(deployer);
     sEOAimplementation = await sEOA_factory.deploy();
     await sEOAimplementation.waitForDeployment();
@@ -147,9 +140,10 @@ describe("sEOA.sol", () => {
     const tx = await delegatedAccount.sendTransaction({
       to: delegatedAccount.address,
       authorizationList: [auth],
-      data: SEOA__factory.createInterface().encodeFunctionData("usedSalts", [
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-      ]),
+      data: SEOA__factory.createInterface().encodeFunctionData(
+        "setDdexSequencerAddress",
+        [ddexSequencerAddress],
+      ),
     });
     await tx.wait();
 
@@ -287,7 +281,7 @@ describe("sEOA.sol", () => {
 
     it("accepts a payload exactly at the deadline block", async function () {
       const salt = randomSalt();
-      const deadline = await futureDeadline(5);
+      const deadline = await futureDeadline(50);
       const payload = buildERC20MintToPayload(delegatedAccount.address, 100);
       const target = await erc20Mock.getAddress();
 

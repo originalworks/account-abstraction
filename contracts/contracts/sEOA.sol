@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "@originalworks/protocol-core-contracts/interfaces/IDdexSequencer.sol";
 
 contract sEOA is EIP712 {
     using ECDSA for bytes32;
@@ -13,11 +14,18 @@ contract sEOA is EIP712 {
         bool success
     );
 
+    event BlobSent(
+        bytes32 indexed salt,
+        bytes indexed commitment,
+        bool success
+    );
+
     error Expired();
     error AlreadyUsed();
     error InvalidSignature();
     error ExecutionFailed(bytes reason);
     error ZeroAddress();
+    error NotAuthorized();
 
     struct ExecuteInput {
         address target;
@@ -36,14 +44,70 @@ contract sEOA is EIP712 {
         uint256 deadline;
     }
 
+    struct BlobBatchInput {
+        bytes32 imageId;
+        bytes commitment;
+        bytes32 blobSha2;
+        bytes32 salt;
+        uint256 deadline;
+        bytes signature;
+    }
+
+    struct SignedBlobCall {
+        bytes32 imageId;
+        bytes32 commitmentHash;
+        bytes32 blobSha2;
+        bytes32 salt;
+        uint256 deadline;
+    }
+
     bytes32 private constant SIGNED_CALL_TYPEHASH =
         keccak256(
             "SignedCall(address target,bytes32 payloadHash,uint256 value,bytes32 salt,uint256 deadline)"
         );
 
+    bytes32 private constant SIGNED_BLOB_CALL_TYPEHASH =
+        keccak256(
+            "SignedBlobCall(bytes32 imageId,bytes32 commitmentHash,bytes32 blobSha2,bytes32 salt,uint256 deadline)"
+        );
+
     mapping(bytes32 => bool) public usedSalts;
+    IDdexSequencer ddexSequencer;
 
     constructor() EIP712("sEOA", "1") {}
+
+    function setDdexSequencerAddress(address ddexSequencerAddress) public {
+        if (msg.sender != address(this)) revert NotAuthorized();
+        ddexSequencer = IDdexSequencer(ddexSequencerAddress);
+    }
+
+    function sendBlobBatch(BlobBatchInput[] calldata input) public {
+        for (uint i = 0; i < input.length; i++) {
+            if (block.timestamp > input[i].deadline) revert Expired();
+            if (usedSalts[input[i].salt]) revert AlreadyUsed();
+
+            bytes32 digest = buildBlobDigest(
+                input[i].imageId,
+                input[i].commitment,
+                input[i].blobSha2,
+                input[i].salt,
+                input[i].deadline
+            );
+            address recovered = digest.recover(input[i].signature);
+            if (recovered != address(this)) revert InvalidSignature();
+
+            usedSalts[input[i].salt] = true;
+
+            ddexSequencer.submitNewBlobWithIndex(
+                input[i].imageId,
+                input[i].commitment,
+                input[i].blobSha2,
+                i
+            );
+
+            emit BlobSent(input[i].salt, input[i].commitment, true);
+        }
+    }
 
     function execute(
         ExecuteInput calldata input
@@ -102,11 +166,37 @@ contract sEOA is EIP712 {
             );
     }
 
+    function buildBlobDigest(
+        bytes32 imageId,
+        bytes calldata commitment,
+        bytes32 blobSha2,
+        bytes32 salt,
+        uint256 deadline
+    ) public view returns (bytes32) {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        SIGNED_BLOB_CALL_TYPEHASH,
+                        imageId,
+                        keccak256(commitment),
+                        blobSha2,
+                        salt,
+                        deadline
+                    )
+                )
+            );
+    }
+
     function domainSeparator() external view returns (bytes32) {
         return _domainSeparatorV4();
     }
 
-    function _exposeStruct(SignedCall calldata) external pure {}
+    function _exposeSignedCallStruct(SignedCall calldata) external pure {}
+
+    function _exposeSignedBlobCallStruct(
+        SignedBlobCall calldata
+    ) external pure {}
 
     receive() external payable {}
 }
