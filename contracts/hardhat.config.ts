@@ -21,6 +21,7 @@ const config: HardhatUserConfig = {
     hardhatVerify,
   ],
   solidity: {
+    settings: { evmVersion: "cancun" },
     profiles: {
       default: {
         version: "0.8.28",

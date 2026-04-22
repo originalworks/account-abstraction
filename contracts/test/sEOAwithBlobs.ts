@@ -3,9 +3,15 @@ import { SEOA__factory } from "../typechain/factories/SEOA__factory.js";
 import { expect } from "chai";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/types";
 import { SEOA } from "../typechain/SEOA.js";
-import { HDNodeWallet } from "ethers";
+import { HDNodeWallet, parseEther, Wallet } from "ethers";
 import { ERC20TokenMock, ERC20TokenMock__factory } from "../typechain/index.js";
-import { futureDeadline, randomSalt } from "./helpers.js";
+import {
+  futureDeadline,
+  getCurrentTimestamp,
+  getEthersType3Wallets,
+  randomSalt,
+} from "./helpers.js";
+import { KzgHelper } from "./kzg.js";
 
 const { ethers } = await network.connect();
 
@@ -55,18 +61,28 @@ async function buildSignature(input: BuildSignatureInput) {
   return input.signer.signTypedData(domain, types, value);
 }
 
-describe("sEOA.sol (BLOB transactions)", () => {
+describe.only("sEOA.sol (BLOB transactions)", () => {
   let deployer: HardhatEthersSigner;
-  let gasSponsorA: HardhatEthersSigner;
-  let gasSponsorB: HardhatEthersSigner;
+  let gasSponsorA: HDNodeWallet;
+  let gasSponsorB: HDNodeWallet;
   let delegatedAccount: HDNodeWallet;
   let sEOAimplementation: SEOA;
-  let erc20Mock: ERC20TokenMock;
   let sEoa: SEOA;
   let ddexSequencerAddress: string;
+  let kzgHelper: KzgHelper;
 
   before(async () => {
-    [deployer, gasSponsorA, gasSponsorB] = await ethers.getSigners();
+    let fundsSource;
+    [deployer, fundsSource] = await ethers.getSigners();
+    const type3Wallets = await getEthersType3Wallets({
+      fundsSource,
+      numberOfWallets: 2,
+      prefundValue: parseEther("1"),
+    });
+
+    gasSponsorA = type3Wallets[0].connect(ethers.provider);
+    gasSponsorB = type3Wallets[1].connect(ethers.provider);
+
     const FakeDdexSequencer = await ethers.getContractFactory(
       "FakeDdexSequencer",
     );
@@ -75,8 +91,8 @@ describe("sEOA.sol (BLOB transactions)", () => {
     const sEOA_factory = new SEOA__factory(deployer);
     sEOAimplementation = await sEOA_factory.deploy();
     await sEOAimplementation.waitForDeployment();
-    const ERC20TokenMock = await ethers.getContractFactory("ERC20TokenMock");
-    erc20Mock = await ERC20TokenMock.deploy();
+    kzgHelper = new KzgHelper();
+    await kzgHelper.generate();
   });
   beforeEach(async () => {
     delegatedAccount = ethers.Wallet.createRandom().connect(ethers.provider);
@@ -103,12 +119,13 @@ describe("sEOA.sol (BLOB transactions)", () => {
     sEoa = SEOA__factory.connect(delegatedAccount.address, delegatedAccount);
   });
 
-  describe("execute() — success", function () {
-    it.only("executes a valid signed payload and marks salt as used", async function () {
+  describe("sendBlobBatch() — success", function () {
+    it("executes a valid signed payload and marks salt as used", async function () {
+      const calculatedBlob = kzgHelper.calculatedBlobs[0];
       const salt = randomSalt();
       const deadline = await futureDeadline(60);
       const imageId = randomSalt();
-      const commitment = randomSalt();
+      const commitment = calculatedBlob.commitment;
       const blobSha2 = randomSalt();
 
       const signature = await buildSignature({
@@ -120,16 +137,229 @@ describe("sEOA.sol (BLOB transactions)", () => {
         salt,
         deadline,
       });
-      await sEoa.connect(gasSponsorA).sendBlobBatch([
-        {
-          imageId,
-          commitment,
-          blobSha2,
-          salt,
-          deadline,
-          signature,
-        },
-      ]);
+
+      await expect(
+        sEoa.connect(gasSponsorA).sendBlobBatch(
+          [
+            {
+              imageId,
+              commitment,
+              blobSha2,
+              salt,
+              deadline,
+              signature,
+            },
+          ],
+          {
+            type: 3,
+            maxFeePerBlobGas: 10,
+            gasLimit: 1000000,
+            blobs: [
+              {
+                data: calculatedBlob.blobString,
+                proof: calculatedBlob.proof,
+                commitment: commitment,
+              },
+            ],
+          },
+        ),
+      ).to.not.revert(ethers);
+      expect(await sEoa.usedSalts(salt)).to.eq(true);
     });
+
+    it("Can send two in a batch", async function () {
+      const imageId = randomSalt();
+      const calculatedBlobA = kzgHelper.calculatedBlobs[0];
+      const calculatedBlobB = kzgHelper.calculatedBlobs[0];
+      const saltA = randomSalt();
+      const saltB = randomSalt();
+      const deadline = await futureDeadline(3600);
+      const commitmentA = calculatedBlobA.commitment;
+      const commitmentB = calculatedBlobB.commitment;
+      const blobSha2A = randomSalt();
+      const blobSha2B = randomSalt();
+
+      const signatureA = await buildSignature({
+        signer: delegatedAccount,
+        sEoa,
+        imageId,
+        commitment: commitmentA,
+        blobSha2: blobSha2A,
+        salt: saltA,
+        deadline,
+      });
+
+      const signatureB = await buildSignature({
+        signer: delegatedAccount,
+        sEoa,
+        imageId,
+        commitment: commitmentB,
+        blobSha2: blobSha2B,
+        salt: saltB,
+        deadline,
+      });
+
+      await expect(
+        sEoa.connect(gasSponsorA).sendBlobBatch(
+          [
+            {
+              imageId,
+              commitment: commitmentA,
+              blobSha2: blobSha2A,
+              salt: saltA,
+              deadline,
+              signature: signatureA,
+            },
+            {
+              imageId,
+              commitment: commitmentB,
+              blobSha2: blobSha2B,
+              salt: saltB,
+              deadline,
+              signature: signatureB,
+            },
+          ],
+          {
+            type: 3,
+            maxFeePerBlobGas: 10,
+            gasLimit: 1000000,
+            blobs: [
+              {
+                data: calculatedBlobA.blobString,
+                proof: calculatedBlobA.proof,
+                commitment: commitmentA,
+              },
+              {
+                data: calculatedBlobB.blobString,
+                proof: calculatedBlobB.proof,
+                commitment: commitmentB,
+              },
+            ],
+          },
+        ),
+      ).to.not.revert(ethers);
+      expect(await sEoa.usedSalts(saltA)).to.eq(true);
+      expect(await sEoa.usedSalts(saltB)).to.eq(true);
+    });
+  });
+  it("reverts with AlreadyUsed on salt replay", async () => {
+    const calculatedBlob = kzgHelper.calculatedBlobs[0];
+    const salt = randomSalt();
+    const deadline = await futureDeadline(60);
+    const imageId = randomSalt();
+    const commitment = calculatedBlob.commitment;
+    const blobSha2 = randomSalt();
+
+    const signature = await buildSignature({
+      signer: delegatedAccount,
+      sEoa,
+      imageId,
+      commitment,
+      blobSha2,
+      salt,
+      deadline,
+    });
+
+    await expect(
+      sEoa.connect(gasSponsorA).sendBlobBatch(
+        [
+          {
+            imageId,
+            commitment,
+            blobSha2,
+            salt,
+            deadline,
+            signature,
+          },
+        ],
+        {
+          type: 3,
+          maxFeePerBlobGas: 10,
+          gasLimit: 1000000,
+          blobs: [
+            {
+              data: calculatedBlob.blobString,
+              proof: calculatedBlob.proof,
+              commitment: commitment,
+            },
+          ],
+        },
+      ),
+    ).to.not.revert(ethers);
+    expect(await sEoa.usedSalts(salt)).to.eq(true);
+
+    await expect(
+      sEoa.connect(gasSponsorA).sendBlobBatch(
+        [
+          {
+            imageId,
+            commitment,
+            blobSha2,
+            salt,
+            deadline,
+            signature,
+          },
+        ],
+        {
+          type: 3,
+          maxFeePerBlobGas: 10,
+          gasLimit: 1000000,
+          blobs: [
+            {
+              data: calculatedBlob.blobString,
+              proof: calculatedBlob.proof,
+              commitment: commitment,
+            },
+          ],
+        },
+      ),
+    ).to.be.revertedWithCustomError(sEoa, "AlreadyUsed");
+  });
+
+  it("reverts with Expired when deadline is in the past", async () => {
+    const calculatedBlob = kzgHelper.calculatedBlobs[0];
+    const salt = randomSalt();
+    const now = await getCurrentTimestamp();
+    const deadline = now - 1;
+    const imageId = randomSalt();
+    const commitment = calculatedBlob.commitment;
+    const blobSha2 = randomSalt();
+
+    const signature = await buildSignature({
+      signer: delegatedAccount,
+      sEoa,
+      imageId,
+      commitment,
+      blobSha2,
+      salt,
+      deadline,
+    });
+
+    await expect(
+      sEoa.connect(gasSponsorA).sendBlobBatch(
+        [
+          {
+            imageId,
+            commitment,
+            blobSha2,
+            salt,
+            deadline,
+            signature,
+          },
+        ],
+        {
+          type: 3,
+          maxFeePerBlobGas: 10,
+          gasLimit: 1000000,
+          blobs: [
+            {
+              data: calculatedBlob.blobString,
+              proof: calculatedBlob.proof,
+              commitment: commitment,
+            },
+          ],
+        },
+      ),
+    ).to.be.revertedWithCustomError(sEoa, "Expired");
   });
 });
