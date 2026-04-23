@@ -75,7 +75,7 @@ mod tests {
             .receive_messages(db_types::TxType::STANDARD, 5)
             .await?;
 
-        match sender::aws_lambda::function_handler(sender_queue_event, &pool).await {
+        match standard_tx_sender::aws_lambda::function_handler(sender_queue_event, &pool).await {
             Ok(_) => {}
             Err(err) => {
                 println!("{err:#?}")
