@@ -13,7 +13,7 @@ serde_json.workspace = true
 hex.workspace = true
 sqlx = { workspace = true, features = ["postgres"] }
 uuid.workspace = true
-sender_queue = { workspace = true, features = ["aws"] }
+standard_sender_queue = { workspace = true, features = ["aws"] }
 db_types.workspace = true
 signer_queue = { workspace = true, features = ["aws"] }
 network_db.workspace = true
@@ -27,6 +27,7 @@ aws-config = { workspace = true, features = [
 ], optional = true }
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
+sqs_queue.workspace = true
 
 [dev-dependencies]
 alloy = { workspace = true, features = ["node-bindings"] }
