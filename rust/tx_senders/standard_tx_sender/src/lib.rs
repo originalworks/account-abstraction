@@ -39,8 +39,8 @@ pub mod aws_lambda {
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
     use receipt_poller_queue::ReceiptPollerQueueMessageBody;
-    use sender_queue::standard_queue::SenderQueueStandardEvent;
     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
+    use standard_sender_queue::StandardSenderQueueEvent;
     use tx_request_db::tx_requests::TxRequestRepo;
     use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
     use wallet_pool::manager::WalletPoolManager;
@@ -81,7 +81,7 @@ pub mod aws_lambda {
         let mut sqs_batch_response = SqsBatchResponse::default();
 
         println!("Reading...");
-        let tx_sender_queue_event = SenderQueueStandardEvent::from_sqs_event(event)?;
+        let tx_sender_queue_event = StandardSenderQueueEvent::from_sqs_event(event)?;
 
         let tx_ids = tx_sender_queue_event
             .messages
