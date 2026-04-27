@@ -21,7 +21,7 @@ sol!(
     #[sol(rpc)]
     #[derive(Debug)]
     SEOA,
-    "../../contracts/artifacts/contracts/sEOA.sol/sEOA.json"
+    "../../../contracts/artifacts/contracts/sEOA.sol/sEOA.json"
 );
 
 trait BuildNewExecutionAttempt {

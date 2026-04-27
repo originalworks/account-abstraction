@@ -1517,6 +1517,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "blob_tx_sender"
+version = "0.1.0"
+
+[[package]]
+name = "blob_tx_signer"
+version = "0.1.0"
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2086,11 +2094,11 @@ dependencies = [
  "retry_queue",
  "serde",
  "serde_json",
- "signer",
  "signer_queue",
  "sqlx",
  "sqs_queue",
  "standard_tx_sender",
+ "standard_tx_signer",
  "tokio",
  "tx_request_db",
  "uuid",
@@ -4679,31 +4687,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "signer"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "alloy-sol-types",
- "anyhow",
- "aws-config",
- "aws-sdk-sqs",
- "aws_lambda_events",
- "db_types",
- "hex",
- "lambda_runtime",
- "network_db",
- "ow_wallet_adapter",
- "sender_queue",
- "serde",
- "serde_json",
- "signer_queue",
- "sqlx",
- "tokio",
- "tx_request_db",
- "uuid",
-]
-
-[[package]]
 name = "signer_queue"
 version = "0.1.0"
 dependencies = [
@@ -5022,6 +5005,31 @@ dependencies = [
  "uuid",
  "wallet_assignment_db",
  "wallet_pool",
+]
+
+[[package]]
+name = "standard_tx_signer"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "alloy-sol-types",
+ "anyhow",
+ "aws-config",
+ "aws-sdk-sqs",
+ "aws_lambda_events",
+ "db_types",
+ "hex",
+ "lambda_runtime",
+ "network_db",
+ "ow_wallet_adapter",
+ "sender_queue",
+ "serde",
+ "serde_json",
+ "signer_queue",
+ "sqlx",
+ "tokio",
+ "tx_request_db",
+ "uuid",
 ]
 
 [[package]]

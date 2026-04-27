@@ -15,12 +15,14 @@ members = [
     "rust/queues/receipt_poller_queue",
     "rust/queues/retry_queue",
     "rust/queues/sqs_queue",
-    "rust/signer",
-    "rust/standard_tx_sender",
+    "rust/tx_signers/standard_tx_signer",
+    "rust/tx_signers/blob_tx_signer",
+    "rust/tx_senders/standard_tx_sender",
     "rust/receipt_poller",
     "rust/e2e_test",
     "rust/wallet_pool",
     "rust/retry_handler",
+    "rust/tx_senders/blob_tx_sender",
 ]
 
 [workspace.dependencies]
@@ -38,8 +40,8 @@ receipt_poller_queue = { path = "./rust/queues/receipt_poller_queue" }
 signer_queue = { path = "./rust/queues/signer_queue" }
 retry_queue = { path = "./rust/queues/retry_queue" }
 sqs_queue = { path = "./rust/queues/sqs_queue" }
-signer = { path = "./rust/signer" }
-standard_tx_sender = { path = "./rust/standard_tx_sender" }
+standard_tx_signer = { path = "./rust/tx_signers/standard_tx_signer" }
+standard_tx_sender = { path = "./rust/tx_senders/standard_tx_sender" }
 retry_handler = { path = "./rust/retry_handler" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
