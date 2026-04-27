@@ -16,7 +16,7 @@ migrator.workspace = true
 sqlx = { workspace = true, features = ["postgres"] }
 network_db.workspace = true
 signer_queue = { workspace = true, features = ["aws"] }
-signer = { workspace = true, features = ["aws"] }
+standard_tx_signer = { workspace = true, features = ["aws"] }
 standard_tx_sender = { workspace = true, features = ["aws", "test-keys"] }
 operator_wallet_db = { workspace = true, features = ["test-keys"] }
 hex.workspace = true

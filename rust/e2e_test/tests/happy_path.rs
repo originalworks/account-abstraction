@@ -104,7 +104,7 @@ mod tests {
             None,
         )])?;
 
-        signer::aws_lambda::function_handler(tx_request_event, &pool)
+        standard_tx_signer::aws_lambda::function_handler(tx_request_event, &pool)
             .await
             .unwrap();
 
