@@ -1,0 +1,13 @@
+[package]
+name = "sqs_queue"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+aws-sdk-sqs = { workspace = true }
+aws-config = { workspace = true, features = ["behavior-version-latest"] }
+aws_lambda_events = { workspace = true, features = ["sqs"] }
+lambda_runtime = { workspace = true }

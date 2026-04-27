@@ -20,7 +20,7 @@ impl Config {
 pub mod aws_lambda {
     use aws_lambda_events::sqs::SqsEvent;
     use lambda_runtime::LambdaEvent;
-    use retry_queue::queue::RetryEvent;
+    use retry_queue::RetryEvent;
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,

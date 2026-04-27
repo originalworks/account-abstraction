@@ -1,11 +1,15 @@
 #[cfg(test)]
 mod tests {
+    use std::env;
+
     use alloy::{primitives::Address, signers::local::PrivateKeySigner};
-    use e2e_test::aws::sqs::TestEventMessage;
-    use e2e_test::aws::sqs::build_lambda_sqs_event;
-    use e2e_test::aws::sqs::receipt_poller_queue::ReceiptPollerTestQueue;
-    use e2e_test::aws::sqs::retry_queue::RetryTestQueue;
-    use e2e_test::aws::sqs::sender_queue::SenderQueueTestHelper;
+    use e2e_test::aws::sqs::event::TestEventMessage;
+    use e2e_test::aws::sqs::event::build_lambda_sqs_event;
+    use e2e_test::aws::sqs::test_queue::TestQueue;
+    use e2e_test::constants::RECEIPT_POLLER_QUEUE_NAME;
+    use e2e_test::constants::RETRY_QUEUE_NAME;
+    use e2e_test::constants::SENDER_BLOB_QUEUE_NAME;
+    use e2e_test::constants::SENDER_STANDARD_QUEUE_NAME;
     use e2e_test::db::network::AddAnvilNetwork;
     use e2e_test::db::operator_wallet::InsertFromMnemonic;
     use e2e_test::tx_request::CreateTestTxRequestBody;
@@ -16,9 +20,8 @@ mod tests {
     };
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
-    use receipt_poller_queue::queue::sqs::ReceiptPollerSqsQueue;
-    use retry_queue::queue::sqs::RetrySqsQueue;
     use signer_queue::tx_request::TxRequestBody;
+    use sqs_queue::queue::SqsQueue;
     use tx_request_db::tx_requests::TxRequestRepo;
 
     pub fn get_seoa_address() -> anyhow::Result<Address> {
@@ -32,6 +35,16 @@ mod tests {
     async fn single_standard_tx_e2e() -> anyhow::Result<()> {
         let anvil_chain_id = std::env::var("ANVIL_CHAIN_ID").unwrap().parse()?;
         let anvil_mnemonic = std::env::var("ANVIL_MNEMONIC").unwrap();
+        let receipt_poller_queue_message_group_id =
+            env::var("RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID").unwrap();
+
+        let blob_sender_queue_message_group_id =
+            env::var("BLOB_SENDER_QUEUE_MESSAGE_GROUP_ID").unwrap();
+        let standard_sender_queue_message_group_id =
+            env::var("STANDARD_SENDER_QUEUE_MESSAGE_GROUP_ID").unwrap();
+        let receipt_poller_queue_message_group_id =
+            env::var("RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID").unwrap();
+        let retry_queue_message_group_id = env::var("RETRY_QUEUE_MESSAGE_GROUP_ID").unwrap();
 
         let pool = get_pool().await?;
         drop_and_migrate(&pool).await?;
@@ -45,9 +58,41 @@ mod tests {
             .await?;
 
         let aws_config: aws_config::SdkConfig = build_aws_sdk_config().await?;
-        let sender_queue_test_helper = SenderQueueTestHelper::build(&aws_config).await?;
-        let receipt_poller_queue = ReceiptPollerSqsQueue::create_and_build(&aws_config).await?;
-        let retry_queue = RetrySqsQueue::create_and_build(&aws_config).await?;
+        let standard_sender_queue = SqsQueue::create_and_build(
+            &aws_config,
+            SENDER_STANDARD_QUEUE_NAME.to_string(),
+            standard_sender_queue_message_group_id,
+        )
+        .await?;
+
+        let blob_sender_queue = SqsQueue::create_and_build(
+            &aws_config,
+            SENDER_BLOB_QUEUE_NAME.to_string(),
+            blob_sender_queue_message_group_id,
+        )
+        .await?;
+        let receipt_poller_queue = SqsQueue::create_and_build(
+            &aws_config,
+            RECEIPT_POLLER_QUEUE_NAME.to_string(),
+            receipt_poller_queue_message_group_id,
+        )
+        .await?;
+        let retry_queue = SqsQueue::create_and_build(
+            &aws_config,
+            RETRY_QUEUE_NAME.to_string(),
+            retry_queue_message_group_id,
+        )
+        .await?;
+
+        unsafe {
+            env::set_var(
+                "SENDER_STANDARD_QUEUE_URL",
+                &standard_sender_queue.queue_url,
+            );
+            env::set_var("SENDER_BLOB_QUEUE_URL", &blob_sender_queue.queue_url);
+            env::set_var("RECEIPT_POLLER_QUEUE_URL", &receipt_poller_queue.queue_url);
+            env::set_var("RETRY_QUEUE_URL", &retry_queue.queue_url);
+        }
 
         let tx_request_body = TxRequestBody::test_build(TxRequestBodyOptional::default(
             db_types::TxType::STANDARD,
@@ -71,9 +116,7 @@ mod tests {
 
         // Transaction Request was signed and is ready to be sent
 
-        let sender_queue_event = sender_queue_test_helper
-            .receive_messages(db_types::TxType::STANDARD, 5)
-            .await?;
+        let sender_queue_event = standard_sender_queue.receive_messages(5).await?;
 
         match standard_tx_sender::aws_lambda::function_handler(sender_queue_event, &pool).await {
             Ok(_) => {}
