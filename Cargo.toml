@@ -10,7 +10,6 @@ members = [
     "rust/database/execution_attempt_db",
     "rust/database/execution_attempt_item_db",
     "rust/database/db_types",
-    # "rust/queues/sender_queue",
     "rust/queues/signer_queue",
     "rust/queues/receipt_poller_queue",
     "rust/queues/retry_queue",
