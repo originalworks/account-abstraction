@@ -2089,6 +2089,7 @@ dependencies = [
  "signer",
  "signer_queue",
  "sqlx",
+ "sqs_queue",
  "standard_tx_sender",
  "tokio",
  "tx_request_db",
@@ -3957,6 +3958,7 @@ dependencies = [
  "receipt_poller_queue",
  "retry_queue",
  "sqlx",
+ "sqs_queue",
  "tokio",
  "uuid",
  "wallet_pool",
@@ -3967,12 +3969,11 @@ name = "receipt_poller_queue"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "aws-config",
- "aws-sdk-sqs",
  "aws_lambda_events",
  "lambda_runtime",
  "serde",
  "serde_json",
+ "sqs_queue",
 ]
 
 [[package]]
@@ -4094,13 +4095,12 @@ name = "retry_queue"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "aws-config",
- "aws-sdk-sqs",
  "aws_lambda_events",
  "execution_attempt_db",
  "lambda_runtime",
  "serde",
  "serde_json",
+ "sqs_queue",
 ]
 
 [[package]]
@@ -4977,6 +4977,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "sqs_queue"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws-config",
+ "aws-sdk-sqs",
+ "aws_lambda_events",
+ "lambda_runtime",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5003,6 +5016,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "sqs_queue",
  "tokio",
  "tx_request_db",
  "uuid",

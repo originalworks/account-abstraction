@@ -38,8 +38,9 @@ pub mod aws_lambda {
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
-    use receipt_poller_queue::queue::{ReceiptPollerQueueMessageBody, sqs::ReceiptPollerSqsQueue};
+    use receipt_poller_queue::ReceiptPollerQueueMessageBody;
     use sender_queue::standard_queue::SenderQueueStandardEvent;
+    use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
     use tx_request_db::tx_requests::TxRequestRepo;
     use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
     use wallet_pool::manager::WalletPoolManager;
@@ -71,7 +72,7 @@ pub mod aws_lambda {
         let wallet_pool_manager = WalletPoolManager::build(operator_wallet_repo, &networks);
         let tx_context_builder = TxContextBuilder::build(&tx_request_repo);
         let contract_manager = ContractManager::build(&networks).await?;
-        let receipt_poller_queue = ReceiptPollerSqsQueue::build(
+        let receipt_poller_queue = SqsQueue::build(
             &aws_config,
             &config.receipt_poller_queue_url,
             &config.receipt_poller_queue_message_group_id,
@@ -135,7 +136,7 @@ pub mod aws_lambda {
             };
 
             receipt_poller_queue
-                .send_new(&receipt_poller_queue_message_body)
+                .send_new(&receipt_poller_queue_message_body.to_json_string()?)
                 .await?;
         }
 

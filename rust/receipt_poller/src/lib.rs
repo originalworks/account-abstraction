@@ -38,8 +38,9 @@ pub mod aws_lambda {
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
-    use receipt_poller_queue::queue::ReceiptPollerEvent;
-    use retry_queue::queue::{RetryQueueMessageBody, sqs::RetrySqsQueue};
+    use receipt_poller_queue::ReceiptPollerEvent;
+    use retry_queue::RetryQueueMessageBody;
+    use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
     use std::str::FromStr;
     use wallet_pool::manager::WalletPoolManager;
 
@@ -65,7 +66,7 @@ pub mod aws_lambda {
 
         let receipt_reader = ReceiptReader::build(&networks, config.tx_max_age_sec).await?;
         let wallet_pool = WalletPoolManager::build(operator_wallet_repo, &networks);
-        let retry_queue = RetrySqsQueue::build(
+        let retry_queue = SqsQueue::build(
             &aws_config,
             &config.retry_queue_url,
             &config.retry_queue_message_group_id,
@@ -94,11 +95,11 @@ pub mod aws_lambda {
                             .await?;
                     }
                     TxExecutionOutcome::DROPPED | TxExecutionOutcome::FAILED => {
-                        retry_queue
-                            .send_new(&RetryQueueMessageBody {
-                                execution_attempt_id: execution_attempt.id.to_string(),
-                            })
-                            .await?;
+                        let message_body = &RetryQueueMessageBody {
+                            execution_attempt_id: execution_attempt.id.to_string(),
+                        };
+                        let message_body_string = message_body.to_json_string()?;
+                        retry_queue.send_new(&message_body_string).await?;
                     }
                 }
             }

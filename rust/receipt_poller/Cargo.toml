@@ -24,6 +24,7 @@ aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
 wallet_pool.workspace = true
 operator_wallet_db.workspace = true
+sqs_queue.workspace = true
 
 
 [features]
