@@ -1529,6 +1529,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "blob_tx_input_db"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "db_types",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
 name = "blob_tx_sender"
 version = "0.1.0"
 
@@ -2106,7 +2118,6 @@ dependencies = [
  "retry_queue",
  "serde",
  "serde_json",
- "signer_queue",
  "sqlx",
  "sqs_queue",
  "standard_tx_sender",
@@ -4686,21 +4697,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "signer_queue"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "aws_lambda_events",
- "db_types",
- "hex",
- "lambda_runtime",
- "serde",
- "serde_json",
- "tx_request_db",
- "uuid",
-]
-
-[[package]]
 name = "simd-adler32"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4990,6 +4986,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "standard_tx_input_db"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
 name = "standard_tx_sender"
 version = "0.1.0"
 dependencies = [
@@ -5035,11 +5042,12 @@ dependencies = [
  "ow_wallet_adapter",
  "serde",
  "serde_json",
- "signer_queue",
  "sqlx",
  "sqs_queue",
  "standard_sender_queue",
+ "standard_tx_input_db",
  "tokio",
+ "tx_request",
  "tx_request_db",
  "uuid",
 ]
@@ -5496,14 +5504,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
+name = "tx_request"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws_lambda_events",
+ "db_types",
+ "hex",
+ "lambda_runtime",
+ "serde",
+ "serde_json",
+ "standard_tx_input_db",
+ "tx_request_db",
+ "uuid",
+]
+
+[[package]]
 name = "tx_request_db"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "blob_tx_input_db",
  "db_types",
  "serde",
  "serde_json",
  "sqlx",
+ "standard_tx_input_db",
  "time",
  "tokio",
  "uuid",

@@ -1,6 +1,6 @@
 use alloy::primitives::{Address, Bytes, Uint, keccak256};
 use std::{collections::HashMap, str::FromStr};
-use tx_request_db::tx_requests::{TxRequest, TxRequestRepo};
+use tx_request_db::tx_requests::{StandardTxRequestRaw, TxRequest, TxRequestRepo};
 use uuid::Uuid;
 
 use crate::contract::sEOA::ExecuteInput;
@@ -27,7 +27,10 @@ impl<'a> TxContextBuilder<'a> {
         &self,
         tx_ids: &Vec<String>,
     ) -> anyhow::Result<Vec<ExecuteBatchTxContext>> {
-        let fetched_txs = self.transaction_repo.select_and_lock_many(tx_ids).await?;
+        let fetched_txs = self
+            .transaction_repo
+            .select_and_lock_many_standard(tx_ids)
+            .await?;
 
         let sorted = Self::group_by_chain_and_wallet(fetched_txs);
 
@@ -50,13 +53,13 @@ impl<'a> TxContextBuilder<'a> {
         &self,
         chain_id: i64,
         use_operator_wallet_id: Option<Uuid>,
-        transactions: Vec<TxRequest>,
+        transactions: Vec<StandardTxRequestRaw>,
     ) -> Option<ExecuteBatchTxContext> {
         let mut execute_batch_input = Vec::new();
         let mut batch_tx_value = 0;
         let mut tx_ids = Vec::new();
 
-        for transaction in &transactions {
+        for transaction in transactions {
             match transaction.clone().into_execute_input() {
                 Ok(execute_input) => {
                     if transaction.pass_value_from_operator_wallet && transaction.value_wei > 0 {
@@ -64,7 +67,7 @@ impl<'a> TxContextBuilder<'a> {
                     }
 
                     tx_ids.push(transaction.tx_id.clone());
-                    execute_batch_input.push(execute_input)
+                    execute_batch_input.push(execute_input.clone())
                 }
                 Err(_) => {
                     self.transaction_repo
@@ -89,9 +92,10 @@ impl<'a> TxContextBuilder<'a> {
     }
 
     fn group_by_chain_and_wallet(
-        transactions: Vec<TxRequest>,
-    ) -> HashMap<i64, HashMap<Option<Uuid>, Vec<TxRequest>>> {
-        let mut grouped: HashMap<i64, HashMap<Option<Uuid>, Vec<TxRequest>>> = HashMap::new();
+        transactions: Vec<StandardTxRequestRaw>,
+    ) -> HashMap<i64, HashMap<Option<Uuid>, Vec<StandardTxRequestRaw>>> {
+        let mut grouped: HashMap<i64, HashMap<Option<Uuid>, Vec<StandardTxRequestRaw>>> =
+            HashMap::new();
 
         for tx in transactions {
             grouped
@@ -110,7 +114,7 @@ trait IntoExecuteInput {
     fn into_execute_input(self) -> anyhow::Result<ExecuteInput>;
 }
 
-impl IntoExecuteInput for TxRequest {
+impl IntoExecuteInput for StandardTxRequestRaw {
     fn into_execute_input(self) -> anyhow::Result<ExecuteInput> {
         Ok(ExecuteInput {
             target: Address::from_str(self.to_address.as_str())?,

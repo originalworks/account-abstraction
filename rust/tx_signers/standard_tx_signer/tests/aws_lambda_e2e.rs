@@ -9,6 +9,7 @@ mod tests {
     use network_db::networks::{NetworkRepo, NewNetwork};
     use serde_json::json;
     use sqlx::PgPool;
+    use standard_tx_input_db::standard_tx_inputs::StandardTxInputRepo;
     use standard_tx_signer::{Config, aws_lambda::function_handler};
     use tx_request_db::tx_requests::TxRequestRepo;
 
@@ -88,10 +89,12 @@ mod tests {
             }
         };
 
-        let transaction_repo = TxRequestRepo::new(&pool);
-        let inserted_transaction = transaction_repo.find_by_tx_id(&tx_id.to_string()).await?;
+        let standard_tx_input_repo = StandardTxInputRepo::new(&pool);
+        let inserted_transaction_input = standard_tx_input_repo
+            .find_by_tx_id(&tx_id.to_string())
+            .await?;
 
-        assert!(inserted_transaction.signature.is_empty() == false);
+        assert!(inserted_transaction_input.signature.is_empty() == false);
         Ok(())
     }
 }

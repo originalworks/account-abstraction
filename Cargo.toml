@@ -2,15 +2,16 @@
 resolver = "3"
 
 members = [
-    "rust/database/operator_wallet_db",
-    "rust/database/tx_request_db",
-    "rust/database/wallet_assignment_db",
-    "rust/database/network_db",
+    "rust/database/tables/operator_wallet_db",
+    "rust/database/tables/tx_request_db",
+    "rust/database/tables/wallet_assignment_db",
+    "rust/database/tables/network_db",
+    "rust/database/tables/execution_attempt_db",
+    "rust/database/tables/execution_attempt_item_db",
     "rust/database/migrator",
-    "rust/database/execution_attempt_db",
-    "rust/database/execution_attempt_item_db",
     "rust/database/db_types",
-    "rust/queues/signer_queue",
+    "rust/database/tables/blob_tx_input_db",
+    "rust/database/tables/standard_tx_input_db",
     "rust/queues/receipt_poller_queue",
     "rust/queues/retry_queue",
     "rust/queues/sqs_queue",
@@ -24,26 +25,28 @@ members = [
     "rust/e2e_test",
     "rust/wallet_pool",
     "rust/retry_handler",
+    "rust/tx_request",
 ]
 
 [workspace.dependencies]
-tx_request_db = { path = "./rust/database/tx_request_db" }
-network_db = { path = "./rust/database/network_db" }
-wallet_assignment_db = { path = "./rust/database/wallet_assignment_db" }
-operator_wallet_db = { path = "./rust/database/operator_wallet_db" }
-execution_attempt_db = { path = "./rust/database/execution_attempt_db" }
-execution_attempt_item_db = { path = "./rust/database/execution_attempt_item_db" }
+tx_request_db = { path = "./rust/database/tables/tx_request_db" }
+network_db = { path = "./rust/database/tables/network_db" }
+wallet_assignment_db = { path = "./rust/database/tables/wallet_assignment_db" }
+operator_wallet_db = { path = "./rust/database/tables/operator_wallet_db" }
+execution_attempt_db = { path = "./rust/database/tables/execution_attempt_db" }
+standard_tx_input_db = { path = "./rust/database/tables/standard_tx_input_db" }
+execution_attempt_item_db = { path = "./rust/database/tables/execution_attempt_item_db" }
 db_types = { path = "./rust/database/db_types" }
 migrator = { path = "./rust/database/migrator" }
 wallet_pool = { path = "./rust/wallet_pool" }
 standard_sender_queue = { path = "./rust/queues/sender_queues/standard_sender_queue" }
 receipt_poller_queue = { path = "./rust/queues/receipt_poller_queue" }
-signer_queue = { path = "./rust/queues/signer_queue" }
 retry_queue = { path = "./rust/queues/retry_queue" }
 sqs_queue = { path = "./rust/queues/sqs_queue" }
 standard_tx_signer = { path = "./rust/tx_signers/standard_tx_signer" }
 standard_tx_sender = { path = "./rust/tx_senders/standard_tx_sender" }
 retry_handler = { path = "./rust/retry_handler" }
+tx_request = { path = "./rust/tx_request" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"
