@@ -15,7 +15,7 @@ sqlx = { workspace = true, features = ["postgres"] }
 uuid.workspace = true
 standard_sender_queue = { workspace = true, features = ["aws"] }
 db_types.workspace = true
-signer_queue = { workspace = true, features = ["aws"] }
+tx_request = { workspace = true, features = ["aws"] }
 network_db.workspace = true
 alloy = { workspace = true }
 alloy-sol-types = "1.5.7"
@@ -31,6 +31,7 @@ sqs_queue.workspace = true
 
 [dev-dependencies]
 alloy = { workspace = true, features = ["node-bindings"] }
+standard_tx_input_db.workspace = true
 
 [features]
 aws = [

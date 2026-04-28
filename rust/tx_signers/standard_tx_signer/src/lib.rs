@@ -63,12 +63,11 @@ pub mod aws_lambda {
     use crate::{Config, signature::sign_tx_request, wallet::WalletManager};
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
-    use db_types::TxType;
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
-    use signer_queue::tx_request::TxRequestBody;
     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
     use standard_sender_queue::StandardSenderQueueMessageBody;
+    use tx_request::{sqs_parser::tx_requests_from_sqs_event, standard::StandardTxRequestBody};
     use tx_request_db::tx_requests::TxRequestRepo;
 
     pub async fn function_handler(
@@ -93,13 +92,7 @@ pub mod aws_lambda {
             &config.standard_sender_queue_message_group_id,
         )?;
 
-        // let tx_sender_blob_queue = SenderBlobSqsQueue::build(
-        //     &aws_config,
-        //     &config.sender_blob_queue_url,
-        //     &config.blob_sender_queue_message_group_id,
-        // )?;
-
-        let tx_request_body_vec = TxRequestBody::from_sqs_event(event)?;
+        let tx_request_body_vec = tx_requests_from_sqs_event::<StandardTxRequestBody>(event)?;
         let mut wallet_manager = WalletManager::build(&networks, &config)?;
 
         for tx_request_body in tx_request_body_vec {
@@ -111,23 +104,15 @@ pub mod aws_lambda {
             println!("Saving...");
             let insert_tx_input = tx_request_body.into_db_input(signature.as_bytes().to_vec())?;
             transaction_repo
-                .insert_ignore_conflict(&insert_tx_input)
+                .insert_tx_request_with_tx_input(&insert_tx_input)
                 .await?;
-            if tx_request_body.tx_type == TxType::STANDARD {
-                let trigger_body = StandardSenderQueueMessageBody {
-                    tx_id: insert_tx_input.tx_id,
-                };
+            let trigger_body = StandardSenderQueueMessageBody {
+                tx_id: insert_tx_input.new_tx_request.tx_id,
+            };
 
-                tx_sender_standard_queue
-                    .send_new(&trigger_body.to_json_string()?)
-                    .await?;
-            } else {
-                // let trigger_body = SenderQueueBlobMessageBody {
-                //     tx_id: insert_tx_input.tx_id,
-                // };
-
-                // tx_sender_blob_queue.send_new(&trigger_body).await?;
-            }
+            tx_sender_standard_queue
+                .send_new(&trigger_body.to_json_string()?)
+                .await?;
         }
 
         Ok(())

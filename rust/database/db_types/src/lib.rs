@@ -17,3 +17,9 @@ pub enum TxStatus {
     EXECUTED,
     INVALID,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "text")]
+pub enum BlobStorageType {
+    S3,
+}

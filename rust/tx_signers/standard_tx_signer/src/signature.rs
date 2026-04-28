@@ -5,7 +5,8 @@ use alloy::{
 };
 use alloy_sol_types::Eip712Domain;
 use ow_wallet_adapter::wallet::OwWallet;
-use signer_queue::tx_request::TxRequestBody;
+use tx_request::standard::StandardTxRequestBody;
+// use signer_queue::tx_request::TxRequestBody;
 use std::str::FromStr;
 
 use crate::{
@@ -22,7 +23,7 @@ sol!(
 );
 
 pub async fn sign_tx_request(
-    tx_request_body: &TxRequestBody,
+    tx_request_body: &StandardTxRequestBody,
     wallet: &OwWallet,
 ) -> anyhow::Result<Signature> {
     let signed_call = sEOA::SignedCall {

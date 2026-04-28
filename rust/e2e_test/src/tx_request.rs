@@ -13,7 +13,7 @@ pub struct TxRequestBodyOptional {
     pub chain_id: i64,
     pub deadline_timestamp: Option<i64>,
     pub pass_value_from_operator_wallet: Option<bool>,
-    pub blob_file_path: Option<String>,
+    pub source_file_path: Option<String>,
     pub use_operator_wallet_id: Option<Uuid>,
 }
 
@@ -29,7 +29,7 @@ impl TxRequestBodyOptional {
             chain_id,
             deadline_timestamp: None,
             pass_value_from_operator_wallet: None,
-            blob_file_path: None,
+            source_file_path: None,
             use_operator_wallet_id: None,
         }
     }
@@ -64,7 +64,7 @@ impl CreateTestTxRequestBody for TxRequestBody {
                 .deadline_timestamp
                 .unwrap_or(deadline_timestamp.try_into()?),
             pass_value_from_operator_wallet: input.pass_value_from_operator_wallet.unwrap_or(false),
-            blob_file_path: input.blob_file_path,
+            source_file_path: input.source_file_path,
             use_operator_wallet_id: input.use_operator_wallet_id,
         })
     }

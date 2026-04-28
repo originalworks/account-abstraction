@@ -1,16 +1,17 @@
 [package]
-name = "signer_queue"
+name = "tx_request"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-db_types.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tx_request_db.workspace = true
 uuid.workspace = true
 anyhow.workspace = true
 hex.workspace = true
+db_types.workspace = true
+standard_tx_input_db.workspace = true
 
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
