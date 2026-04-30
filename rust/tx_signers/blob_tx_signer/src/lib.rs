@@ -20,20 +20,11 @@ pub struct Config {
     pub private_key: Option<String>,
     pub signer_kms_id: Option<String>,
     pub blob_storage_bucket_name: String,
-    // pub sender_blob_queue_url: String,
-    // pub blob_sender_queue_message_group_id: String,
-    // pub standard_sender_queue_message_group_id: String,
-    // pub database_url: String,
 }
 
 impl Config {
     pub fn build() -> anyhow::Result<Self> {
         let blob_storage_bucket_name = Self::get_env_var("BLOB_STORAGE_BUCKET_NAME");
-        // let standard_sender_queue_message_group_id =
-        //     Self::get_env_var("STANDARD_SENDER_QUEUE_MESSAGE_GROUP_ID");
-        // let sender_standard_queue_url = Self::get_env_var("SENDER_STANDARD_QUEUE_URL");
-        // let sender_blob_queue_url = Self::get_env_var("SENDER_BLOB_QUEUE_URL");
-        // let database_url = Self::get_env_var("DATABASE_URL");
         let mut signer_kms_id = None;
         let mut private_key = None;
         let use_kms = matches!(
@@ -53,11 +44,7 @@ impl Config {
             use_kms,
             private_key,
             signer_kms_id,
-            blob_storage_bucket_name, // database_url,
-                                      // sender_standard_queue_url,
-                                      // sender_blob_queue_url,
-                                      // blob_sender_queue_message_group_id,
-                                      // standard_sender_queue_message_group_id,
+            blob_storage_bucket_name,
         })
     }
 

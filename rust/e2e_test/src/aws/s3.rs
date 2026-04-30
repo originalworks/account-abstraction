@@ -1,13 +1,9 @@
-use std::path::Path;
-
 use aws_sdk_s3::primitives::ByteStream;
 use blob_tx_signer::blob_storage::s3::S3BlobStorageManager;
+use std::path::Path;
 
 const TEST_BLOB_FOLDER: &str = "../../local_setup/blob_test_files";
-
 const BLOB_FILE_NAMES: &[&str] = &["blob_1.json", "blob_2.json", "blob_3.json"];
-// const BLOB_2_FILE_NAME: &str = "blob_2.json";
-// const BLOB_3_FILE_NAME: &str = "blob_3.json";
 
 #[allow(async_fn_in_trait)]
 pub trait S3BlobStorageManagerTestFeatures {

@@ -1,8 +1,7 @@
 use alloy::primitives::Address;
-use db_types::{BlobStorageType, TxType};
-use tx_request::{blob_tx::BlobTxRequestBody, standard::StandardTxRequestBody};
-// use signer_queue::tx_request::TxRequestBody;
+use db_types::BlobStorageType;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tx_request::{blob_tx::BlobTxRequestBody, standard::StandardTxRequestBody};
 use uuid::Uuid;
 
 pub struct StandardTxRequestBodyOptional {
