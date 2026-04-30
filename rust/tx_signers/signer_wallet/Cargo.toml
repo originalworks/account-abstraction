@@ -1,0 +1,9 @@
+[package]
+name = "signer_wallet"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow.workspace = true
+network_db.workspace = true
+ow_wallet_adapter.workspace = true

@@ -1,9 +1,18 @@
 pub mod calldata;
-pub mod constants;
 pub mod signature;
-pub mod wallet;
 
+use signer_wallet::IntoSignerWalletConfig;
 use std::env;
+
+impl IntoSignerWalletConfig for Config {
+    fn into_signer_wallet_config(&self) -> signer_wallet::Config {
+        signer_wallet::Config {
+            use_kms: self.use_kms,
+            private_key: self.private_key.clone(),
+            signer_kms_id: self.signer_kms_id.clone(),
+        }
+    }
+}
 
 pub struct Config {
     pub use_kms: bool,
@@ -60,11 +69,12 @@ impl Config {
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
 
-    use crate::{Config, signature::sign_tx_request, wallet::WalletManager};
+    use crate::{Config, signature::sign_tx_request};
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
+    use signer_wallet::{IntoSignerWalletConfig, manager::SignerWalletManager};
     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
     use standard_sender_queue::StandardSenderQueueMessageBody;
     use tx_request::{sqs_parser::tx_requests_from_sqs_event, standard::StandardTxRequestBody};
@@ -93,7 +103,8 @@ pub mod aws_lambda {
         )?;
 
         let tx_request_body_vec = tx_requests_from_sqs_event::<StandardTxRequestBody>(event)?;
-        let mut wallet_manager = WalletManager::build(&networks, &config)?;
+        let mut wallet_manager =
+            SignerWalletManager::build(&networks, &config.into_signer_wallet_config())?;
 
         for tx_request_body in tx_request_body_vec {
             println!("Signing: {tx_request_body:?}");

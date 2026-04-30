@@ -5,6 +5,10 @@ async function main() {
   const [signer] = await ethers.getSigners();
   const SEOA = await ethers.getContractFactory("sEOA");
 
+  const FakeDdexSequencer = await ethers.getContractFactory(
+    "FakeDdexSequencer",
+  );
+  const fakeDdexSequencer = await FakeDdexSequencer.deploy();
   const seoaImplementation = await SEOA.deploy();
 
   const auth = await signer.authorize({
@@ -15,8 +19,8 @@ async function main() {
   const tx = await signer.sendTransaction({
     to: signer.address,
     authorizationList: [auth],
-    data: SEOA.interface.encodeFunctionData("usedSalts", [
-      "0x0000000000000000000000000000000000000000000000000000000000000000",
+    data: SEOA.interface.encodeFunctionData("setDdexSequencerAddress", [
+      await fakeDdexSequencer.getAddress(),
     ]),
   });
   await tx.wait();
