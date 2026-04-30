@@ -12,9 +12,11 @@ anyhow.workspace = true
 hex.workspace = true
 db_types.workspace = true
 standard_tx_input_db.workspace = true
+blob_tx_input_db.workspace = true
 
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
+alloy.workspace = true
 
 [features]
 aws = ["dep:aws_lambda_events", "dep:lambda_runtime"]

@@ -23,6 +23,10 @@ receipt_poller_queue = { workspace = true, features = ["aws"] }
 receipt_poller = { version = "0.1.0", path = "../receipt_poller", features = [
     "aws",
 ] }
+retry_queue = { workspace = true, features = ["aws"] }
+retry_handler = { workspace = true, features = ["aws"] }
+sqs_queue = { workspace = true, optional = true }
+tx_request = { workspace = true, features = ["aws"] }
 
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
@@ -30,9 +34,11 @@ aws-sdk-sqs = { workspace = true, optional = true }
 aws-config = { workspace = true, features = [
     "behavior-version-latest",
 ], optional = true }
-retry_queue = { workspace = true, features = ["aws"] }
-retry_handler = { workspace = true, features = ["aws"] }
-sqs_queue = { workspace = true, optional = true }
+standard_tx_input_db.workspace = true
+blob_tx_signer = { version = "0.1.0", path = "../tx_signers/blob_tx_signer", features = ["aws"] }
+aws-sdk-s3 = "1.131.0"
+blob_tx_input_db.workspace = true
+blob_tx_sender = { version = "0.1.0", path = "../tx_senders/blob_tx_sender" }
 
 
 [features]

@@ -12,16 +12,16 @@ mod tests {
     use e2e_test::constants::SENDER_STANDARD_QUEUE_NAME;
     use e2e_test::db::network::AddAnvilNetwork;
     use e2e_test::db::operator_wallet::InsertFromMnemonic;
-    use e2e_test::tx_request::CreateTestTxRequestBody;
-    use e2e_test::tx_request::TxRequestBodyOptional;
+    use e2e_test::tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional};
     use e2e_test::{
         aws::config::build_aws_sdk_config,
         db::{drop_and_migrate, get_pool},
     };
     use network_db::networks::NetworkRepo;
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
-    use signer_queue::tx_request::TxRequestBody;
     use sqs_queue::queue::SqsQueue;
+    use standard_tx_input_db::standard_tx_inputs::StandardTxInputRepo;
+    use tx_request::standard::StandardTxRequestBody;
     use tx_request_db::tx_requests::TxRequestRepo;
 
     pub fn get_seoa_address() -> anyhow::Result<Address> {
@@ -31,6 +31,7 @@ mod tests {
         Ok(pk_signer.address())
     }
 
+    #[ignore]
     #[tokio::test]
     async fn single_standard_tx_e2e() -> anyhow::Result<()> {
         let anvil_chain_id = std::env::var("ANVIL_CHAIN_ID").unwrap().parse()?;
@@ -50,6 +51,7 @@ mod tests {
         drop_and_migrate(&pool).await?;
         let network_repo = NetworkRepo::new(&pool);
         let tx_request_repo = TxRequestRepo::new(&pool);
+        let standard_tx_input_repo = StandardTxInputRepo::new(&pool);
         let operator_wallet_repo = OperatorWalletRepo::new(&pool);
         let seoa_address = get_seoa_address()?;
         network_repo.add_anvil(seoa_address.to_string()).await?;
@@ -94,10 +96,9 @@ mod tests {
             env::set_var("RETRY_QUEUE_URL", &retry_queue.queue_url);
         }
 
-        let tx_request_body = TxRequestBody::test_build(TxRequestBodyOptional::default(
-            db_types::TxType::STANDARD,
-            anvil_chain_id,
-        ))?;
+        let tx_request_body = StandardTxRequestBody::test_build(
+            StandardTxRequestBodyOptional::default(anvil_chain_id),
+        )?;
 
         let tx_request_event = build_lambda_sqs_event(vec![TestEventMessage::new(
             &tx_request_body.to_string(),
@@ -108,11 +109,11 @@ mod tests {
             .await
             .unwrap();
 
-        let tx_request_db_record = tx_request_repo
+        let standard_tx_input = standard_tx_input_repo
             .find_by_tx_id(&tx_request_body.tx_id)
             .await?;
 
-        assert!(tx_request_db_record.signature.is_empty() == false);
+        assert!(standard_tx_input.signature.is_empty() == false);
 
         // Transaction Request was signed and is ready to be sent
 

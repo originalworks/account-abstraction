@@ -19,6 +19,8 @@ members = [
     "rust/queues/sender_queues/standard_sender_queue",
     "rust/tx_signers/standard_tx_signer",
     "rust/tx_signers/blob_tx_signer",
+    "rust/tx_signers/eip712_domain",
+    "rust/tx_signers/signer_wallet",
     "rust/tx_senders/standard_tx_sender",
     "rust/tx_senders/blob_tx_sender",
     "rust/receipt_poller",
@@ -35,6 +37,7 @@ wallet_assignment_db = { path = "./rust/database/tables/wallet_assignment_db" }
 operator_wallet_db = { path = "./rust/database/tables/operator_wallet_db" }
 execution_attempt_db = { path = "./rust/database/tables/execution_attempt_db" }
 standard_tx_input_db = { path = "./rust/database/tables/standard_tx_input_db" }
+blob_tx_input_db = { path = "./rust/database/tables/blob_tx_input_db" }
 execution_attempt_item_db = { path = "./rust/database/tables/execution_attempt_item_db" }
 db_types = { path = "./rust/database/db_types" }
 migrator = { path = "./rust/database/migrator" }
@@ -44,6 +47,8 @@ receipt_poller_queue = { path = "./rust/queues/receipt_poller_queue" }
 retry_queue = { path = "./rust/queues/retry_queue" }
 sqs_queue = { path = "./rust/queues/sqs_queue" }
 standard_tx_signer = { path = "./rust/tx_signers/standard_tx_signer" }
+eip712_domain = { path = "./rust/tx_signers/eip712_domain" }
+signer_wallet = { path = "./rust/tx_signers/signer_wallet" }
 standard_tx_sender = { path = "./rust/tx_senders/standard_tx_sender" }
 retry_handler = { path = "./rust/retry_handler" }
 tx_request = { path = "./rust/tx_request" }
@@ -57,6 +62,7 @@ ow_wallet_adapter = "0.1.8"
 time = "0.3.47"
 uuid = "1.21.0"
 alloy = "1.7.3"
+alloy-sol-types = "1.5.7"
 
 aws-config = "1.8.13"
 lambda_runtime = "1.0.2"

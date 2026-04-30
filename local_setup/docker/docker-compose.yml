@@ -25,6 +25,7 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - ANVIL_RPC_URL=http://anvil:${ANVIL_PORT}
       - ANVIL_CHAIN_ID=${ANVIL_CHAIN_ID}
+      - ANVIL_MNEMONIC=${ANVIL_MNEMONIC}
       - USE_KMS=false
       - PRIVATE_KEY=${SEOA_PRIVATE_KEY}
       - AWS_ACCESS_KEY_ID=test
@@ -36,7 +37,8 @@ services:
       - RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID="aa-receipt-poller-queue"
       - RETRY_QUEUE_MESSAGE_GROUP_ID="aa-retry-queue"
       - TX_MAX_AGE_SEC=3600
-      - ANVIL_MNEMONIC=${ANVIL_MNEMONIC}
+      - BLOB_STORAGE_BUCKET_NAME=blob-storage-bucket
+      - IS_LOCAL=true
     command: ["cargo", "test", "-p", "e2e_test", "--features", "aws", "--", "--no-capture"]
 
 
@@ -81,7 +83,7 @@ services:
     working_dir: /account-abstraction/contracts
     volumes:
       - ../../:/account-abstraction
-    command: ["sh", "-c", "npm i && npx hardhat run scripts/deployAndDelegate.ts --network anvilDocker"]
+    command: ["sh", "-c", "npm i && npx hardhat run scripts/deployForE2eTests.ts --network anvilDocker"]
 
   localstack:
     image: localstack/localstack:4.14.0
@@ -89,7 +91,7 @@ services:
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=sqs
+      - SERVICES=sqs,s3
       - AWS_DEFAULT_REGION=us-east-1
       - DEBUG=1
     volumes:

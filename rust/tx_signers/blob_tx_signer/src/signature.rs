@@ -1,16 +1,12 @@
 use alloy::{
-    primitives::{Address, U256, Uint, keccak256},
+    primitives::{U256, Uint, keccak256},
     signers::Signature,
     sol,
 };
 use alloy_sol_types::Eip712Domain;
 use eip712_domain::constants::{EIP712_DOMAIN_NAME, EIP712_DOMAIN_VERSION};
 use ow_wallet_adapter::wallet::OwWallet;
-use tx_request::standard::StandardTxRequestBody;
-// use signer_queue::tx_request::TxRequestBody;
-use std::str::FromStr;
-
-use crate::calldata::parse_calldata;
+use tx_request::blob_tx::{BlobInputJsonFile, BlobTxRequestBody};
 
 sol!(
     #[allow(missing_docs)]
@@ -21,13 +17,14 @@ sol!(
 );
 
 pub async fn sign_tx_request(
-    tx_request_body: &StandardTxRequestBody,
+    tx_request_body: &BlobTxRequestBody,
+    blob_input_json_file: &BlobInputJsonFile,
     wallet: &OwWallet,
 ) -> anyhow::Result<Signature> {
-    let signed_call = sEOA::SignedCall {
-        target: Address::from_str(&tx_request_body.to_address)?,
-        payloadHash: keccak256(parse_calldata(&tx_request_body.calldata)?),
-        value: U256::from(tx_request_body.value_wei),
+    let signed_call = sEOA::SignedBlobCall {
+        imageId: blob_input_json_file.image_id,
+        commitmentHash: keccak256(blob_input_json_file.commitment.clone()),
+        blobSha2: blob_input_json_file.blob_sha2,
         salt: keccak256(tx_request_body.tx_id.as_bytes()),
         deadline: U256::from(tx_request_body.deadline_timestamp),
     };

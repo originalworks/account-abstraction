@@ -18,7 +18,9 @@ db_types.workspace = true
 tx_request = { workspace = true, features = ["aws"] }
 network_db.workspace = true
 alloy = { workspace = true }
-alloy-sol-types = "1.5.7"
+alloy-sol-types.workspace = true
+eip712_domain.workspace = true
+signer_wallet.workspace = true
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }

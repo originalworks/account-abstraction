@@ -4,3 +4,37 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+serde.workspace = true
+serde_json.workspace = true
+sqlx = { workspace = true, features = ["postgres"] }
+sqs_queue.workspace = true
+tx_request = { workspace = true, features = ["aws"] }
+db_types.workspace = true
+eip712_domain.workspace = true
+ow_wallet_adapter.workspace = true
+alloy-sol-types.workspace = true
+alloy.workspace = true
+signer_wallet.workspace = true
+network_db.workspace = true
+tx_request_db.workspace = true
+
+# aws
+aws-sdk-sqs = { workspace = true, optional = true }
+aws-config = { workspace = true, features = [
+    "behavior-version-latest",
+], optional = true }
+aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
+lambda_runtime = { workspace = true, optional = true }
+aws-sdk-s3 = { version = "1.131.0", optional = true }
+
+
+[features]
+aws = [
+    "dep:aws-sdk-sqs",
+    "dep:aws-config",
+    "dep:aws_lambda_events",
+    "dep:lambda_runtime",
+    "dep:aws-sdk-s3",
+]
