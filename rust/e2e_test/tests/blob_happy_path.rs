@@ -8,6 +8,7 @@ mod tests {
     use e2e_test::aws::sqs::event::build_lambda_sqs_event;
     use e2e_test::aws::sqs::test_queue::TestQueue;
     use e2e_test::constants::RECEIPT_POLLER_QUEUE_NAME;
+    use e2e_test::constants::RETRY_QUEUE_NAME;
     use e2e_test::constants::SENDER_BLOB_QUEUE_NAME;
     use e2e_test::db::network::AddAnvilNetwork;
     use e2e_test::db::operator_wallet::InsertFromMnemonic;
@@ -41,6 +42,7 @@ mod tests {
             env::var("BLOB_SENDER_QUEUE_MESSAGE_GROUP_ID").unwrap();
         let receipt_poller_queue_message_group_id =
             env::var("RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID").unwrap();
+        let retry_queue_message_group_id = env::var("RETRY_QUEUE_MESSAGE_GROUP_ID").unwrap();
 
         let pool = get_pool().await?;
         drop_and_migrate(&pool).await?;
@@ -74,9 +76,17 @@ mod tests {
         )
         .await?;
 
+        let retry_queue = SqsQueue::create_and_build(
+            &aws_config,
+            RETRY_QUEUE_NAME.to_string(),
+            retry_queue_message_group_id,
+        )
+        .await?;
+
         unsafe {
             env::set_var("SENDER_BLOB_QUEUE_URL", &blob_sender_queue.queue_url);
             env::set_var("RECEIPT_POLLER_QUEUE_URL", &receipt_poller_queue.queue_url);
+            env::set_var("RETRY_QUEUE_URL", &retry_queue.queue_url);
         }
 
         let tx_request_body = BlobTxRequestBody::test_build(BlobTxRequestBodyOptional::default(
@@ -110,15 +120,15 @@ mod tests {
             }
         }
 
-        // let receipt_poller_queue_event = receipt_poller_queue.receive_messages(5).await?;
+        let receipt_poller_queue_event = receipt_poller_queue.receive_messages(5).await?;
 
-        // match receipt_poller::aws_lambda::function_handler(receipt_poller_queue_event, &pool).await
-        // {
-        //     Ok(_) => {}
-        //     Err(err) => {
-        //         println!("{err:#?}")
-        //     }
-        // }
+        match receipt_poller::aws_lambda::function_handler(receipt_poller_queue_event, &pool).await
+        {
+            Ok(_) => {}
+            Err(err) => {
+                println!("{err:#?}")
+            }
+        }
 
         // let retry_queue_event = retry_queue.receive_messages(5).await?;
 
