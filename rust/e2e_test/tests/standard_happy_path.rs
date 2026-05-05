@@ -36,8 +36,6 @@ mod tests {
     async fn single_standard_tx_e2e() -> anyhow::Result<()> {
         let anvil_chain_id = std::env::var("ANVIL_CHAIN_ID").unwrap().parse()?;
         let anvil_mnemonic = std::env::var("ANVIL_MNEMONIC").unwrap();
-        let receipt_poller_queue_message_group_id =
-            env::var("RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID").unwrap();
 
         let blob_sender_queue_message_group_id =
             env::var("BLOB_SENDER_QUEUE_MESSAGE_GROUP_ID").unwrap();
