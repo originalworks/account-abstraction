@@ -20,9 +20,7 @@ standard_tx_sender = { workspace = true, features = ["aws", "test-keys"] }
 operator_wallet_db = { workspace = true, features = ["test-keys"] }
 hex.workspace = true
 receipt_poller_queue = { workspace = true, features = ["aws"] }
-receipt_poller = { version = "0.1.0", path = "../receipt_poller", features = [
-    "aws",
-] }
+receipt_poller = { workspace = true, features = ["aws"] }
 retry_queue = { workspace = true, features = ["aws"] }
 retry_handler = { workspace = true, features = ["aws"] }
 sqs_queue = { workspace = true, optional = true }
@@ -35,10 +33,11 @@ aws-config = { workspace = true, features = [
     "behavior-version-latest",
 ], optional = true }
 standard_tx_input_db.workspace = true
-blob_tx_signer = { version = "0.1.0", path = "../tx_signers/blob_tx_signer", features = ["aws"] }
+blob_tx_signer = { workspace = true, features = ["aws"] }
 aws-sdk-s3 = "1.131.0"
 blob_tx_input_db.workspace = true
-blob_tx_sender = { version = "0.1.0", path = "../tx_senders/blob_tx_sender" }
+blob_tx_sender = { workspace = true, features = ["aws"] }
+blob_storage = { workspace = true, features = ["aws"] }
 
 
 [features]

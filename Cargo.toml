@@ -28,6 +28,7 @@ members = [
     "rust/wallet_pool",
     "rust/retry_handler",
     "rust/tx_request",
+    "rust/blob_storage",
 ]
 
 [workspace.dependencies]
@@ -43,15 +44,20 @@ db_types = { path = "./rust/database/db_types" }
 migrator = { path = "./rust/database/migrator" }
 wallet_pool = { path = "./rust/wallet_pool" }
 standard_sender_queue = { path = "./rust/queues/sender_queues/standard_sender_queue" }
+blob_sender_queue = { path = "./rust/queues/sender_queues/blob_sender_queue" }
 receipt_poller_queue = { path = "./rust/queues/receipt_poller_queue" }
 retry_queue = { path = "./rust/queues/retry_queue" }
 sqs_queue = { path = "./rust/queues/sqs_queue" }
 standard_tx_signer = { path = "./rust/tx_signers/standard_tx_signer" }
 eip712_domain = { path = "./rust/tx_signers/eip712_domain" }
 signer_wallet = { path = "./rust/tx_signers/signer_wallet" }
+blob_tx_signer = { path = "./rust/tx_signers/blob_tx_signer" }
 standard_tx_sender = { path = "./rust/tx_senders/standard_tx_sender" }
+blob_tx_sender = { path = "./rust/tx_senders/blob_tx_sender" }
 retry_handler = { path = "./rust/retry_handler" }
 tx_request = { path = "./rust/tx_request" }
+receipt_poller = { path = "./rust/receipt_poller" }
+blob_storage = { path = "./rust/blob_storage" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"
