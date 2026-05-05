@@ -1625,6 +1625,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "blob_storage"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws-config",
+ "aws-sdk-s3",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tx_request",
+]
+
+[[package]]
 name = "blob_tx_input_db"
 version = "0.1.0"
 dependencies = [
@@ -1639,6 +1652,32 @@ dependencies = [
 [[package]]
 name = "blob_tx_sender"
 version = "0.1.0"
+dependencies = [
+ "alloy",
+ "anyhow",
+ "aws-config",
+ "aws-sdk-sqs",
+ "aws_lambda_events",
+ "blob_sender_queue",
+ "blob_storage",
+ "db_types",
+ "execution_attempt_db",
+ "execution_attempt_item_db",
+ "hex",
+ "lambda_runtime",
+ "network_db",
+ "operator_wallet_db",
+ "receipt_poller_queue",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "sqs_queue",
+ "tokio",
+ "tx_request_db",
+ "uuid",
+ "wallet_assignment_db",
+ "wallet_pool",
+]
 
 [[package]]
 name = "blob_tx_signer"
@@ -1648,9 +1687,10 @@ dependencies = [
  "alloy-sol-types",
  "anyhow",
  "aws-config",
- "aws-sdk-s3",
  "aws-sdk-sqs",
  "aws_lambda_events",
+ "blob_sender_queue",
+ "blob_storage",
  "db_types",
  "eip712_domain",
  "lambda_runtime",
@@ -2319,6 +2359,7 @@ dependencies = [
  "aws-sdk-s3",
  "aws-sdk-sqs",
  "aws_lambda_events",
+ "blob_storage",
  "blob_tx_input_db",
  "blob_tx_sender",
  "blob_tx_signer",

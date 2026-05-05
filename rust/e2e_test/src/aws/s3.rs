@@ -1,5 +1,5 @@
 use aws_sdk_s3::primitives::ByteStream;
-use blob_tx_signer::blob_storage::s3::S3BlobStorageManager;
+use blob_storage::storage::s3::S3BlobStorageManager;
 use std::path::Path;
 
 const TEST_BLOB_FOLDER: &str = "../../local_setup/blob_test_files";

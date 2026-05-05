@@ -67,6 +67,28 @@ pub struct StandardTxRequestRaw {
     pub pass_value_from_operator_wallet: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BlobTxRequestRaw {
+    pub sequence_id: i64,
+    pub tx_id: String,
+    pub requester_id: String,
+    pub tx_type: TxType,
+    pub tx_status: TxStatus,
+    pub chain_id: i64,
+    pub use_operator_wallet_id: Option<Uuid>,
+    pub attempts: i32,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
+
+    pub signature: Vec<u8>,
+    pub image_id: Vec<u8>,
+    pub commitment: Vec<u8>,
+    pub blob_sha2: Vec<u8>,
+    pub deadline_timestamp: i64,
+    pub source_file_path: String,
+    pub storage_type: BlobStorageType,
+}
+
 impl<'a> TxRequestRepo<'a> {
     pub fn new(pool: &'a PgPool) -> Self {
         Self { pool }
@@ -251,6 +273,71 @@ impl<'a> TxRequestRepo<'a> {
 
             FROM updated u
             INNER JOIN standard_tx_inputs s ON s.tx_id = u.tx_id
+            "#,
+            ids
+        )
+        .fetch_all(self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
+    pub async fn select_and_lock_many_blob(
+        &self,
+        ids: &Vec<String>,
+    ) -> anyhow::Result<Vec<BlobTxRequestRaw>> {
+        let rows = sqlx::query_as!(
+            BlobTxRequestRaw,
+            r#"
+            WITH selected AS (
+                SELECT tx_id
+                FROM tx_requests
+                WHERE tx_id = ANY($1)
+                  AND tx_status = 'SIGNED'
+                  AND tx_type = 'BLOB'
+                FOR UPDATE SKIP LOCKED
+            ),
+            updated AS (
+                UPDATE tx_requests t
+                SET
+                    tx_status = 'LOCKED',
+                    attempts = attempts + 1
+                FROM selected
+                WHERE t.tx_id = selected.tx_id
+                RETURNING
+                    t.sequence_id,
+                    t.tx_id,
+                    t.requester_id,
+                    t.tx_type,
+                    t.tx_status,
+                    t.chain_id,
+                    t.use_operator_wallet_id,
+                    t.attempts,
+                    t.created_at,
+                    t.updated_at
+            )
+            SELECT
+                u.sequence_id,
+                u.tx_id,
+                u.requester_id,
+                u.tx_type as "tx_type: TxType",
+                u.tx_status as "tx_status: TxStatus",
+                u.chain_id,
+                u.use_operator_wallet_id,
+                u.attempts,
+                u.created_at,
+                u.updated_at,
+
+                b.signature,
+                b.image_id,
+                b.commitment,
+                b.blob_sha2,
+                b.deadline_timestamp,
+                b.source_file_path,
+                b.storage_type as "storage_type: BlobStorageType"
+
+            FROM updated u
+            INNER JOIN blob_tx_inputs b ON b.tx_id = u.tx_id
             "#,
             ids
         )

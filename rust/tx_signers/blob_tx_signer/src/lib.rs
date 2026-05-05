@@ -1,9 +1,7 @@
-pub mod blob_storage;
 pub mod signature;
 
-use std::env;
-
 use signer_wallet::IntoSignerWalletConfig;
+use std::env;
 
 impl IntoSignerWalletConfig for Config {
     fn into_signer_wallet_config(&self) -> signer_wallet::Config {
@@ -20,10 +18,15 @@ pub struct Config {
     pub private_key: Option<String>,
     pub signer_kms_id: Option<String>,
     pub blob_storage_bucket_name: String,
+    pub blob_sender_queue_message_group_id: String,
+    pub sender_blob_queue_url: String,
 }
 
 impl Config {
     pub fn build() -> anyhow::Result<Self> {
+        let blob_sender_queue_message_group_id =
+            Self::get_env_var("BLOB_SENDER_QUEUE_MESSAGE_GROUP_ID");
+        let sender_blob_queue_url = Self::get_env_var("SENDER_BLOB_QUEUE_URL");
         let blob_storage_bucket_name = Self::get_env_var("BLOB_STORAGE_BUCKET_NAME");
         let mut signer_kms_id = None;
         let mut private_key = None;
@@ -45,6 +48,8 @@ impl Config {
             private_key,
             signer_kms_id,
             blob_storage_bucket_name,
+            blob_sender_queue_message_group_id,
+            sender_blob_queue_url,
         })
     }
 
@@ -58,14 +63,17 @@ pub mod aws_lambda {
 
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
+    use blob_sender_queue::BlobSenderQueueMessageBody;
+    use blob_storage::storage::s3::S3BlobStorageManager;
     use db_types::BlobStorageType;
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
     use signer_wallet::{IntoSignerWalletConfig, manager::SignerWalletManager};
+    use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
     use tx_request::{blob_tx::BlobTxRequestBody, sqs_parser::tx_requests_from_sqs_event};
     use tx_request_db::tx_requests::TxRequestRepo;
 
-    use crate::{Config, blob_storage::s3::S3BlobStorageManager, signature::sign_tx_request};
+    use crate::{Config, signature::sign_tx_request};
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
@@ -83,6 +91,12 @@ pub mod aws_lambda {
         let transaction_repo = TxRequestRepo::new(&pool);
         let network_repo = NetworkRepo::new(&pool);
         let networks = network_repo.select_all().await?;
+
+        let blob_tx_sender_queue = SqsQueue::build(
+            &aws_config,
+            &config.sender_blob_queue_url,
+            &config.blob_sender_queue_message_group_id,
+        )?;
 
         let s3_blob_storage_manager =
             S3BlobStorageManager::build(&aws_config, &config.blob_storage_bucket_name);
@@ -110,6 +124,14 @@ pub mod aws_lambda {
 
             transaction_repo
                 .insert_tx_request_with_tx_input(&insert_tx_input)
+                .await?;
+
+            let trigger_body = BlobSenderQueueMessageBody {
+                tx_id: insert_tx_input.new_tx_request.tx_id,
+            };
+
+            blob_tx_sender_queue
+                .send_new(&trigger_body.to_json_string()?)
                 .await?;
         }
         Ok(())

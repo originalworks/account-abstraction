@@ -111,18 +111,18 @@ impl<'a> TxContextBuilder<'a> {
 }
 
 trait IntoExecuteInput {
-    fn into_execute_input(self) -> anyhow::Result<ExecuteInput>;
+    fn into_execute_input(&self) -> anyhow::Result<ExecuteInput>;
 }
 
 impl IntoExecuteInput for StandardTxRequestRaw {
-    fn into_execute_input(self) -> anyhow::Result<ExecuteInput> {
+    fn into_execute_input(&self) -> anyhow::Result<ExecuteInput> {
         Ok(ExecuteInput {
             target: Address::from_str(self.to_address.as_str())?,
-            payload: self.calldata.into(),
+            payload: self.calldata.clone().into(),
             value: Uint::<256, 4>::from(self.value_wei as u64),
-            salt: keccak256(self.tx_id.into_bytes()),
+            salt: keccak256(self.tx_id.clone().into_bytes()),
             deadline: Uint::<256, 4>::from(self.deadline_timestamp as u64),
-            signature: self.signature.into(),
+            signature: self.signature.clone().into(),
         })
     }
 }

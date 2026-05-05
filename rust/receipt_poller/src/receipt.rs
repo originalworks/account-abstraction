@@ -30,14 +30,7 @@ impl ReceiptReader {
         let mut providers_by_chain_id = HashMap::new();
         for network in networks {
             let provider = ProviderBuilder::new().connect_http(network.rpc_url.parse()?);
-            let chain_id = provider.get_chain_id().await?;
-            if i64::try_from(chain_id)? != network.chain_id {
-                bail!(
-                    "Chain id mismatch for {:?}. Fetched chain_id: {}",
-                    network,
-                    chain_id
-                );
-            }
+
             providers_by_chain_id.insert(network.chain_id, provider);
         }
 

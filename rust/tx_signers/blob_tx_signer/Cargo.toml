@@ -19,6 +19,7 @@ alloy.workspace = true
 signer_wallet.workspace = true
 network_db.workspace = true
 tx_request_db.workspace = true
+blob_storage = { workspace = true, features = ["aws"] }
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }
@@ -27,7 +28,7 @@ aws-config = { workspace = true, features = [
 ], optional = true }
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
-aws-sdk-s3 = { version = "1.131.0", optional = true }
+blob_sender_queue = { workspace = true, features = ["aws"] }
 
 
 [features]
@@ -36,5 +37,4 @@ aws = [
     "dep:aws-config",
     "dep:aws_lambda_events",
     "dep:lambda_runtime",
-    "dep:aws-sdk-s3",
 ]
