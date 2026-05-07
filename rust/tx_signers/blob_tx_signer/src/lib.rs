@@ -26,7 +26,7 @@ impl Config {
     pub fn build() -> anyhow::Result<Self> {
         let blob_sender_queue_message_group_id =
             Self::get_env_var("BLOB_SENDER_QUEUE_MESSAGE_GROUP_ID");
-        let sender_blob_queue_url = Self::get_env_var("SENDER_BLOB_QUEUE_URL");
+        let sender_blob_queue_url = Self::get_env_var("BLOB_SENDER_QUEUE_URL");
         let blob_storage_bucket_name = Self::get_env_var("BLOB_STORAGE_BUCKET_NAME");
         let mut signer_kms_id = None;
         let mut private_key = None;
@@ -91,9 +91,9 @@ pub mod aws_lambda {
         let transaction_repo = TxRequestRepo::new(&pool);
         let network_repo = NetworkRepo::new(&pool);
         let networks = network_repo.select_all().await?;
-
+        let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
         let blob_tx_sender_queue = SqsQueue::build(
-            &aws_config,
+            &sqs_client,
             &config.sender_blob_queue_url,
             &config.blob_sender_queue_message_group_id,
         )?;

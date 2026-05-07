@@ -36,7 +36,7 @@ pub struct OperatorWallet {
 }
 
 pub struct OperatorWalletRepo<'a> {
-    pool: &'a PgPool,
+    pub pool: &'a PgPool,
 }
 
 impl<'a> OperatorWalletRepo<'a> {

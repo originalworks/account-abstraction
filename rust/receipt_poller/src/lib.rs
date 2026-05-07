@@ -48,8 +48,10 @@ pub mod aws_lambda {
         event: LambdaEvent<SqsEvent>,
         pool: &sqlx::Pool<sqlx::Postgres>,
     ) -> anyhow::Result<(), lambda_runtime::Error> {
-        println!("Building...");
+        println!("Building receipt_poller...");
         let event = ReceiptPollerEvent::from_sqs_event(event)?;
+
+        println!("receipt poller event: {event:#?}");
 
         let config = Config::build()?;
 
@@ -66,8 +68,9 @@ pub mod aws_lambda {
 
         let receipt_reader = ReceiptReader::build(&networks, config.tx_max_age_sec).await?;
         let wallet_pool = WalletPoolManager::build(operator_wallet_repo, &networks);
+        let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
         let retry_queue = SqsQueue::build(
-            &aws_config,
+            &sqs_client,
             &config.retry_queue_url,
             &config.retry_queue_message_group_id,
         )?;

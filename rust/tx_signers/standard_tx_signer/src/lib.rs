@@ -27,7 +27,7 @@ impl Config {
     pub fn build() -> anyhow::Result<Self> {
         let standard_sender_queue_message_group_id =
             Self::get_env_var("STANDARD_SENDER_QUEUE_MESSAGE_GROUP_ID");
-        let sender_standard_queue_url = Self::get_env_var("SENDER_STANDARD_QUEUE_URL");
+        let sender_standard_queue_url = Self::get_env_var("STANDARD_SENDER_QUEUE_URL");
         let database_url = Self::get_env_var("DATABASE_URL");
         let mut signer_kms_id = None;
         let mut private_key = None;
@@ -89,8 +89,11 @@ pub mod aws_lambda {
             .region(region_provider)
             .load()
             .await;
+
+        let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
+
         let tx_sender_standard_queue = SqsQueue::build(
-            &aws_config,
+            &sqs_client,
             &config.sender_standard_queue_url,
             &config.standard_sender_queue_message_group_id,
         )?;

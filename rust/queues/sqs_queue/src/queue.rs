@@ -6,12 +6,12 @@ pub struct SqsQueue {
 
 impl SqsQueue {
     pub fn build(
-        aws_config: &aws_config::SdkConfig,
+        client: &aws_sdk_sqs::Client,
         queue_url: &str,
         message_group_id: &str,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            client: aws_sdk_sqs::Client::new(aws_config),
+            client: client.clone(),
             queue_url: queue_url.to_string(),
             message_group_id: message_group_id.to_string(),
         })
@@ -27,7 +27,6 @@ impl SqsQueue {
             .send()
             .await?;
 
-        println!("{response:?}");
         Ok(())
     }
 }
