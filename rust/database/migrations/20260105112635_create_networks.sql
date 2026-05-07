@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS networks (
     contract_address TEXT NOT NULL,
     min_operator_wallet_balance BIGINT NOT NULL,
     gas_estimation_buffer_ppm BIGINT NOT NULL,
+    blob_gas_estimation_buffer_ppm BIGINT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

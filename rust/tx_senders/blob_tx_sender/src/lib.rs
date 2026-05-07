@@ -77,8 +77,9 @@ pub mod aws_lambda {
         let tx_context_builder =
             BlobTxContextBuilder::build(&tx_request_repo, blob_storage_manager);
         let contract_manager = ContractManager::build(&networks).await?;
+        let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
         let receipt_poller_queue = SqsQueue::build(
-            &aws_config,
+            &sqs_client,
             &config.receipt_poller_queue_url,
             &config.receipt_poller_queue_message_group_id,
         )?;

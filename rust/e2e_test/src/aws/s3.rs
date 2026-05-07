@@ -40,7 +40,6 @@ impl S3BlobStorageManagerTestFeatures for S3BlobStorageManager {
                 .body(body)
                 .send()
                 .await?;
-            println!("{response:#?}")
         }
 
         Ok(BLOB_FILE_NAMES)

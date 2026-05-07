@@ -126,7 +126,9 @@ impl ContractManager {
         let tx_sidecar = Self::flat_sidecars(&tx_context)?;
 
         let fees = provider.estimate_eip1559_fees().await?;
-        let max_fee_per_blob_gas = provider.get_blob_base_fee().await? * 2;
+        let blob_base_fee = provider.get_blob_base_fee().await?;
+        let max_fee_per_blob_gas = blob_base_fee
+            + blob_base_fee * u128::try_from(network.blob_gas_estimation_buffer_ppm)? / 1_000_000;
         let call_builder = contract
             .sendBlobBatch(tx_input)
             .sidecar_7594(tx_sidecar)
@@ -164,7 +166,6 @@ impl ContractManager {
     ) -> anyhow::Result<BlobTransactionSidecarEip7594> {
         let mut flat_sidecar = BlobTransactionSidecarEip7594::default();
         for blob_input in &tx_context.blob_batch_with_sidecar_vec {
-            println!("blob_input before flattening: {blob_input:#?}");
             if blob_input.sidecar.blobs.len() != 1 {
                 bail!(
                     "Expecting one BLOB per tx request, got: {}",

@@ -8,7 +8,7 @@ pub enum TxType {
     BLOB,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq)]
 #[sqlx(type_name = "text")]
 pub enum TxStatus {
     SIGNED,
