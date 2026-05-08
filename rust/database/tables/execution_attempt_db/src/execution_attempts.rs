@@ -44,12 +44,12 @@ pub struct NewExecutionAttempt {
     pub max_fee_per_blob_gas: Option<i64>,
 }
 
-pub struct ExecutionAttemptRepo<'a> {
-    pool: &'a PgPool,
+pub struct ExecutionAttemptRepo {
+    pool: PgPool,
 }
 
-impl<'a> ExecutionAttemptRepo<'a> {
-    pub fn new(pool: &'a PgPool) -> Self {
+impl ExecutionAttemptRepo {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -78,7 +78,7 @@ impl<'a> ExecutionAttemptRepo<'a> {
                 id = $1"#,
             id
         )
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(attempt)
@@ -131,7 +131,7 @@ impl<'a> ExecutionAttemptRepo<'a> {
             input.max_fee_per_blob_gas,
             input.tx_value
         )
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(attempt)

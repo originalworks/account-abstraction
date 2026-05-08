@@ -12,12 +12,12 @@ pub struct ExecutionAttemptItem {
     pub created_at: OffsetDateTime,
 }
 
-pub struct ExecutionAttemptItemRepo<'a> {
-    pool: &'a PgPool,
+pub struct ExecutionAttemptItemRepo {
+    pool: PgPool,
 }
 
-impl<'a> ExecutionAttemptItemRepo<'a> {
-    pub fn new(pool: &'a PgPool) -> Self {
+impl ExecutionAttemptItemRepo {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -36,7 +36,7 @@ impl<'a> ExecutionAttemptItemRepo<'a> {
                 id = $1"#,
             id
         )
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(attempt_item)
@@ -59,7 +59,7 @@ impl<'a> ExecutionAttemptItemRepo<'a> {
             &ids,
             tx_ids
         )
-        .execute(self.pool)
+        .execute(&self.pool)
         .await?;
 
         Ok(())

@@ -19,12 +19,12 @@ pub struct WalletAssignment {
     pub updated_at: OffsetDateTime,
 }
 
-pub struct WalletAssignmentRepo<'a> {
-    pool: &'a PgPool,
+pub struct WalletAssignmentRepo {
+    pool: PgPool,
 }
 
-impl<'a> WalletAssignmentRepo<'a> {
-    pub fn new(pool: &'a PgPool) -> Self {
+impl WalletAssignmentRepo {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -44,9 +44,8 @@ impl<'a> WalletAssignmentRepo<'a> {
                 id = $1"#,
             tx_assignment_id
         )
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
-
         Ok(transaction_assignment)
     }
 
@@ -69,9 +68,8 @@ impl<'a> WalletAssignmentRepo<'a> {
             tx_id,
             operator_wallet_id,
         )
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
-
         Ok(id)
     }
 
@@ -106,7 +104,6 @@ impl<'a> WalletAssignmentRepo<'a> {
         .await?;
 
         tx.commit().await?;
-
         Ok(ids)
     }
 }

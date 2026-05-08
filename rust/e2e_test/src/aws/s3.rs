@@ -3,7 +3,7 @@ use blob_storage::storage::s3::S3BlobStorageManager;
 use std::path::Path;
 
 const TEST_BLOB_FOLDER: &str = "../../local_setup/blob_test_files";
-const BLOB_FILE_NAMES: &[&str] = &["blob_1.json", "blob_2.json", "blob_3.json"];
+pub const BLOB_JSON_TEST_FILES: &[&str] = &["blob_1.json", "blob_2.json", "blob_3.json"];
 
 #[allow(async_fn_in_trait)]
 pub trait S3BlobStorageManagerTestFeatures {
@@ -29,7 +29,7 @@ impl S3BlobStorageManagerTestFeatures for S3BlobStorageManager {
         Ok(())
     }
     async fn upload_test_blobs(&self) -> anyhow::Result<&[&str]> {
-        for blob_file_name in BLOB_FILE_NAMES {
+        for blob_file_name in BLOB_JSON_TEST_FILES {
             let body =
                 ByteStream::from_path(Path::new(TEST_BLOB_FOLDER).join(blob_file_name)).await?;
             let response = self
@@ -42,6 +42,6 @@ impl S3BlobStorageManagerTestFeatures for S3BlobStorageManager {
                 .await?;
         }
 
-        Ok(BLOB_FILE_NAMES)
+        Ok(BLOB_JSON_TEST_FILES)
     }
 }

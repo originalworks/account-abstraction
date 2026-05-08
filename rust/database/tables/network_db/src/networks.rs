@@ -24,12 +24,12 @@ pub struct NewNetwork {
     pub blob_gas_estimation_buffer_ppm: i64,
 }
 
-pub struct NetworkRepo<'a> {
-    pool: &'a PgPool,
+pub struct NetworkRepo {
+    pool: PgPool,
 }
 
-impl<'a> NetworkRepo<'a> {
-    pub fn new(pool: &'a PgPool) -> Self {
+impl NetworkRepo {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -53,7 +53,7 @@ impl<'a> NetworkRepo<'a> {
                 chain_id = $1"#,
             chain_id
         )
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(network)
@@ -76,7 +76,7 @@ impl<'a> NetworkRepo<'a> {
             FROM
                 networks"#
         )
-        .fetch_all(self.pool)
+        .fetch_all(&self.pool)
         .await?;
 
         Ok(networks)
@@ -103,7 +103,7 @@ impl<'a> NetworkRepo<'a> {
             network.gas_estimation_buffer_ppm,
             network.blob_gas_estimation_buffer_ppm,
         )
-        .execute(self.pool)
+        .execute(&self.pool)
         .await?;
 
         Ok(result.rows_affected() == 1)

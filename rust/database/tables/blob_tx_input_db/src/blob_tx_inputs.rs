@@ -28,12 +28,12 @@ pub struct NewBlobTxInput {
     pub source_file_path: String,
 }
 
-pub struct BlobTxInputRepo<'a> {
-    pool: &'a PgPool,
+pub struct BlobTxInputRepo {
+    pool: PgPool,
 }
 
-impl<'a> BlobTxInputRepo<'a> {
-    pub fn new(pool: &'a PgPool) -> Self {
+impl BlobTxInputRepo {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -58,7 +58,7 @@ impl<'a> BlobTxInputRepo<'a> {
                 tx_id = $1"#,
             tx_id
         )
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(transaction)

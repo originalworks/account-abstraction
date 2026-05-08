@@ -2,7 +2,6 @@ use crate::wallet::Wallet;
 use anyhow::bail;
 use network_db::networks::Network;
 use operator_wallet_db::operator_wallets::{OperatorWallet, OperatorWalletRepo};
-use ow_wallet_adapter::wallet::OwWallet;
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -12,13 +11,13 @@ enum AcquireAttemptResult {
     InsufficientFunds(Uuid),
 }
 
-pub struct WalletPoolManager<'a> {
-    operator_wallet_repo: OperatorWalletRepo<'a>,
+pub struct WalletPoolManager {
+    operator_wallet_repo: OperatorWalletRepo,
     networks_map: HashMap<i64, Network>,
 }
 
-impl<'a> WalletPoolManager<'a> {
-    pub fn build(operator_wallet_repo: OperatorWalletRepo<'a>, networks: &Vec<Network>) -> Self {
+impl WalletPoolManager {
+    pub fn build(operator_wallet_repo: OperatorWalletRepo, networks: &Vec<Network>) -> Self {
         let mut networks_map: HashMap<i64, Network> = HashMap::new();
         for network in networks {
             networks_map.insert(network.chain_id, network.clone());

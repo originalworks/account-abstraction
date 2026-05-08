@@ -26,7 +26,8 @@ pub mod aws_lambda {
         event: LambdaEvent<SqsEvent>,
         pool: &sqlx::Pool<sqlx::Postgres>,
     ) -> anyhow::Result<(), lambda_runtime::Error> {
-        println!("Building...");
+        println!("Building retry_handler...");
+
         let event = RetryEvent::from_sqs_event(event)?;
 
         println!("retry event received: {:?}", event);

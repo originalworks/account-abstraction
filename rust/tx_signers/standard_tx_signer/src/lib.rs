@@ -77,11 +77,12 @@ pub mod aws_lambda {
         event: LambdaEvent<SqsEvent>,
         pool: &sqlx::Pool<sqlx::Postgres>,
     ) -> anyhow::Result<(), lambda_runtime::Error> {
-        println!("Building...");
+        println!("Building standard_tx_signer...");
+
         let config = Config::build()?;
 
-        let transaction_repo = TxRequestRepo::new(&pool);
-        let network_repo = NetworkRepo::new(&pool);
+        let transaction_repo = TxRequestRepo::new(pool.clone());
+        let network_repo = NetworkRepo::new(pool.clone());
         let networks = network_repo.select_all().await?;
 
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");

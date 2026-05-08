@@ -61,9 +61,9 @@ pub mod aws_lambda {
             .load()
             .await;
 
-        let network_repo = NetworkRepo::new(&pool);
-        let execution_attempt_repo = ExecutionAttemptRepo::new(&pool);
-        let operator_wallet_repo = OperatorWalletRepo::new(&pool);
+        let network_repo = NetworkRepo::new(pool.clone());
+        let execution_attempt_repo = ExecutionAttemptRepo::new(pool.clone());
+        let operator_wallet_repo = OperatorWalletRepo::new(pool.clone());
         let networks = network_repo.select_all().await?;
 
         let receipt_reader = ReceiptReader::build(&networks, config.tx_max_age_sec).await?;

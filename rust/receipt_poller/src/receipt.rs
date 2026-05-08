@@ -1,5 +1,5 @@
 use alloy::{
-    primitives::{Address, FixedBytes, Uint},
+    primitives::FixedBytes,
     providers::{
         Provider, ProviderBuilder,
         fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller},

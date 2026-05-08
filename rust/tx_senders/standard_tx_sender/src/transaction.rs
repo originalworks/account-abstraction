@@ -15,7 +15,7 @@ pub struct ExecuteBatchTxContext {
 }
 
 pub struct TxContextBuilder<'a> {
-    transaction_repo: &'a TxRequestRepo<'a>,
+    transaction_repo: &'a TxRequestRepo,
 }
 
 impl<'a> TxContextBuilder<'a> {
