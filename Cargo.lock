@@ -2364,6 +2364,8 @@ dependencies = [
  "blob_tx_sender",
  "blob_tx_signer",
  "db_types",
+ "execution_attempt_db",
+ "execution_attempt_item_db",
  "hex",
  "lambda_runtime",
  "migrator",
@@ -2384,6 +2386,7 @@ dependencies = [
  "tx_request",
  "tx_request_db",
  "uuid",
+ "wallet_assignment_db",
 ]
 
 [[package]]

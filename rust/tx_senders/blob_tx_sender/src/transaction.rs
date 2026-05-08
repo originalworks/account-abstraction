@@ -23,7 +23,7 @@ pub struct BlobBatchTxContext {
 }
 
 pub struct BlobTxContextBuilder<'a> {
-    transaction_repo: &'a TxRequestRepo<'a>,
+    transaction_repo: &'a TxRequestRepo,
     blob_storage_manager: S3BlobStorageManager,
 }
 

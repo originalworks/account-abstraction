@@ -35,12 +35,12 @@ pub struct OperatorWallet {
     pub updated_at: OffsetDateTime,
 }
 
-pub struct OperatorWalletRepo<'a> {
-    pub pool: &'a PgPool,
+pub struct OperatorWalletRepo {
+    pub pool: PgPool,
 }
 
-impl<'a> OperatorWalletRepo<'a> {
-    pub fn new(pool: &'a PgPool) -> Self {
+impl OperatorWalletRepo {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -66,7 +66,7 @@ impl<'a> OperatorWalletRepo<'a> {
                 id = $1"#,
             operator_wallet_id
         )
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(transaction)
@@ -113,9 +113,8 @@ impl<'a> OperatorWalletRepo<'a> {
             operator_wallet_id,
             chain_id
         )
-        .fetch_optional(self.pool)
+        .fetch_optional(&self.pool)
         .await?;
-
         Ok(wallet)
     }
 
@@ -155,9 +154,8 @@ impl<'a> OperatorWalletRepo<'a> {
         "#,
             chain_id
         )
-        .fetch_optional(self.pool)
+        .fetch_optional(&self.pool)
         .await?;
-
         Ok(wallet)
     }
 
@@ -173,9 +171,8 @@ impl<'a> OperatorWalletRepo<'a> {
         "#,
             operator_wallet_id
         )
-        .execute(self.pool)
+        .execute(&self.pool)
         .await?;
-
         Ok(())
     }
     pub async fn insert(&self, new_wallet: NewOperatorWallet) -> anyhow::Result<OperatorWallet> {
@@ -224,9 +221,8 @@ impl<'a> OperatorWalletRepo<'a> {
             new_wallet.chain_id,
             new_wallet.current_nonce
         )
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
-
         Ok(wallet)
     }
 
@@ -242,13 +238,12 @@ impl<'a> OperatorWalletRepo<'a> {
         "#,
             operator_wallet_id
         )
-        .execute(self.pool)
+        .execute(&self.pool)
         .await?;
 
         if result.rows_affected() == 0 {
             anyhow::bail!("wallet not found or not in use");
         }
-
         Ok(())
     }
 }

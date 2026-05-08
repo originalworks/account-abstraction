@@ -5,23 +5,18 @@ pub trait AddAnvilNetwork {
     async fn add_anvil(&self, contract_address: String, chain_id: i64) -> anyhow::Result<()>;
 }
 
-impl AddAnvilNetwork for NetworkRepo<'_> {
+impl AddAnvilNetwork for NetworkRepo {
     async fn add_anvil(&self, contract_address: String, chain_id: i64) -> anyhow::Result<()> {
-        match self.find_by_chain_id(chain_id).await {
-            Ok(_) => Ok(()),
-            Err(_) => {
-                self.insert_new_network(&NewNetwork {
-                    rpc_url: "http://anvil:8545".to_string(),
-                    chain_id,
-                    contract_address,
-                    chain_name: "anvil".to_string(),
-                    min_operator_wallet_balance: 1_000_000,
-                    gas_estimation_buffer_ppm: 1_200_000,
-                    blob_gas_estimation_buffer_ppm: 200_000_000,
-                })
-                .await?;
-                return Ok(());
-            }
-        }
+        self.insert_new_network(&NewNetwork {
+            rpc_url: "http://anvil:8545".to_string(),
+            chain_id,
+            contract_address,
+            chain_name: "anvil".to_string(),
+            min_operator_wallet_balance: 1_000_000,
+            gas_estimation_buffer_ppm: 1_200_000,
+            blob_gas_estimation_buffer_ppm: 200_000_000,
+        })
+        .await?;
+        Ok(())
     }
 }

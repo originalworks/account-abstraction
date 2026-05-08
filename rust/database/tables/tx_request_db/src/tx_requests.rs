@@ -42,8 +42,8 @@ pub struct NewTxRequestWithTxInput {
     pub tx_input: NewTxInput,
 }
 
-pub struct TxRequestRepo<'a> {
-    pool: &'a PgPool,
+pub struct TxRequestRepo {
+    pool: PgPool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -89,8 +89,8 @@ pub struct BlobTxRequestRaw {
     pub storage_type: BlobStorageType,
 }
 
-impl<'a> TxRequestRepo<'a> {
-    pub fn new(pool: &'a PgPool) -> Self {
+impl TxRequestRepo {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -187,7 +187,6 @@ impl<'a> TxRequestRepo<'a> {
         }
 
         postgres_tx.commit().await?;
-
         Ok(())
     }
 
@@ -212,9 +211,8 @@ impl<'a> TxRequestRepo<'a> {
                 tx_id = $1"#,
             tx_id
         )
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
-
         Ok(transaction)
     }
 
@@ -222,6 +220,8 @@ impl<'a> TxRequestRepo<'a> {
         &self,
         ids: &Vec<String>,
     ) -> anyhow::Result<Vec<StandardTxRequestRaw>> {
+        let mut tx = self.pool.begin().await?;
+
         let rows = sqlx::query_as!(
             StandardTxRequestRaw,
             r#"
@@ -276,9 +276,10 @@ impl<'a> TxRequestRepo<'a> {
             "#,
             ids
         )
-        .fetch_all(self.pool)
+        .fetch_all(&mut *tx)
         .await?;
 
+        tx.commit().await?;
         Ok(rows)
     }
 
@@ -286,6 +287,8 @@ impl<'a> TxRequestRepo<'a> {
         &self,
         ids: &Vec<String>,
     ) -> anyhow::Result<Vec<BlobTxRequestRaw>> {
+        let mut tx = self.pool.begin().await?;
+
         let rows = sqlx::query_as!(
             BlobTxRequestRaw,
             r#"
@@ -341,9 +344,10 @@ impl<'a> TxRequestRepo<'a> {
             "#,
             ids
         )
-        .fetch_all(self.pool)
+        .fetch_all(&mut *tx)
         .await?;
 
+        tx.commit().await?;
         Ok(rows)
     }
 
@@ -357,9 +361,8 @@ impl<'a> TxRequestRepo<'a> {
         "#,
             ids
         )
-        .execute(self.pool)
+        .execute(&self.pool)
         .await?;
-
         Ok(())
     }
 
@@ -373,9 +376,8 @@ impl<'a> TxRequestRepo<'a> {
         "#,
             tx_id
         )
-        .execute(self.pool)
+        .execute(&self.pool)
         .await?;
-
         Ok(())
     }
 
@@ -389,9 +391,8 @@ impl<'a> TxRequestRepo<'a> {
         "#,
             tx_ids
         )
-        .execute(self.pool)
+        .execute(&self.pool)
         .await?;
-
         Ok(())
     }
 }

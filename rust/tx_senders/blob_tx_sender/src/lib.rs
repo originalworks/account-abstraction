@@ -53,7 +53,7 @@ pub mod aws_lambda {
         event: LambdaEvent<SqsEvent>,
         pool: &sqlx::Pool<sqlx::Postgres>,
     ) -> anyhow::Result<SqsBatchResponse, lambda_runtime::Error> {
-        println!("Building...");
+        println!("Building blob_tx_sender...");
 
         let config = Config::build()?;
 
@@ -63,12 +63,12 @@ pub mod aws_lambda {
             .load()
             .await;
 
-        let wallet_assignment_repo = WalletAssignmentRepo::new(&pool);
-        let operator_wallet_repo = OperatorWalletRepo::new(&pool);
-        let network_repo = NetworkRepo::new(&pool);
-        let tx_request_repo = TxRequestRepo::new(&pool);
-        let execution_attempt_repo = ExecutionAttemptRepo::new(&pool);
-        let execution_attempt_item_repo = ExecutionAttemptItemRepo::new(&pool);
+        let wallet_assignment_repo = WalletAssignmentRepo::new(pool.clone());
+        let operator_wallet_repo = OperatorWalletRepo::new(pool.clone());
+        let network_repo = NetworkRepo::new(pool.clone());
+        let tx_request_repo = TxRequestRepo::new(pool.clone());
+        let execution_attempt_repo = ExecutionAttemptRepo::new(pool.clone());
+        let execution_attempt_item_repo = ExecutionAttemptItemRepo::new(pool.clone());
         let networks = network_repo.select_all().await?;
         let blob_storage_manager =
             S3BlobStorageManager::build(&aws_config, &config.blob_storage_bucket_name);

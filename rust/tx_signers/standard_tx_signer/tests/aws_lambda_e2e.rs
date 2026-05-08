@@ -31,7 +31,7 @@ mod tests {
 
     async fn add_network(rpc_url: String, chain_id: i64) -> anyhow::Result<()> {
         let pool = PgPool::connect(&Config::get_env_var("DATABASE_URL")).await?;
-        let network_repo = NetworkRepo::new(&pool);
+        let network_repo = NetworkRepo::new(pool);
         network_repo
             .insert_new_network(&NewNetwork {
                 rpc_url,
@@ -90,7 +90,7 @@ mod tests {
             }
         };
 
-        let standard_tx_input_repo = StandardTxInputRepo::new(&pool);
+        let standard_tx_input_repo = StandardTxInputRepo::new(pool);
         let inserted_transaction_input = standard_tx_input_repo
             .find_by_tx_id(&tx_id.to_string())
             .await?;
