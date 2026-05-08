@@ -21,11 +21,6 @@ pub async fn drop_table(pool: &sqlx::Pool<sqlx::Postgres>) -> anyhow::Result<()>
 pub async fn get_pool() -> anyhow::Result<sqlx::Pool<sqlx::Postgres>> {
     let database_url = env::var("DATABASE_URL").unwrap();
     let pool: sqlx::Pool<sqlx::Postgres> = PgPool::connect(&database_url).await?;
-    // let pool = PgPoolOptions::new()
-    //     .max_connections(50)
-    //     .acquire_timeout(Duration::from_secs(30))
-    //     .connect(&database_url)
-    //     .await?;
 
     Ok(pool)
 }
