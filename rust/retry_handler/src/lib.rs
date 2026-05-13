@@ -60,8 +60,8 @@ pub mod aws_lambda {
 
             if let Some(ref outcome) = execution_attempt.execution_attempt.outcome {
                 match outcome {
-                    TxExecutionOutcome::DROPPED => handle_dropped(&execution_attempt)?,
                     TxExecutionOutcome::STUCK => handle_stuck(&execution_attempt)?,
+                    TxExecutionOutcome::DROPPED => handle_dropped(&execution_attempt)?,
                     TxExecutionOutcome::FAILED => handle_failed(&execution_attempt)?,
                     TxExecutionOutcome::SUCCEED => continue,
                 }
