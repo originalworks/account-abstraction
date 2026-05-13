@@ -1,0 +1,8 @@
+[package]
+name = "tx_input_types"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+standard_tx_input_db.workspace = true
+blob_tx_input_db.workspace = true

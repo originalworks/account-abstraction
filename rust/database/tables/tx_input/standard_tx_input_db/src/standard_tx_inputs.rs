@@ -11,7 +11,6 @@ pub struct StandardTxInput {
     pub deadline_timestamp: i64,
     pub pass_value_from_operator_wallet: bool,
     pub created_at: OffsetDateTime,
-    pub updated_at: OffsetDateTime,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -46,8 +45,7 @@ impl StandardTxInputRepo {
                 deadline_timestamp,
                 signature,
                 pass_value_from_operator_wallet,
-                created_at,
-                updated_at
+                created_at
             FROM 
                 standard_tx_inputs
             WHERE

@@ -1,1 +1,2 @@
-pub mod standard_happy_path;
+pub mod happy_path;
+pub mod retry_path;

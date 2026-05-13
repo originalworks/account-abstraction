@@ -13,6 +13,7 @@ alloy.workspace = true
 receipt_poller_queue = { workspace = true, features = ["aws"] }
 network_db.workspace = true
 retry_queue = { workspace = true, features = ["aws"] }
+db_types.workspace = true
 
 
 # aws

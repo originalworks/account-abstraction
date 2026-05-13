@@ -35,6 +35,7 @@ pub struct OperatorWallet {
     pub updated_at: OffsetDateTime,
 }
 
+#[derive(Clone)]
 pub struct OperatorWalletRepo {
     pub pool: PgPool,
 }

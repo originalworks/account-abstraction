@@ -1,5 +1,7 @@
 use crate::{
-    aws::{s3::S3BlobStorageManagerTestFeatures, sqs::TestQueueManager},
+    aws::{
+        config::build_aws_sdk_config, s3::S3BlobStorageManagerTestFeatures, sqs::TestQueueManager,
+    },
     db::{get_pool, network::AddAnvilNetwork, operator_wallet::InsertFromMnemonic},
 };
 use alloy::{primitives::Address, signers::local::PrivateKeySigner};
@@ -34,17 +36,20 @@ pub struct E2eTestFixture {
     pub pool: PgPool,
     pub env_vars: E2eTestEnvVars,
     pub blob_storage_manager: S3BlobStorageManager,
+    pub aws_config: aws_config::SdkConfig,
 }
 
 pub struct E2eTestEnvVars {
     pub anvil_chain_id: i64,
     pub anvil_mnemonic: String,
     pub blob_storage_bucket_name: String,
+    pub tx_max_age_sec: String,
 }
 
-pub async fn get_e2e_test_fixture(aws_config: &aws_config::SdkConfig) -> &'static E2eTestFixture {
+pub async fn get_e2e_test_fixture() -> &'static E2eTestFixture {
     E2E_TEST_FIXTURE
         .get_or_init(|| async {
+            let aws_config: aws_config::SdkConfig = build_aws_sdk_config().await.unwrap();
             let pool = get_pool().await.unwrap();
 
             let e2e_test_env_vars = build_env_vars().unwrap();
@@ -69,6 +74,7 @@ pub async fn get_e2e_test_fixture(aws_config: &aws_config::SdkConfig) -> &'stati
                 db_repositories,
                 env_vars: e2e_test_env_vars,
                 blob_storage_manager,
+                aws_config,
             }
         })
         .await
@@ -85,11 +91,13 @@ fn build_env_vars() -> anyhow::Result<E2eTestEnvVars> {
     let anvil_chain_id = std::env::var("ANVIL_CHAIN_ID").unwrap().parse().unwrap();
     let anvil_mnemonic = std::env::var("ANVIL_MNEMONIC").unwrap();
     let blob_storage_bucket_name = std::env::var("BLOB_STORAGE_BUCKET_NAME").unwrap();
+    let tx_max_age_sec = std::env::var("TX_MAX_AGE_SEC").unwrap();
 
     Ok(E2eTestEnvVars {
         anvil_chain_id,
         anvil_mnemonic,
         blob_storage_bucket_name,
+        tx_max_age_sec,
     })
 }
 

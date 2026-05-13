@@ -21,3 +21,4 @@ standard_tx_input_db.workspace = true
 time = { workspace = true, features = ["serde"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 uuid = { workspace = true, features = ["serde", "v4"] }
+tx_input_types.workspace = true

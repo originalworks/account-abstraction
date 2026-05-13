@@ -34,6 +34,7 @@ pub mod aws_lambda {
     use crate::{Config, receipt::ReceiptReader};
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
+    use db_types::TxStatus;
     use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, TxExecutionOutcome};
     use lambda_runtime::LambdaEvent;
     use network_db::networks::NetworkRepo;
@@ -90,14 +91,20 @@ pub mod aws_lambda {
                 match outcome {
                     TxExecutionOutcome::SUCCEED => {
                         execution_attempt_repo
-                            .propagate_success(execution_attempt.id, outcome)
+                            .propagate_outcome(execution_attempt.id, outcome, TxStatus::EXECUTED)
                             .await?;
 
                         wallet_pool
                             .release(execution_attempt.operator_wallet_id)
                             .await?;
                     }
-                    TxExecutionOutcome::DROPPED | TxExecutionOutcome::FAILED => {
+                    TxExecutionOutcome::FAILED
+                    | TxExecutionOutcome::STUCK
+                    | TxExecutionOutcome::DROPPED => {
+                        execution_attempt_repo
+                            .propagate_outcome(execution_attempt.id, outcome, TxStatus::RETRIED)
+                            .await?;
+
                         let message_body = &RetryQueueMessageBody {
                             execution_attempt_id: execution_attempt.id.to_string(),
                         };

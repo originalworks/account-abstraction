@@ -1,6 +1,6 @@
 #![recursion_limit = "256"]
-mod contract;
-mod transaction;
+pub mod contract;
+pub mod transaction;
 
 use std::env;
 

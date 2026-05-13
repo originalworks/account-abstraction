@@ -10,7 +10,9 @@ use e2e_test::{
 use std::time::Duration;
 use tx_request::standard::StandardTxRequestBody;
 
-pub async fn single_standard_tx_e2e(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+pub async fn happy_path_single_standard_tx(
+    e2e_test_fixture: &E2eTestFixture,
+) -> anyhow::Result<()> {
     let tx_request_body = StandardTxRequestBody::test_build(
         StandardTxRequestBodyOptional::default(e2e_test_fixture.env_vars.anvil_chain_id),
     )?;
@@ -83,14 +85,6 @@ pub async fn single_standard_tx_e2e(e2e_test_fixture: &E2eTestFixture) -> anyhow
         tokio::time::sleep(Duration::from_millis(1000)).await;
     }
     assert!(receipt_found);
-    // let retry_queue_event = retry_queue.receive_messages(5).await?;
-
-    // match retry_handler::aws_lambda::function_handler(retry_queue_event, &pool).await {
-    //     Ok(_) => {}
-    //     Err(err) => {
-    //         println!("{err:#?}")
-    //     }
-    // }
 
     Ok(())
 }

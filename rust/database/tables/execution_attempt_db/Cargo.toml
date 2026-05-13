@@ -18,3 +18,7 @@ sqlx = { workspace = true, features = [
 time = { workspace = true, features = ["serde"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 uuid.workspace = true
+tx_request_db.workspace = true
+tx_input_types.workspace = true
+standard_tx_input_db.workspace = true
+blob_tx_input_db.workspace = true

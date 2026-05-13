@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS execution_attempts (
     max_priority_fee BIGINT NOT NULL,
     max_fee_per_blob_gas BIGINT,
     outcome TEXT,
+    retry_lock BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

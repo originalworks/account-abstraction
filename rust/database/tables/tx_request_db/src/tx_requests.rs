@@ -4,6 +4,7 @@ use db_types::{BlobStorageType, TxStatus, TxType};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, types::time::OffsetDateTime};
 use standard_tx_input_db::standard_tx_inputs::NewStandardTxInput;
+use tx_input_types::TxInput;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -87,6 +88,15 @@ pub struct BlobTxRequestRaw {
     pub deadline_timestamp: i64,
     pub source_file_path: String,
     pub storage_type: BlobStorageType,
+}
+
+#[derive(Debug, Clone)]
+pub struct TxRequestWithInput {
+    pub tx_id: String,
+    pub requester_id: String,
+    pub tx_type: TxType,
+    pub tx_status: TxStatus,
+    pub tx_input: TxInput,
 }
 
 impl TxRequestRepo {

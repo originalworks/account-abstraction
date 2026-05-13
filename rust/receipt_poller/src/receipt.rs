@@ -61,15 +61,15 @@ impl ReceiptReader {
                 return Ok(Some(TxExecutionOutcome::FAILED));
             }
         } else {
-            if let Some(_) = provider.get_transaction_by_hash(tx_hash).await? {
-                return Ok(None);
-            } else {
-                let tx_max_age = Duration::from_secs(self.tx_max_age_sec);
-                if execution_attempt.created_at + tx_max_age < OffsetDateTime::now_utc() {
-                    return Ok(Some(TxExecutionOutcome::DROPPED));
+            let tx_max_age = Duration::from_secs(self.tx_max_age_sec);
+            if execution_attempt.created_at + tx_max_age < OffsetDateTime::now_utc() {
+                if let Some(_) = provider.get_transaction_by_hash(tx_hash).await? {
+                    return Ok(Some(TxExecutionOutcome::STUCK));
                 } else {
-                    return Ok(None);
+                    return Ok(Some(TxExecutionOutcome::DROPPED));
                 }
+            } else {
+                return Ok(None);
             }
         }
     }

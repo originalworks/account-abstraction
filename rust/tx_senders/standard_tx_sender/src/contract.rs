@@ -24,7 +24,7 @@ sol!(
     "../../../contracts/artifacts/contracts/sEOA.sol/sEOA.json"
 );
 
-trait BuildNewStandardExecutionAttempt {
+pub trait BuildNewStandardExecutionAttempt {
     fn build_standard(
         fees: Eip1559Estimation,
         gas_limit: i64,
@@ -70,8 +70,8 @@ type HardlyTypedProvider = FillProvider<
 >;
 
 pub struct ContractManager {
-    networks_by_chain_id: HashMap<i64, Network>,
-    providers_by_chain_id: HashMap<i64, HardlyTypedProvider>,
+    pub networks_by_chain_id: HashMap<i64, Network>,
+    pub providers_by_chain_id: HashMap<i64, HardlyTypedProvider>,
 }
 
 impl ContractManager {
