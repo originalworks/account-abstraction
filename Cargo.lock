@@ -2387,6 +2387,7 @@ dependencies = [
  "tx_request_db",
  "uuid",
  "wallet_assignment_db",
+ "wallet_pool",
 ]
 
 [[package]]
@@ -2544,12 +2545,16 @@ name = "execution_attempt_db"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "blob_tx_input_db",
  "db_types",
  "serde",
  "serde_json",
  "sqlx",
+ "standard_tx_input_db",
  "time",
  "tokio",
+ "tx_input_types",
+ "tx_request_db",
  "uuid",
 ]
 
@@ -4350,6 +4355,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-sqs",
  "aws_lambda_events",
+ "db_types",
  "execution_attempt_db",
  "lambda_runtime",
  "network_db",
@@ -4483,10 +4489,12 @@ dependencies = [
  "aws-config",
  "aws-sdk-sqs",
  "aws_lambda_events",
+ "execution_attempt_db",
  "lambda_runtime",
  "retry_queue",
  "sqlx",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -5956,6 +5964,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
+name = "tx_input_types"
+version = "0.1.0"
+dependencies = [
+ "blob_tx_input_db",
+ "standard_tx_input_db",
+]
+
+[[package]]
 name = "tx_request"
 version = "0.1.0"
 dependencies = [
@@ -5986,6 +6002,7 @@ dependencies = [
  "standard_tx_input_db",
  "time",
  "tokio",
+ "tx_input_types",
  "uuid",
 ]
 

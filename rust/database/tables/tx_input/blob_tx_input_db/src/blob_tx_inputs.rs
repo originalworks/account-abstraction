@@ -13,7 +13,6 @@ pub struct BlobTxInput {
     pub source_file_path: String,
     pub storage_type: BlobStorageType,
     pub created_at: OffsetDateTime,
-    pub updated_at: OffsetDateTime,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -50,8 +49,7 @@ impl BlobTxInputRepo {
                 deadline_timestamp,
                 source_file_path,
                 storage_type as "storage_type: BlobStorageType",
-                created_at,
-                updated_at
+                created_at
             FROM 
                 blob_tx_inputs
             WHERE

@@ -10,8 +10,8 @@ members = [
     "rust/database/tables/execution_attempt_item_db",
     "rust/database/migrator",
     "rust/database/db_types",
-    "rust/database/tables/blob_tx_input_db",
-    "rust/database/tables/standard_tx_input_db",
+    "rust/database/tables/tx_input/blob_tx_input_db",
+    "rust/database/tables/tx_input/standard_tx_input_db",
     "rust/queues/receipt_poller_queue",
     "rust/queues/retry_queue",
     "rust/queues/sqs_queue",
@@ -29,6 +29,7 @@ members = [
     "rust/retry_handler",
     "rust/tx_request",
     "rust/blob_storage",
+    "rust/database/tables/tx_input/tx_input_types",
 ]
 
 [workspace.dependencies]
@@ -37,8 +38,9 @@ network_db = { path = "./rust/database/tables/network_db" }
 wallet_assignment_db = { path = "./rust/database/tables/wallet_assignment_db" }
 operator_wallet_db = { path = "./rust/database/tables/operator_wallet_db" }
 execution_attempt_db = { path = "./rust/database/tables/execution_attempt_db" }
-standard_tx_input_db = { path = "./rust/database/tables/standard_tx_input_db" }
-blob_tx_input_db = { path = "./rust/database/tables/blob_tx_input_db" }
+standard_tx_input_db = { path = "./rust/database/tables/tx_input/standard_tx_input_db" }
+blob_tx_input_db = { path = "./rust/database/tables/tx_input/blob_tx_input_db" }
+tx_input_types = { path = "./rust/database/tables/tx_input/tx_input_types" }
 execution_attempt_item_db = { path = "./rust/database/tables/execution_attempt_item_db" }
 db_types = { path = "./rust/database/db_types" }
 migrator = { path = "./rust/database/migrator" }

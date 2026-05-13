@@ -1,11 +1,11 @@
-use alloy::primitives::{Address, Bytes, Uint, keccak256};
+use alloy::primitives::{Address, Uint, keccak256};
 use std::{collections::HashMap, str::FromStr};
-use tx_request_db::tx_requests::{StandardTxRequestRaw, TxRequest, TxRequestRepo};
+use tx_request_db::tx_requests::{StandardTxRequestRaw, TxRequestRepo};
 use uuid::Uuid;
 
 use crate::contract::sEOA::ExecuteInput;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExecuteBatchTxContext {
     pub chain_id: i64,
     pub execute_batch_input: Vec<ExecuteInput>,

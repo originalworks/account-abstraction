@@ -1,19 +1,24 @@
 mod blob_tx;
 mod standard_tx;
 
-use e2e_test::{aws::config::build_aws_sdk_config, fixture::get_e2e_test_fixture};
-
 use crate::{
-    blob_tx::{blob_happy_path::single_blob_tx_e2e, blob_happy_path_two_tx::two_blob_tx_e2e},
-    standard_tx::standard_happy_path::single_standard_tx_e2e,
+    blob_tx::happy_path::{
+        happy_path_single_blob_tx::happy_path_single_blob_tx,
+        happy_path_two_blob_tx::happy_path_two_blob_tx,
+    },
+    standard_tx::{
+        happy_path::happy_path_single_standard_tx::happy_path_single_standard_tx,
+        retry_path::retry_path_standard_tx_dropped::retry_path_standard_tx_dropped,
+    },
 };
+use e2e_test::fixture::get_e2e_test_fixture;
 
 #[tokio::test]
 async fn e2e_tests() -> anyhow::Result<()> {
-    let aws_config: aws_config::SdkConfig = build_aws_sdk_config().await?;
-    let e2e_test_fixture = get_e2e_test_fixture(&aws_config).await;
-    single_standard_tx_e2e(e2e_test_fixture).await?;
-    single_blob_tx_e2e(e2e_test_fixture).await?;
-    two_blob_tx_e2e(e2e_test_fixture).await?;
+    let e2e_test_fixture = get_e2e_test_fixture().await;
+    happy_path_single_standard_tx(e2e_test_fixture).await?;
+    happy_path_single_blob_tx(e2e_test_fixture).await?;
+    happy_path_two_blob_tx(e2e_test_fixture).await?;
+    retry_path_standard_tx_dropped(e2e_test_fixture).await?;
     Ok(())
 }

@@ -8,6 +8,8 @@ anyhow.workspace = true
 sqlx = { workspace = true, features = ["postgres", "time"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 alloy.workspace = true
+execution_attempt_db.workspace = true
+uuid.workspace = true
 
 
 # aws

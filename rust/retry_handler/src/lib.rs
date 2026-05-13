@@ -1,5 +1,9 @@
 use std::env;
 
+use execution_attempt_db::{
+    execution_attempts::ExecutionAttempt, retry_types::RetriedExecutionAttempt,
+};
+
 pub struct Config {
     pub database_url: String,
 }
@@ -18,9 +22,15 @@ impl Config {
 
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
+    use std::str::FromStr;
+
     use aws_lambda_events::sqs::SqsEvent;
+    use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, TxExecutionOutcome};
     use lambda_runtime::LambdaEvent;
     use retry_queue::RetryEvent;
+    use uuid::Uuid;
+
+    use crate::{handle_dropped, handle_failed, handle_stuck};
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
@@ -32,6 +42,47 @@ pub mod aws_lambda {
 
         println!("retry event received: {:?}", event);
 
+        let execution_attempt_repo = ExecutionAttemptRepo::new(pool.clone());
+
+        for queue_message in event.messages {
+            let Some(execution_attempt) = execution_attempt_repo
+                .select_and_lock_for_retry(Uuid::from_str(
+                    queue_message.body.execution_attempt_id.as_str(),
+                )?)
+                .await?
+            else {
+                println!(
+                    "execution_attepmt not found: {:?}",
+                    queue_message.body.execution_attempt_id
+                );
+                continue;
+            };
+
+            if let Some(ref outcome) = execution_attempt.execution_attempt.outcome {
+                match outcome {
+                    TxExecutionOutcome::DROPPED => handle_dropped(&execution_attempt)?,
+                    TxExecutionOutcome::STUCK => handle_stuck(&execution_attempt)?,
+                    TxExecutionOutcome::FAILED => handle_failed(&execution_attempt)?,
+                    TxExecutionOutcome::SUCCEED => continue,
+                }
+            }
+        }
+
         Ok(())
     }
+}
+
+fn handle_dropped(execution_attempt: &RetriedExecutionAttempt) -> anyhow::Result<()> {
+    println!("handle_dropped: {execution_attempt:#?}");
+    Ok(())
+}
+
+fn handle_stuck(execution_attempt: &RetriedExecutionAttempt) -> anyhow::Result<()> {
+    println!("handle_stuck: {execution_attempt:#?}");
+    Ok(())
+}
+
+fn handle_failed(execution_attempt: &RetriedExecutionAttempt) -> anyhow::Result<()> {
+    println!("handle_failed: {execution_attempt:#?}");
+    Ok(())
 }

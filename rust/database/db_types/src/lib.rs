@@ -16,6 +16,7 @@ pub enum TxStatus {
     BROADCASTED,
     EXECUTED,
     INVALID,
+    RETRIED,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
