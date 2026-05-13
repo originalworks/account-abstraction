@@ -11,16 +11,50 @@ jobs:
   aws-deploy-dev:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: database
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/database
 
     steps:
       - name: "Checkout"
         uses: actions/checkout@v6
+
+      - name: "Setup Node.js 24"
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features postgres
+
+      - name: Run migrations
+        working-directory: rust/database
+        run: sqlx database create && sqlx migrate run
 
       - name: "Compile conracts"
         working-directory: contracts
         run: |
           npm i
           npx hardhat compile
+
+      - name: "Install cargo-lambda"
+        run: pip3 install cargo-lambda
 
       - name: "Build standard_tx_signer"
         working-directory: rust/tx_signers/standard_tx_signer
