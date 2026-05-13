@@ -1,0 +1,27 @@
+name: "Deploy AA suite to AWS Dev"
+
+on:
+  # push:
+  pull_request:
+    branches: [master]
+    paths:
+      - "rust/**"
+
+jobs:
+  aws-deploy-dev:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v6
+
+      - name: "Compile conracts"
+        working-directory: contracts
+        run: |
+          npm i
+          npx hardhat compile
+
+      - name: "Build standard_tx_signer"
+        working-directory: rust/tx_signers/standard_tx_signer
+        run: cargo lambda build --release --features aws --bin aws_lambda
