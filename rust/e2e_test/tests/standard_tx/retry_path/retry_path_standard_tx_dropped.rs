@@ -28,9 +28,13 @@ pub async fn retry_path_standard_tx_dropped(
         None,
     )])?;
 
-    standard_tx_signer::aws_lambda::function_handler(tx_request_event, &e2e_test_fixture.pool)
-        .await
-        .unwrap();
+    standard_tx_signer::aws_lambda::function_handler(
+        tx_request_event,
+        &e2e_test_fixture.pool,
+        &e2e_test_fixture.aws_config,
+    )
+    .await
+    .unwrap();
 
     let standard_tx_input = e2e_test_fixture
         .db_repositories

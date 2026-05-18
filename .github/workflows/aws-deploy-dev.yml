@@ -56,6 +56,6 @@ jobs:
       - name: "Install cargo-lambda"
         run: pip3 install cargo-lambda
 
-      - name: "Build standard_tx_signer"
-        working-directory: rust/tx_signers/standard_tx_signer
-        run: cargo lambda build --release --features aws --bin aws_lambda
+      - name: "Build migrator"
+        working-directory: rust/database/migrator
+        run: cargo lambda build --release --features aws --bin aws_migrator

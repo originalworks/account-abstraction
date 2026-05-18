@@ -20,7 +20,12 @@ aws-config = { workspace = true, features = [
     "behavior-version-latest",
 ], optional = true }
 lambda_runtime = { workspace = true, optional = true }
+aws_secrets = { workspace = true, optional = true }
 
 
 [features]
-aws = ["dep:aws-config", "dep:lambda_runtime"]
+aws = ["dep:aws-config", "dep:lambda_runtime", "dep:aws_secrets"]
+
+[[bin]]
+name = "aws_migrator"
+path = "src/bin/aws_lambda_migrate.rs"

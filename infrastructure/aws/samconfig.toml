@@ -1,0 +1,29 @@
+version = 0.1
+
+[dev.deploy.parameters]
+stack_name = "aa-infra-dev"
+region = "us-east-1"
+s3_bucket = "ow-protocol-artifacts"
+s3_prefix = "dev"
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
+parameter_overrides = [
+    "AaBlobBucketName=aa-blob-bucket-dev",
+    "DbSecretsName=/rev/dev/db-secret",
+    "DatabaseName=account_abstraction_dev_db",
+]
+
+[staging.deploy.parameters]
+stack_name = "aa-infra-stage"
+region = "us-east-1"
+s3_bucket = "ow-protocol-artifacts"
+s3_prefix = "stage"
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
+parameter_overrides = ["AaBlobBucketName=aa-blob-bucket-stage"]
+
+[prod.deploy.parameters]
+stack_name = "aa-infra-prod"
+region = "us-east-1"
+s3_bucket = "ow-protocol-artifacts"
+s3_prefix = "prod"
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
+parameter_overrides = ["AaBlobBucketName=aa-blob-bucket-prod"]

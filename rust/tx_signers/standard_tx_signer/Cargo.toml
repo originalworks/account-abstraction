@@ -29,7 +29,8 @@ aws-config = { workspace = true, features = [
 ], optional = true }
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
-sqs_queue.workspace = true
+sqs_queue = { workspace = true, optional = true }
+aws_secrets = { workspace = true, optional = true }
 
 [dev-dependencies]
 alloy = { workspace = true, features = ["node-bindings"] }
@@ -41,4 +42,10 @@ aws = [
     "dep:aws-config",
     "dep:aws_lambda_events",
     "dep:lambda_runtime",
+    "dep:aws_secrets",
+    "dep:sqs_queue",
 ]
+
+[[bin]]
+name = "aws_standard_tx_signer"
+path = "src/bin/aws_lambda.rs"

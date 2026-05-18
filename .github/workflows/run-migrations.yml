@@ -1,0 +1,53 @@
+name: "Deploy Owen infrastructure and code to AWS dev environment"
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  migrate:
+    name: Run Migrations via Lambda
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-migrations-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Invoke Migration Lambda
+        id: invoke
+        run: |
+          RESPONSE=$(aws lambda invoke \
+            --function-name your-migration-lambda \
+            --payload '{"source": "github-actions", "run_id": "${{ github.run_id }}"}' \
+            --cli-binary-format raw-in-base64-out \
+            --log-type Tail \
+            response.json)
+
+          echo "Status code: $(echo $RESPONSE | jq -r '.StatusCode')"
+
+          # Decode and print Lambda logs
+          echo $RESPONSE | jq -r '.LogResult' | base64 --decode || true
+
+          # Print response body
+          cat response.json
+
+          # Extract success field and fail the job if migrations didn't succeed
+          SUCCESS=$(cat response.json | jq -r '.success')
+          if [ "$SUCCESS" != "true" ]; then
+            echo "❌ Migrations failed!"
+            cat response.json | jq -r '.error // "Unknown error"'
+            exit 1
+          fi
+
+          echo "✅ Migrations completed successfully!"
+          cat response.json | jq -r '.message'

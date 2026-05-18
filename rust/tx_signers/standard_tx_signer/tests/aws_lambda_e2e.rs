@@ -82,7 +82,12 @@ mod tests {
 
         let lambda_event = LambdaEvent::new(sqs_event, Context::default());
         let pool = PgPool::connect(&Config::get_env_var("DATABASE_URL")).await?;
-        match function_handler(lambda_event, &pool).await {
+        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+        let aws_config = aws_config::defaults(BehaviorVersion::latest())
+            .region(region_provider)
+            .load()
+            .await;
+        match function_handler(lambda_event, &pool, &aws_config).await {
             Ok(value) => value,
             Err(err) => {
                 println!("{err:?}");
