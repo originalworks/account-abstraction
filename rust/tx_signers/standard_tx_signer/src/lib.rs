@@ -76,6 +76,7 @@ pub mod aws_lambda {
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
         pool: &sqlx::Pool<sqlx::Postgres>,
+        aws_config: &aws_config::SdkConfig,
     ) -> anyhow::Result<(), lambda_runtime::Error> {
         println!("Building standard_tx_signer...");
 
@@ -84,12 +85,6 @@ pub mod aws_lambda {
         let transaction_repo = TxRequestRepo::new(pool.clone());
         let network_repo = NetworkRepo::new(pool.clone());
         let networks = network_repo.select_all().await?;
-
-        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
-        let aws_config = aws_config::defaults(BehaviorVersion::latest())
-            .region(region_provider)
-            .load()
-            .await;
 
         let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
 

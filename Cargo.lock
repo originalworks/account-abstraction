@@ -1144,6 +1144,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-secretsmanager"
+version = "1.104.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "811bcb3da8bf26e571da7a248c0a93152bba9642aa4c8c907c58d949fa5f1d5c"
+dependencies = [
+ "aws-credential-types",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-observability",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-types",
+ "bytes",
+ "fastrand",
+ "http 0.2.12",
+ "http 1.4.0",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
 name = "aws-sdk-sqs"
 version = "1.93.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1512,6 +1536,17 @@ dependencies = [
  "serde_dynamo",
  "serde_json",
  "serde_with",
+]
+
+[[package]]
+name = "aws_secrets"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws-config",
+ "aws-sdk-secretsmanager",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3686,6 +3721,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "aws-config",
+ "aws_secrets",
  "lambda_runtime",
  "serde",
  "serde_json",
@@ -5493,6 +5529,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-sqs",
  "aws_lambda_events",
+ "aws_secrets",
  "db_types",
  "eip712_domain",
  "hex",
