@@ -42,3 +42,7 @@ aws = [
     "dep:sqs_queue",
 ]
 test-keys = ["wallet_pool/test-keys"]
+
+[[bin]]
+name = "aws_standard_tx_sender"
+path = "src/bin/aws_lambda.rs"

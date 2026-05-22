@@ -1,7 +1,6 @@
 #![recursion_limit = "256"]
 #![cfg(feature = "aws")]
 use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
-use aws_secrets::AwsSecretsManager;
 use lambda_runtime::{run, service_fn, tracing};
 use sqlx::PgPool;
 use standard_tx_signer::{Config, aws_lambda::function_handler};
@@ -17,8 +16,7 @@ async fn main() -> Result<(), lambda_runtime::Error> {
         .load()
         .await;
 
-    let aws_secrets_manager = AwsSecretsManager::build(&aws_config)?;
-    let database_url = aws_secrets_manager.read_database_url().await?;
+    let database_url = Config::get_env_var("DATABASE_URL");
 
     let pool = PgPool::connect(&database_url).await?;
 

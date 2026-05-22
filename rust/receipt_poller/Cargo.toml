@@ -35,3 +35,7 @@ aws = [
     "dep:aws_lambda_events",
     "dep:lambda_runtime",
 ]
+
+[[bin]]
+name = "aws_receipt_poller"
+path = "src/bin/aws_lambda.rs"

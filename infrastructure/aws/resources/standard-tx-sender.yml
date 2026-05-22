@@ -1,0 +1,87 @@
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  StandardTxSenderQueueName:
+    Type: String
+  StandardTxSenderDlqName:
+    Type: String
+  LambdaFunctionRoleArn:
+    Type: String
+  DatabaseName:
+    Type: String
+  DbSecretsName:
+    Type: String
+  DatabaseAccessSecurityGroup:
+    Type: String
+  PrivateSubnets:
+    Type: String
+  ReceiptPollerQueueMessageGroupId:
+    Type: String
+  ReceiptPollerQueueName:
+    Type: String
+
+Resources:
+  StandardTxSenderDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref StandardTxSenderDlqName
+      FifoQueue: true
+      ContentBasedDeduplication: true
+
+  StandardTxSenderQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref StandardTxSenderQueueName
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      VisibilityTimeout: 300
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt StandardTxSenderDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  StandardTxSenderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: provided.al2023
+      Architectures:
+        - x86_64
+      Handler: bootstrap
+      CodeUri: ../../../target/lambda/aws_standard_tx_sender
+      Timeout: 300
+      Role: !Ref LambdaFunctionRoleArn
+      Environment:
+        Variables:
+          DATABASE_URL: !Join
+            - ""
+            - - "postgresql://"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:username}}"
+              - ":"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:password}}"
+              - "@"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:host}}"
+              - ":"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:port}}"
+              - "/"
+              - !Ref DatabaseName
+          RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID: !Ref ReceiptPollerQueueMessageGroupId
+          RECEIPT_POLLER_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${ReceiptPollerQueueName}"
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref DatabaseAccessSecurityGroup
+        SubnetIds: !Split [",", !Ref PrivateSubnets]
+      Events:
+        StandardTxSenderQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt StandardTxSenderQueue.Arn
+            BatchSize: 5
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
