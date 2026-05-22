@@ -59,6 +59,7 @@ impl WalletPoolManager {
             .fetch_and_lock(chain_id, use_operator_wallet_id)
             .await?
         else {
+            println!("fetch and lock failed in wallet acquire");
             return Ok(AcquireAttemptResult::NoWalletAvailable);
         };
 
@@ -84,9 +85,7 @@ impl WalletPoolManager {
                 .await?
             {
                 AcquireAttemptResult::Acquired(wallet) => return Ok(Some(wallet)),
-
                 AcquireAttemptResult::NoWalletAvailable => return Ok(None),
-
                 AcquireAttemptResult::InsufficientFunds(operator_wallet_id) => {
                     self.operator_wallet_repo
                         .mark_no_funds(operator_wallet_id)

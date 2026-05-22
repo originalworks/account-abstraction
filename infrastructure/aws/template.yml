@@ -5,8 +5,38 @@ Parameters:
     Type: String
   DbSecretsName:
     Type: String
+  MasterKmsSecretsName:
+    Type: String
   AaBlobBucketName:
     Type: String
+  PrivateSubnets:
+    Type: AWS::SSM::Parameter::Value<String>
+  DatabaseAccessSecurityGroup:
+    Type: AWS::SSM::Parameter::Value<String>
+  StandardSenderQueueMessageGroupId:
+    Type: String
+    Default: standard-sender-queue-group
+  ReceiptPollerQueueMessageGroupId:
+    Type: String
+    Default: receipt-poller-queue-group
+  StandardTxSenderQueueName:
+    Type: String
+    Default: standard-tx-sender.fifo
+  StandardTxSenderDlqName:
+    Type: String
+    Default: standard-tx-sender-dlq.fifo
+  StandardTxSignerQueueName:
+    Type: String
+    Default: standard-tx-signer.fifo
+  StandardTxSignerDlqName:
+    Type: String
+    Default: standard-tx-signer-dlq.fifo
+  ReceiptPollerQueueName:
+    Type: String
+    Default: receipt-poller.fifo
+  ReceiptPollerDlqName:
+    Type: String
+    Default: receipt-poller-dlq.fifo
 
 Resources:
   AaBlobBucket:
@@ -14,22 +44,7 @@ Resources:
     Properties:
       BucketName: !Ref AaBlobBucketName
 
-  MigrationsFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Runtime: provided.al2023
-      Architectures:
-        - x86_64
-      Handler: bootstrap
-      CodeUri: ../../target/lambda/aws_migrator
-      Timeout: 300
-      Role: !GetAtt MigrationsFunctionRole.Arn
-      Environment:
-        Variables:
-          AWS_DATABASE_SECRETS_NAME: !Ref DbSecretsName
-          DATABASE_NAME: !Ref DatabaseName
-
-  MigrationsFunctionRole:
+  LambdaFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -41,14 +56,83 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
       Policies:
-        - PolicyName: SecretsManagerAccess
+        - PolicyName: SqsAccess
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Sid: GetDbSecret
+              - Sid: ConsumeAaQueues
                 Effect: Allow
                 Action:
-                  - secretsmanager:GetSecretValue
-                  - secretsmanager:DescribeSecret
-                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${DbSecretsName}*"
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:ChangeMessageVisibility
+                  - sqs:SendMessage
+                Resource:
+                  - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${StandardTxSenderQueueName}"
+                  - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${StandardTxSenderDlqName}"
+                  - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${StandardTxSignerQueueName}"
+                  - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${StandardTxSignerDlqName}"
+
+        - PolicyName: KmsEthereumSigningAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: UseEthereumKmsKey
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource: "*"
+
+  StandardTxSigner:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./resources/standard-tx-signer.yml
+      Parameters:
+        StandardSenderQueueMessageGroupId: !Ref StandardSenderQueueMessageGroupId
+        MasterKmsSecretsName: !Ref MasterKmsSecretsName
+        LambdaFunctionRoleArn: !GetAtt LambdaFunctionRole.Arn
+        DatabaseName: !Ref DatabaseName
+        DbSecretsName: !Ref DbSecretsName
+        DatabaseAccessSecurityGroup: !Ref DatabaseAccessSecurityGroup
+        PrivateSubnets: !Ref PrivateSubnets
+        StandardTxSenderQueueName: !Ref StandardTxSenderQueueName
+        StandardTxSignerQueueName: !Ref StandardTxSignerQueueName
+        StandardTxSignerDlqName: !Ref StandardTxSignerDlqName
+
+  StandardTxSender:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./resources/standard-tx-sender.yml
+      Parameters:
+        StandardTxSenderQueueName: !Ref StandardTxSenderQueueName
+        StandardTxSenderDlqName: !Ref StandardTxSenderDlqName
+        LambdaFunctionRoleArn: !GetAtt LambdaFunctionRole.Arn
+        DatabaseName: !Ref DatabaseName
+        DbSecretsName: !Ref DbSecretsName
+        DatabaseAccessSecurityGroup: !Ref DatabaseAccessSecurityGroup
+        PrivateSubnets: !Ref PrivateSubnets
+        ReceiptPollerQueueMessageGroupId: !Ref ReceiptPollerQueueMessageGroupId
+        ReceiptPollerQueueName: !Ref ReceiptPollerQueueName
+
+  ReceiptPoller:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./resources/receipt-poller.yml
+      Parameters:
+        ReceiptPollerQueueName: !Ref ReceiptPollerQueueName
+        ReceiptPollerDlqName: !Ref ReceiptPollerDlqName
+
+  Migrations:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./resources/migrations.yml
+      Parameters:
+        LambdaFunctionRoleArn: !GetAtt LambdaFunctionRole.Arn
+        DbSecretsName: !Ref DbSecretsName
+        DatabaseName: !Ref DatabaseName
+        DatabaseAccessSecurityGroup: !Ref DatabaseAccessSecurityGroup
+        PrivateSubnets: !Ref PrivateSubnets

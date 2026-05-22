@@ -1,0 +1,26 @@
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  ReceiptPollerQueueName:
+    Type: String
+  ReceiptPollerDlqName:
+    Type: String
+
+Resources:
+  ReceiptPollerDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref ReceiptPollerDlqName
+      FifoQueue: true
+      ContentBasedDeduplication: true
+
+  ReceiptPollerQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref ReceiptPollerQueueName
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      VisibilityTimeout: 300
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ReceiptPollerDeadLetterQueue.Arn
+        maxReceiveCount: 5

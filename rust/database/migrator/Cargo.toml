@@ -15,16 +15,12 @@ sqlx = { workspace = true, features = [
 ] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
-# aws feature:
-aws-config = { workspace = true, features = [
-    "behavior-version-latest",
-], optional = true }
+
 lambda_runtime = { workspace = true, optional = true }
-aws_secrets = { workspace = true, optional = true }
 
 
 [features]
-aws = ["dep:aws-config", "dep:lambda_runtime", "dep:aws_secrets"]
+aws = ["dep:lambda_runtime"]
 
 [[bin]]
 name = "aws_migrator"

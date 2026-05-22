@@ -1,0 +1,51 @@
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  LambdaFunctionRoleArn:
+    Type: String
+  DatabaseName:
+    Type: String
+  DbSecretsName:
+    Type: String
+  DatabaseAccessSecurityGroup:
+    Type: String
+  PrivateSubnets:
+    Type: String
+
+Resources:
+  MigrationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: provided.al2023
+      Architectures:
+        - x86_64
+      Handler: bootstrap
+      CodeUri: ../../../target/lambda/aws_migrator
+      Timeout: 300
+      Role: !Ref LambdaFunctionRoleArn
+      Environment:
+        Variables:
+          DATABASE_URL: !Join
+            - ""
+            - - "postgresql://"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:username}}"
+              - ":"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:password}}"
+              - "@"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:host}}"
+              - ":"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:port}}"
+              - "/"
+              - !Ref DatabaseName
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref DatabaseAccessSecurityGroup
+        SubnetIds: !Split [",", !Ref PrivateSubnets]

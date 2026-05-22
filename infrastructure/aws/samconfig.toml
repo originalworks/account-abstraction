@@ -8,8 +8,11 @@ s3_prefix = "dev"
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
 parameter_overrides = [
     "AaBlobBucketName=aa-blob-bucket-dev",
-    "DbSecretsName=/rev/dev/db-secret",
+    "DbSecretsName='/rev/dev/db-secret'",
+    "MasterKmsSecretsName='/rev/dev/secrets'",
     "DatabaseName=account_abstraction_dev_db",
+    "PrivateSubnets=/dev-stage/network/private-subnet-ids",
+    "DatabaseAccessSecurityGroup=/dev/database/access-security-group-id",
 ]
 
 [staging.deploy.parameters]
