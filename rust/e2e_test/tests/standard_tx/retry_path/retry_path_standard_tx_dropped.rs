@@ -65,6 +65,7 @@ pub async fn retry_path_standard_tx_dropped(
     match standard_tx_sender::aws_lambda::function_handler(
         sender_queue_event,
         &e2e_test_fixture.pool,
+        &e2e_test_fixture.aws_config,
     )
     .await
     {
@@ -80,11 +81,10 @@ pub async fn retry_path_standard_tx_dropped(
         .receive_messages(5)
         .await?;
 
-    // let mut receipt_found = false;
-
-    unsafe {
-        env::set_var("TX_MAX_AGE_SEC", "1");
-    }
+    // WIP: tx_max_age_sec is now column in networks, so update networks here instead
+    // unsafe {
+    //     env::set_var("TX_MAX_AGE_SEC", "1");
+    // }
 
     tokio::time::sleep(Duration::from_millis(3000)).await;
 
@@ -124,10 +124,10 @@ pub async fn retry_path_standard_tx_dropped(
             println!("{err:#?}")
         }
     }
-
-    unsafe {
-        env::set_var("TX_MAX_AGE_SEC", &e2e_test_fixture.env_vars.tx_max_age_sec);
-    }
+    // WIP: tx_max_age_sec is now column in networks, so update networks here instead
+    // unsafe {
+    //     env::set_var("TX_MAX_AGE_SEC", &e2e_test_fixture.env_vars.tx_max_age_sec);
+    // }
 
     Ok(())
 }

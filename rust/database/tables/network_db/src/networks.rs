@@ -10,6 +10,7 @@ pub struct Network {
     pub min_operator_wallet_balance: i64,
     pub gas_estimation_buffer_ppm: i64,
     pub blob_gas_estimation_buffer_ppm: i64,
+    pub tx_max_age_sec: i64,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -20,6 +21,7 @@ pub struct NewNetwork {
     pub rpc_url: String,
     pub contract_address: String,
     pub min_operator_wallet_balance: i64,
+    pub tx_max_age_sec: i64,
     pub gas_estimation_buffer_ppm: i64,
     pub blob_gas_estimation_buffer_ppm: i64,
 }
@@ -45,6 +47,7 @@ impl NetworkRepo {
                 min_operator_wallet_balance,
                 gas_estimation_buffer_ppm,
                 blob_gas_estimation_buffer_ppm,
+                tx_max_age_sec,
                 created_at,
                 updated_at
             FROM
@@ -71,6 +74,7 @@ impl NetworkRepo {
                 min_operator_wallet_balance,
                 gas_estimation_buffer_ppm,
                 blob_gas_estimation_buffer_ppm,
+                tx_max_age_sec,
                 created_at,
                 updated_at
             FROM
@@ -92,9 +96,10 @@ impl NetworkRepo {
                 contract_address,
                 min_operator_wallet_balance,
                 gas_estimation_buffer_ppm,
-                blob_gas_estimation_buffer_ppm
+                blob_gas_estimation_buffer_ppm,
+                tx_max_age_sec
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             network.chain_id,
             network.chain_name,
             network.rpc_url,
@@ -102,6 +107,7 @@ impl NetworkRepo {
             network.min_operator_wallet_balance,
             network.gas_estimation_buffer_ppm,
             network.blob_gas_estimation_buffer_ppm,
+            network.tx_max_age_sec,
         )
         .execute(&self.pool)
         .await?;

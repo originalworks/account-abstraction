@@ -41,6 +41,7 @@ mod tests {
                 min_operator_wallet_balance: 1_000_000,
                 gas_estimation_buffer_ppm: 120_000,
                 blob_gas_estimation_buffer_ppm: 1_000_000,
+                tx_max_age_sec: 3600,
             })
             .await?;
         Ok(())
