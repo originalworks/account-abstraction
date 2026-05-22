@@ -6,19 +6,16 @@ pub struct Config {
     pub database_url: String,
     pub retry_queue_message_group_id: String,
     pub retry_queue_url: String,
-    pub tx_max_age_sec: u64,
 }
 
 impl Config {
     pub fn build() -> anyhow::Result<Self> {
         let database_url = Self::get_env_var("DATABASE_URL");
-        let tx_max_age_sec = Self::get_env_var("TX_MAX_AGE_SEC").parse()?;
         let retry_queue_message_group_id = Self::get_env_var("RETRY_QUEUE_MESSAGE_GROUP_ID");
         let retry_queue_url = Self::get_env_var("RETRY_QUEUE_URL");
 
         Ok(Self {
             database_url,
-            tx_max_age_sec,
             retry_queue_message_group_id,
             retry_queue_url,
         })
@@ -67,7 +64,7 @@ pub mod aws_lambda {
         let operator_wallet_repo = OperatorWalletRepo::new(pool.clone());
         let networks = network_repo.select_all().await?;
 
-        let receipt_reader = ReceiptReader::build(&networks, config.tx_max_age_sec).await?;
+        let receipt_reader = ReceiptReader::build(&networks).await?;
         let wallet_pool = WalletPoolManager::build(operator_wallet_repo, &networks);
         let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
         let retry_queue = SqsQueue::build(

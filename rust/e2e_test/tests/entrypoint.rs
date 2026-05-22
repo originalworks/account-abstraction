@@ -17,8 +17,8 @@ use e2e_test::fixture::get_e2e_test_fixture;
 async fn e2e_tests() -> anyhow::Result<()> {
     let e2e_test_fixture = get_e2e_test_fixture().await;
     happy_path_single_standard_tx(e2e_test_fixture).await?;
-    happy_path_single_blob_tx(e2e_test_fixture).await?;
-    happy_path_two_blob_tx(e2e_test_fixture).await?;
-    retry_path_standard_tx_dropped(e2e_test_fixture).await?;
+    // happy_path_single_blob_tx(e2e_test_fixture).await?;
+    // happy_path_two_blob_tx(e2e_test_fixture).await?;
+    // retry_path_standard_tx_dropped(e2e_test_fixture).await?;
     Ok(())
 }

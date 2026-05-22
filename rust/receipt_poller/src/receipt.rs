@@ -22,20 +22,22 @@ type HardlyTypedProvider = FillProvider<
 
 pub struct ReceiptReader {
     providers_by_chain_id: HashMap<i64, HardlyTypedProvider>,
-    tx_max_age_sec: u64,
+    tx_max_age_by_chain_id: HashMap<i64, i64>,
 }
 
 impl ReceiptReader {
-    pub async fn build(networks: &Vec<Network>, tx_max_age_sec: u64) -> anyhow::Result<Self> {
+    pub async fn build(networks: &Vec<Network>) -> anyhow::Result<Self> {
         let mut providers_by_chain_id = HashMap::new();
+        let mut tx_max_age_by_chain_id = HashMap::new();
         for network in networks {
             let provider = ProviderBuilder::new().connect_http(network.rpc_url.parse()?);
 
             providers_by_chain_id.insert(network.chain_id, provider);
+            tx_max_age_by_chain_id.insert(network.chain_id, network.tx_max_age_sec);
         }
 
         Ok(Self {
-            tx_max_age_sec,
+            tx_max_age_by_chain_id,
             providers_by_chain_id,
         })
     }
@@ -61,7 +63,18 @@ impl ReceiptReader {
                 return Ok(Some(TxExecutionOutcome::FAILED));
             }
         } else {
-            let tx_max_age = Duration::from_secs(self.tx_max_age_sec);
+            let tx_max_age = Duration::from_secs(u64::try_from(
+                self.tx_max_age_by_chain_id
+                    .get(&execution_attempt.chain_id)
+                    .expect(
+                        &format!(
+                            "execution attempt with unrecognized chain id: {}",
+                            execution_attempt.chain_id,
+                        )
+                        .to_string(),
+                    )
+                    .clone(),
+            )?);
             if execution_attempt.created_at + tx_max_age < OffsetDateTime::now_utc() {
                 if let Some(_) = provider.get_transaction_by_hash(tx_hash).await? {
                     return Ok(Some(TxExecutionOutcome::STUCK));

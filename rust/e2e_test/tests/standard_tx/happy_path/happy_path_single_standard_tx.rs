@@ -49,6 +49,7 @@ pub async fn happy_path_single_standard_tx(
     match standard_tx_sender::aws_lambda::function_handler(
         sender_queue_event,
         &e2e_test_fixture.pool,
+        &e2e_test_fixture.aws_config,
     )
     .await
     {

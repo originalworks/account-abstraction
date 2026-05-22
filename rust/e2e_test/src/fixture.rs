@@ -43,7 +43,6 @@ pub struct E2eTestEnvVars {
     pub anvil_chain_id: i64,
     pub anvil_mnemonic: String,
     pub blob_storage_bucket_name: String,
-    pub tx_max_age_sec: String,
 }
 
 pub async fn get_e2e_test_fixture() -> &'static E2eTestFixture {
@@ -91,13 +90,11 @@ fn build_env_vars() -> anyhow::Result<E2eTestEnvVars> {
     let anvil_chain_id = std::env::var("ANVIL_CHAIN_ID").unwrap().parse().unwrap();
     let anvil_mnemonic = std::env::var("ANVIL_MNEMONIC").unwrap();
     let blob_storage_bucket_name = std::env::var("BLOB_STORAGE_BUCKET_NAME").unwrap();
-    let tx_max_age_sec = std::env::var("TX_MAX_AGE_SEC").unwrap();
 
     Ok(E2eTestEnvVars {
         anvil_chain_id,
         anvil_mnemonic,
         blob_storage_bucket_name,
-        tx_max_age_sec,
     })
 }
 

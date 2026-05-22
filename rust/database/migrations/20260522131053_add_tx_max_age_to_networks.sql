@@ -1,0 +1,2 @@
+ALTER TABLE networks
+ADD COLUMN tx_max_age_sec BIGINT NOT NULL DEFAULT 3600;
