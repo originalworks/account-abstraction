@@ -1,26 +1,36 @@
-use alloy::primitives::{Address, Uint, keccak256};
+use crate::contract::sEOA::ExecuteInput;
+use alloy::{
+    eips::eip1559::Eip1559Estimation,
+    primitives::{Address, Uint, keccak256},
+};
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr};
 use tx_request_db::tx_requests::{StandardTxRequestRaw, TxRequestRepo};
 use uuid::Uuid;
 
-use crate::contract::sEOA::ExecuteInput;
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ExecuteBatchTxContext {
     pub chain_id: i64,
     pub execute_batch_input: Vec<ExecuteInput>,
     pub use_operator_wallet_id: Option<Uuid>,
     pub batch_tx_value: i64,
     pub tx_ids: Vec<String>,
+    pub successfully_simulated: bool,
+    pub assigned_nonce: Option<u64>,
+    pub fees: Option<Eip1559Estimation>,
+    pub gas_limit: Option<u64>,
+    pub tx_hash: Option<String>,
 }
 
-pub struct TxContextBuilder<'a> {
-    transaction_repo: &'a TxRequestRepo,
+pub struct TxContextBuilder {
+    transaction_repo: TxRequestRepo,
 }
 
-impl<'a> TxContextBuilder<'a> {
-    pub fn build(transaction_repo: &'a TxRequestRepo) -> Self {
-        Self { transaction_repo }
+impl TxContextBuilder {
+    pub fn build(transaction_repo: &TxRequestRepo) -> Self {
+        Self {
+            transaction_repo: transaction_repo.clone(),
+        }
     }
 
     pub async fn fetch_and_sort_into_batches(
@@ -88,6 +98,11 @@ impl<'a> TxContextBuilder<'a> {
             execute_batch_input,
             batch_tx_value,
             tx_ids,
+            successfully_simulated: false,
+            assigned_nonce: None,
+            fees: None,
+            gas_limit: None,
+            tx_hash: None,
         })
     }
 

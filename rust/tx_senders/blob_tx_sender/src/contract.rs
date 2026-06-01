@@ -52,14 +52,17 @@ impl BuildNewBlobExecutionAttempt for NewExecutionAttempt {
         Ok(NewExecutionAttempt {
             chain_id,
             operator_wallet_id,
-            nonce_used: i64::try_from(nonce)?,
+            nonce_used: Some(i64::try_from(nonce)?),
             tx_type: TxType::BLOB,
-            tx_hash,
-            gas_limit,
-            max_fee_per_gas: i64::try_from(fees.max_fee_per_gas)?,
-            max_priority_fee: i64::try_from(fees.max_priority_fee_per_gas)?,
+            tx_hash: Some(tx_hash),
+            gas_limit: Some(gas_limit),
+            max_fee_per_gas: Some(i64::try_from(fees.max_fee_per_gas)?),
+            max_priority_fee: Some(i64::try_from(fees.max_priority_fee_per_gas)?),
             max_fee_per_blob_gas: Some(i64::try_from(max_fee_per_blob_gas)?),
             tx_value,
+            outcome: None,
+            error_object: None,
+            retryable: None,
         })
     }
 }

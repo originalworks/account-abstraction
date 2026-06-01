@@ -46,7 +46,16 @@ impl ReceiptReader {
         &self,
         execution_attempt: &ExecutionAttempt,
     ) -> anyhow::Result<Option<TxExecutionOutcome>> {
-        let tx_hash = FixedBytes::<32>::from_str(&execution_attempt.tx_hash.as_str())?;
+        if let Some(outcome) = execution_attempt.outcome.clone() {
+            return Ok(Some(outcome));
+        }
+        let tx_hash = FixedBytes::<32>::from_str(
+            execution_attempt
+                .tx_hash
+                .clone()
+                .expect("tx_hash is required")
+                .as_str(),
+        )?;
 
         let Some(provider) = self.providers_by_chain_id.get(&execution_attempt.chain_id) else {
             bail!(

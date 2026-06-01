@@ -60,7 +60,7 @@ impl Wallet {
             )
         }
         if latest_nonce == db_nonce {
-            self.next_nonce = Some(db_nonce);
+            self.next_nonce = Some(latest_nonce + 1);
         } else {
             bail!(
                 "Nonce mismatch! latest nonce: {}, db nonce: {}",

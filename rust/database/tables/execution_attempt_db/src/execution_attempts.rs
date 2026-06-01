@@ -15,6 +15,7 @@ pub enum TxExecutionOutcome {
     DROPPED,
     SUCCEED,
     FAILED,
+    REVERTED,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -22,13 +23,13 @@ pub struct ExecutionAttempt {
     pub id: Uuid,
     pub chain_id: i64,
     pub operator_wallet_id: Uuid,
-    pub nonce_used: i64,
+    pub nonce_used: Option<i64>,
     pub tx_value: i64,
     pub tx_type: TxType,
-    pub tx_hash: String,
-    pub gas_limit: i64,
-    pub max_fee_per_gas: i64,
-    pub max_priority_fee: i64,
+    pub tx_hash: Option<String>,
+    pub gas_limit: Option<i64>,
+    pub max_fee_per_gas: Option<i64>,
+    pub max_priority_fee: Option<i64>,
     pub max_fee_per_blob_gas: Option<i64>,
     pub outcome: Option<TxExecutionOutcome>,
     pub created_at: OffsetDateTime,
@@ -38,14 +39,37 @@ pub struct ExecutionAttempt {
 pub struct NewExecutionAttempt {
     pub chain_id: i64,
     pub operator_wallet_id: Uuid,
-    pub nonce_used: i64,
+    pub nonce_used: Option<i64>,
     pub tx_value: i64,
     pub tx_type: TxType,
-    pub tx_hash: String,
-    pub gas_limit: i64,
-    pub max_fee_per_gas: i64,
-    pub max_priority_fee: i64,
+    pub tx_hash: Option<String>,
+    pub gas_limit: Option<i64>,
+    pub max_fee_per_gas: Option<i64>,
+    pub max_priority_fee: Option<i64>,
     pub max_fee_per_blob_gas: Option<i64>,
+    pub outcome: Option<TxExecutionOutcome>,
+    pub error_object: Option<String>,
+    pub retryable: Option<bool>,
+}
+
+impl NewExecutionAttempt {
+    pub fn default_standard(chain_id: i64, operator_wallet_id: Uuid, tx_value: i64) -> Self {
+        Self {
+            chain_id,
+            operator_wallet_id,
+            nonce_used: None,
+            tx_value,
+            tx_type: TxType::STANDARD,
+            tx_hash: None,
+            gas_limit: None,
+            max_fee_per_gas: None,
+            max_priority_fee: None,
+            max_fee_per_blob_gas: None,
+            outcome: None,
+            error_object: None,
+            retryable: None,
+        }
+    }
 }
 
 pub struct ExecutionAttemptRepo {
@@ -102,10 +126,13 @@ impl ExecutionAttemptRepo {
                 max_fee_per_gas,
                 max_priority_fee,
                 max_fee_per_blob_gas,
-                tx_value
+                tx_value,
+                outcome,
+                error_object,
+                retryable
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
             )
             RETURNING
                 id,
@@ -133,7 +160,10 @@ impl ExecutionAttemptRepo {
             input.max_fee_per_gas,
             input.max_priority_fee,
             input.max_fee_per_blob_gas,
-            input.tx_value
+            input.tx_value,
+            input.outcome as Option<TxExecutionOutcome>,
+            input.error_object,
+            input.retryable
         )
         .fetch_one(&self.pool)
         .await?;
@@ -146,6 +176,7 @@ impl ExecutionAttemptRepo {
         execution_attempt_id: Uuid,
         outcome: TxExecutionOutcome,
         tx_requests_status: TxStatus,
+        retryable: Option<bool>,
     ) -> anyhow::Result<()> {
         let mut tx = self.pool.begin().await?;
 
@@ -154,7 +185,8 @@ impl ExecutionAttemptRepo {
             r#"
             UPDATE execution_attempts
             SET
-                outcome = $2
+                outcome = $2,
+                retryable = $3
             WHERE
                 id = $1
             RETURNING
@@ -174,7 +206,8 @@ impl ExecutionAttemptRepo {
                 updated_at
             "#,
             execution_attempt_id,
-            outcome as TxExecutionOutcome
+            outcome as TxExecutionOutcome,
+            retryable
         )
         .fetch_one(&mut *tx)
         .await?;
@@ -216,7 +249,7 @@ impl ExecutionAttemptRepo {
             FROM execution_attempts
             WHERE
                 id = $1
-                AND outcome IN ('FAILED', 'DROPPED', 'STUCK')
+                AND outcome IN ('FAILED', 'DROPPED', 'STUCK', 'REVERTED')
                 AND retry_lock = false
             FOR UPDATE SKIP LOCKED
         )

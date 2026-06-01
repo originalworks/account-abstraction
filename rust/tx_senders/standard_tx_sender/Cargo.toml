@@ -22,6 +22,7 @@ execution_attempt_item_db.workspace = true
 db_types.workspace = true
 receipt_poller_queue = { workspace = true, features = ["aws"] }
 wallet_pool.workspace = true
+retry_queue = { workspace = true, features = ["aws"] }
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }

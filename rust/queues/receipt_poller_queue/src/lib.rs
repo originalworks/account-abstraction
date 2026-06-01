@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ReceiptPollerQueueMessageBody {
     pub execution_attempt_id: String,
+    pub batch_size: u8,
 }
 
 #[derive(Debug)]

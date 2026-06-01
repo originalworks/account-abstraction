@@ -64,11 +64,11 @@ pub async fn happy_path_single_blob_tx(e2e_test_fixture: &E2eTestFixture) -> any
     let mut receipt_found = false;
 
     while receipt_found == false {
-        match receipt_poller::aws_lambda::function_handler(
-            receipt_poller_queue_event.clone(),
-            &e2e_test_fixture.pool,
-        )
-        .await
+        match e2e_test_fixture
+            .orchestrators
+            .receipt_poller_orchestrator
+            .function_handler(receipt_poller_queue_event.clone())
+            .await
         {
             Ok(_) => {}
             Err(err) => {

@@ -134,11 +134,12 @@ pub mod aws_lambda {
                 .await?;
 
             tx_request_repo
-                .mark_many_as_broadcasted(&blob_batch_context.tx_ids)
+                .set_status_for_many(&blob_batch_context.tx_ids, db_types::TxStatus::BROADCASTED)
                 .await?;
 
             let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
                 execution_attempt_id: execution_attempt.id.to_string(),
+                batch_size: u8::try_from(blob_batch_context.tx_ids.len())?,
             };
 
             receipt_poller_queue

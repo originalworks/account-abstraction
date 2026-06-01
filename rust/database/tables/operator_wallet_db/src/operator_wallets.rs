@@ -94,8 +94,7 @@ impl OperatorWalletRepo {
         )
         UPDATE operator_wallets ow
         SET
-            in_use = true,
-            nonce = nonce + 1
+            in_use = true
         FROM candidate
         WHERE ow.id = candidate.id
         RETURNING
@@ -136,8 +135,7 @@ impl OperatorWalletRepo {
         )
         UPDATE operator_wallets ow
         SET
-            in_use = true,
-            nonce = nonce + 1
+            in_use = true
         FROM candidate
         WHERE ow.id = candidate.id
         RETURNING
@@ -227,7 +225,29 @@ impl OperatorWalletRepo {
         Ok(wallet)
     }
 
-    pub async fn release(&self, operator_wallet_id: Uuid) -> anyhow::Result<()> {
+    pub async fn release_used(&self, operator_wallet_id: Uuid) -> anyhow::Result<()> {
+        let result = sqlx::query!(
+            r#"
+        UPDATE operator_wallets
+        SET
+            in_use = false,
+            nonce = nonce + 1
+        WHERE
+            id = $1
+            AND in_use = true
+        "#,
+            operator_wallet_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            anyhow::bail!("wallet not found or not in use");
+        }
+        Ok(())
+    }
+
+    pub async fn release_unused(&self, operator_wallet_id: Uuid) -> anyhow::Result<()> {
         let result = sqlx::query!(
             r#"
         UPDATE operator_wallets

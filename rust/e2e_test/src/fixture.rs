@@ -30,6 +30,12 @@ pub struct DbRepositories {
     pub wallet_assignment_repo: WalletAssignmentRepo,
 }
 
+pub struct TestOrchestrators {
+    pub standard_tx_sender_orchestrator:
+        standard_tx_sender::orchestrator::aws::AwsLambdaOrchestrator,
+    pub receipt_poller_orchestrator: receipt_poller::orchestrator::aws::AwsLambdaOrchestrator,
+}
+
 pub struct E2eTestFixture {
     pub test_queue_manager: TestQueueManager,
     pub db_repositories: DbRepositories,
@@ -37,6 +43,7 @@ pub struct E2eTestFixture {
     pub env_vars: E2eTestEnvVars,
     pub blob_storage_manager: S3BlobStorageManager,
     pub aws_config: aws_config::SdkConfig,
+    pub orchestrators: TestOrchestrators,
 }
 
 pub struct E2eTestEnvVars {
@@ -67,6 +74,24 @@ pub async fn get_e2e_test_fixture() -> &'static E2eTestFixture {
 
             blob_storage_manager.prepare_for_test().await.unwrap();
 
+            let orchestrators = TestOrchestrators {
+                standard_tx_sender_orchestrator:
+                    standard_tx_sender::orchestrator::aws::AwsLambdaOrchestrator::build(
+                        &pool,
+                        &aws_config,
+                    )
+                    .await
+                    .unwrap(),
+
+                receipt_poller_orchestrator:
+                    receipt_poller::orchestrator::aws::AwsLambdaOrchestrator::build(
+                        &pool,
+                        &aws_config,
+                    )
+                    .await
+                    .unwrap(),
+            };
+
             E2eTestFixture {
                 pool,
                 test_queue_manager,
@@ -74,6 +99,7 @@ pub async fn get_e2e_test_fixture() -> &'static E2eTestFixture {
                 env_vars: e2e_test_env_vars,
                 blob_storage_manager,
                 aws_config,
+                orchestrators,
             }
         })
         .await

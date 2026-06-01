@@ -1,6 +1,7 @@
-use crate::transaction::ExecuteBatchTxContext;
+use crate::{
+    execution_attempt::NewStandardExecutionAttemptBuilder, transaction::ExecuteBatchTxContext,
+};
 use alloy::{
-    eips::eip1559::Eip1559Estimation,
     primitives::{Address, Uint},
     providers::{
         Provider, ProviderBuilder,
@@ -9,57 +10,19 @@ use alloy::{
     sol,
 };
 use anyhow::bail;
-use db_types::TxType;
 use execution_attempt_db::execution_attempts::NewExecutionAttempt;
 use network_db::networks::Network;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr};
-use uuid::Uuid;
 use wallet_pool::wallet::Wallet;
 
 sol!(
     #[allow(missing_docs)]
     #[sol(rpc)]
-    #[derive(Debug)]
+    #[derive(Debug, Deserialize, Serialize)]
     SEOA,
     "../../../contracts/artifacts/contracts/sEOA.sol/sEOA.json"
 );
-
-pub trait BuildNewStandardExecutionAttempt {
-    fn build_standard(
-        fees: Eip1559Estimation,
-        gas_limit: i64,
-        tx_hash: String,
-        nonce: u64,
-        operator_wallet_id: Uuid,
-        chain_id: i64,
-        tx_value: i64,
-    ) -> anyhow::Result<NewExecutionAttempt>;
-}
-
-impl BuildNewStandardExecutionAttempt for NewExecutionAttempt {
-    fn build_standard(
-        fees: Eip1559Estimation,
-        gas_limit: i64,
-        tx_hash: String,
-        nonce: u64,
-        operator_wallet_id: Uuid,
-        chain_id: i64,
-        tx_value: i64,
-    ) -> anyhow::Result<Self> {
-        Ok(NewExecutionAttempt {
-            chain_id,
-            operator_wallet_id,
-            nonce_used: i64::try_from(nonce)?,
-            tx_type: TxType::STANDARD,
-            tx_hash,
-            gas_limit,
-            max_fee_per_gas: i64::try_from(fees.max_fee_per_gas)?,
-            max_priority_fee: i64::try_from(fees.max_priority_fee_per_gas)?,
-            max_fee_per_blob_gas: None,
-            tx_value,
-        })
-    }
-}
 
 type HardlyTypedProvider = FillProvider<
     JoinFill<
@@ -90,11 +53,11 @@ impl ContractManager {
         })
     }
 
-    pub async fn send_batch(
+    pub async fn simulate_send_batch_tx(
         &self,
-        tx_context: &ExecuteBatchTxContext,
-        mut wallet: Wallet,
-    ) -> anyhow::Result<NewExecutionAttempt> {
+        tx_context: &mut ExecuteBatchTxContext,
+        wallet: &mut Wallet,
+    ) -> anyhow::Result<()> {
         let Some(network) = self.networks_by_chain_id.get(&tx_context.chain_id) else {
             bail!(
                 "Contract address not found for chain id: {}",
@@ -106,7 +69,7 @@ impl ContractManager {
         };
         let nonce = wallet.use_nonce()?;
         let provider = ProviderBuilder::new()
-            .wallet(wallet.ow_wallet.wallet)
+            .wallet(&wallet.ow_wallet.wallet)
             .connect_provider(root_provider);
         let contract = SEOA::new(
             Address::from_str(network.contract_address.as_str())?,
@@ -116,32 +79,79 @@ impl ContractManager {
         let tx_value = Uint::<256, 4>::from(tx_context.batch_tx_value);
 
         let fees = provider.estimate_eip1559_fees().await?;
-        let call_builder = contract
+        let call = contract
             .executeBatch(tx_context.execute_batch_input.clone())
             .value(tx_value)
             .nonce(nonce)
             .max_fee_per_gas(fees.max_fee_per_gas)
             .max_priority_fee_per_gas(fees.max_priority_fee_per_gas);
 
-        let gas = i64::try_from(call_builder.estimate_gas().await?)?;
-        let gas_with_buffer = gas + gas * network.gas_estimation_buffer_ppm / 1_000_000;
+        let execute_batch_return = call.call().await?;
 
-        let pending_tx = call_builder
-            .gas(u64::try_from(gas_with_buffer)?)
+        println!("execute_batch_return: {:?}", execute_batch_return);
+
+        let estimated_gas = call.estimate_gas().await?;
+
+        let gas_limit = estimated_gas
+            + estimated_gas * u64::try_from(network.gas_estimation_buffer_ppm)? / 1_000_000;
+
+        tx_context.assigned_nonce = Some(nonce);
+        tx_context.fees = Some(fees);
+        tx_context.gas_limit = Some(gas_limit);
+        tx_context.successfully_simulated = true;
+
+        Ok(())
+    }
+
+    pub async fn send_batch(
+        &self,
+        tx_context: &mut ExecuteBatchTxContext,
+        wallet: &Wallet,
+    ) -> anyhow::Result<NewExecutionAttempt> {
+        let Some(network) = self.networks_by_chain_id.get(&tx_context.chain_id) else {
+            bail!(
+                "Contract address not found for chain id: {}",
+                tx_context.chain_id
+            );
+        };
+        let Some(root_provider) = self.providers_by_chain_id.get(&tx_context.chain_id) else {
+            bail!("Provider not found for chain id: {}", tx_context.chain_id);
+        };
+
+        let Some(nonce) = tx_context.assigned_nonce else {
+            bail!("Nonce should be assinged at this point. Use simulate_send_batch_tx first");
+        };
+
+        let Some(fees) = tx_context.fees else {
+            bail!("Fees should be calculated at this point. Use simulate_send_batch_tx first");
+        };
+
+        let Some(gas_limit) = tx_context.gas_limit else {
+            bail!("Gas limit should be calculated at this point. Use simulate_send_batch_tx first");
+        };
+
+        let provider = ProviderBuilder::new()
+            .wallet(wallet.ow_wallet.wallet.clone())
+            .connect_provider(root_provider);
+        let contract = SEOA::new(
+            Address::from_str(network.contract_address.as_str())?,
+            &provider,
+        );
+
+        let pending_tx = contract
+            .executeBatch(tx_context.execute_batch_input.clone())
+            .value(Uint::<256, 4>::from(tx_context.batch_tx_value))
+            .nonce(nonce)
+            .max_fee_per_gas(fees.max_fee_per_gas)
+            .max_priority_fee_per_gas(fees.max_priority_fee_per_gas)
+            .gas(gas_limit)
             .send()
             .await?;
 
-        let tx_hash = pending_tx.tx_hash().to_string();
+        tx_context.tx_hash = Some(pending_tx.tx_hash().to_string());
 
-        let new_execution_attempt = NewExecutionAttempt::build_standard(
-            fees,
-            gas_with_buffer,
-            tx_hash,
-            nonce,
-            wallet.db_record.id,
-            tx_context.chain_id,
-            tx_context.batch_tx_value,
-        )?;
+        let new_execution_attempt =
+            NewExecutionAttempt::standard_successful(tx_context, wallet.db_record.id)?;
 
         Ok(new_execution_attempt)
     }
