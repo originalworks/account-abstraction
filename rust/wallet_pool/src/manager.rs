@@ -100,9 +100,16 @@ impl WalletPoolManager {
         }
     }
 
-    pub async fn release(&self, operator_wallet_id: Uuid) -> anyhow::Result<()> {
+    pub async fn release_used(&self, operator_wallet_id: Uuid) -> anyhow::Result<()> {
         self.operator_wallet_repo
-            .release(operator_wallet_id)
+            .release_used(operator_wallet_id)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn release_unused(&self, operator_wallet_id: Uuid) -> anyhow::Result<()> {
+        self.operator_wallet_repo
+            .release_unused(operator_wallet_id)
             .await?;
         Ok(())
     }

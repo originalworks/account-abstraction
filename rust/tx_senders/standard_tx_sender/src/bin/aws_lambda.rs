@@ -3,7 +3,7 @@
 use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
 use lambda_runtime::{run, service_fn, tracing};
 use sqlx::PgPool;
-use standard_tx_sender::{Config, aws_lambda::function_handler};
+use standard_tx_sender::{Config, orchestrator::aws::AwsLambdaOrchestrator};
 
 #[tokio::main]
 async fn main() -> Result<(), lambda_runtime::Error> {
@@ -19,8 +19,10 @@ async fn main() -> Result<(), lambda_runtime::Error> {
     let database_url = Config::get_env_var("DATABASE_URL");
     let pool = PgPool::connect(&database_url).await?;
 
+    let aws_lambda_orchestrator = AwsLambdaOrchestrator::build(&pool, &aws_config).await?;
+
     run(service_fn(|event| {
-        function_handler(event, &pool, &aws_config)
+        aws_lambda_orchestrator.function_handler(event)
     }))
     .await
 }

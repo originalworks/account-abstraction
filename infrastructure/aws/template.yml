@@ -16,6 +16,9 @@ Parameters:
   StandardSenderQueueMessageGroupId:
     Type: String
     Default: standard-sender-queue-group
+  RetryQueueMessageGroupId:
+    Type: String
+    Default: retry-queue-group
   ReceiptPollerQueueMessageGroupId:
     Type: String
     Default: receipt-poller-queue-group
@@ -37,6 +40,12 @@ Parameters:
   ReceiptPollerDlqName:
     Type: String
     Default: receipt-poller-dlq.fifo
+  RetryQueueName:
+    Type: String
+    Default: aa-tx-retry.fifo
+  RetryDlqName:
+    Type: String
+    Default: aa-tx-retry-dlq.fifo
 
 Resources:
   AaBlobBucket:
@@ -75,7 +84,8 @@ Resources:
                   - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${StandardTxSenderDlqName}"
                   - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${StandardTxSignerQueueName}"
                   - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${StandardTxSignerDlqName}"
-
+                  - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${ReceiptPollerQueueName}"
+                  - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${ReceiptPollerDlqName}"
         - PolicyName: KmsEthereumSigningAccess
           PolicyDocument:
             Version: "2012-10-17"
@@ -125,6 +135,13 @@ Resources:
       Parameters:
         ReceiptPollerQueueName: !Ref ReceiptPollerQueueName
         ReceiptPollerDlqName: !Ref ReceiptPollerDlqName
+        LambdaFunctionRoleArn: !GetAtt LambdaFunctionRole.Arn
+        DatabaseName: !Ref DatabaseName
+        DbSecretsName: !Ref DbSecretsName
+        DatabaseAccessSecurityGroup: !Ref DatabaseAccessSecurityGroup
+        PrivateSubnets: !Ref PrivateSubnets
+        RetryQueueMessageGroupId: !Ref RetryQueueMessageGroupId
+        RetryQueueName: !Ref RetryQueueName
 
   Migrations:
     Type: AWS::Serverless::Application

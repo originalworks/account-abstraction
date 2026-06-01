@@ -44,7 +44,6 @@ pub async fn retry_path_standard_tx_dropped(
 
     assert!(standard_tx_input.signature.is_empty() == false);
 
-    // broadcast_underpriced_tx(e2e_test_fixture, &standard_tx_input.tx_id).await?;
     let networks = e2e_test_fixture
         .db_repositories
         .network_repo
@@ -62,12 +61,11 @@ pub async fn retry_path_standard_tx_dropped(
         .receive_messages(5)
         .await?;
 
-    match standard_tx_sender::aws_lambda::function_handler(
-        sender_queue_event,
-        &e2e_test_fixture.pool,
-        &e2e_test_fixture.aws_config,
-    )
-    .await
+    match e2e_test_fixture
+        .orchestrators
+        .standard_tx_sender_orchestrator
+        .function_handler(sender_queue_event)
+        .await
     {
         Ok(_) => {}
         Err(err) => {
@@ -88,11 +86,11 @@ pub async fn retry_path_standard_tx_dropped(
 
     tokio::time::sleep(Duration::from_millis(3000)).await;
 
-    match receipt_poller::aws_lambda::function_handler(
-        receipt_poller_queue_event.clone(),
-        &e2e_test_fixture.pool,
-    )
-    .await
+    match e2e_test_fixture
+        .orchestrators
+        .receipt_poller_orchestrator
+        .function_handler(receipt_poller_queue_event.clone())
+        .await
     {
         Ok(_) => {}
         Err(err) => {

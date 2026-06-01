@@ -43,6 +43,7 @@ pub struct NewTxRequestWithTxInput {
     pub tx_input: NewTxInput,
 }
 
+#[derive(Debug, Clone)]
 pub struct TxRequestRepo {
     pool: PgPool,
 }
@@ -391,15 +392,20 @@ impl TxRequestRepo {
         Ok(())
     }
 
-    pub async fn mark_many_as_broadcasted(&self, tx_ids: &Vec<String>) -> anyhow::Result<()> {
+    pub async fn set_status_for_many(
+        &self,
+        tx_ids: &Vec<String>,
+        tx_status: TxStatus,
+    ) -> anyhow::Result<()> {
         sqlx::query!(
             r#"
         UPDATE tx_requests
         SET 
-            tx_status = 'BROADCASTED'
+            tx_status = $2
         WHERE tx_id = ANY($1)
         "#,
-            tx_ids
+            tx_ids,
+            tx_status as TxStatus
         )
         .execute(&self.pool)
         .await?;

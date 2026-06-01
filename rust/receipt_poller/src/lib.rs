@@ -1,3 +1,5 @@
+#[cfg(feature = "aws")]
+pub mod orchestrator;
 pub mod receipt;
 
 use std::env;
@@ -23,95 +25,5 @@ impl Config {
 
     pub fn get_env_var(key: &str) -> String {
         env::var(key).expect(format!("Missing env variable: {key}").as_str())
-    }
-}
-
-#[cfg(feature = "aws")]
-pub mod aws_lambda {
-    use crate::{Config, receipt::ReceiptReader};
-    use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
-    use aws_lambda_events::sqs::SqsEvent;
-    use db_types::TxStatus;
-    use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, TxExecutionOutcome};
-    use lambda_runtime::LambdaEvent;
-    use network_db::networks::NetworkRepo;
-    use operator_wallet_db::operator_wallets::OperatorWalletRepo;
-    use receipt_poller_queue::ReceiptPollerEvent;
-    use retry_queue::RetryQueueMessageBody;
-    use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
-    use std::str::FromStr;
-    use wallet_pool::manager::WalletPoolManager;
-
-    pub async fn function_handler(
-        event: LambdaEvent<SqsEvent>,
-        pool: &sqlx::Pool<sqlx::Postgres>,
-    ) -> anyhow::Result<(), lambda_runtime::Error> {
-        println!("Building receipt_poller...");
-        let event = ReceiptPollerEvent::from_sqs_event(event)?;
-
-        println!("receipt poller event: {event:#?}");
-
-        let config = Config::build()?;
-
-        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
-        let aws_config = aws_config::defaults(BehaviorVersion::latest())
-            .region(region_provider)
-            .load()
-            .await;
-
-        let network_repo = NetworkRepo::new(pool.clone());
-        let execution_attempt_repo = ExecutionAttemptRepo::new(pool.clone());
-        let operator_wallet_repo = OperatorWalletRepo::new(pool.clone());
-        let networks = network_repo.select_all().await?;
-
-        let receipt_reader = ReceiptReader::build(&networks).await?;
-        let wallet_pool = WalletPoolManager::build(operator_wallet_repo, &networks);
-        let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
-        let retry_queue = SqsQueue::build(
-            &sqs_client,
-            &config.retry_queue_url,
-            &config.retry_queue_message_group_id,
-        )?;
-
-        for queue_message in event.messages {
-            let execution_attempt_uuid =
-                uuid::Uuid::from_str(queue_message.body.execution_attempt_id.as_str())?;
-            let execution_attempt = execution_attempt_repo
-                .find_by_id(execution_attempt_uuid)
-                .await?;
-
-            let execution_outcome = receipt_reader
-                .check_execution_outcome(&execution_attempt)
-                .await?;
-
-            if let Some(outcome) = execution_outcome {
-                match outcome {
-                    TxExecutionOutcome::SUCCEED => {
-                        execution_attempt_repo
-                            .propagate_outcome(execution_attempt.id, outcome, TxStatus::EXECUTED)
-                            .await?;
-
-                        wallet_pool
-                            .release(execution_attempt.operator_wallet_id)
-                            .await?;
-                    }
-                    TxExecutionOutcome::FAILED
-                    | TxExecutionOutcome::STUCK
-                    | TxExecutionOutcome::DROPPED => {
-                        execution_attempt_repo
-                            .propagate_outcome(execution_attempt.id, outcome, TxStatus::RETRIED)
-                            .await?;
-
-                        let message_body = &RetryQueueMessageBody {
-                            execution_attempt_id: execution_attempt.id.to_string(),
-                        };
-                        let message_body_string = message_body.to_json_string()?;
-                        retry_queue.send_new(&message_body_string).await?;
-                    }
-                }
-            }
-        }
-
-        Ok(())
     }
 }

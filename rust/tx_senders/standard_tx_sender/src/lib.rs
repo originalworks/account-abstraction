@@ -1,5 +1,7 @@
 #![recursion_limit = "256"]
 pub mod contract;
+pub mod execution_attempt;
+pub mod orchestrator;
 pub mod transaction;
 
 use std::env;
@@ -8,6 +10,8 @@ pub struct Config {
     pub database_url: String,
     pub receipt_poller_queue_url: String,
     pub receipt_poller_queue_message_group_id: String,
+    pub retry_queue_message_group_id: String,
+    pub retry_queue_url: String,
 }
 
 impl Config {
@@ -16,125 +20,19 @@ impl Config {
         let receipt_poller_queue_message_group_id =
             Self::get_env_var("RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID");
         let receipt_poller_queue_url = Self::get_env_var("RECEIPT_POLLER_QUEUE_URL");
+        let retry_queue_message_group_id = Self::get_env_var("RETRY_QUEUE_MESSAGE_GROUP_ID");
+        let retry_queue_url = Self::get_env_var("RETRY_QUEUE_URL");
 
         Ok(Self {
             database_url,
             receipt_poller_queue_message_group_id,
             receipt_poller_queue_url,
+            retry_queue_message_group_id,
+            retry_queue_url,
         })
     }
 
     pub fn get_env_var(key: &str) -> String {
         env::var(key).expect(format!("Missing env variable: {key}").as_str())
-    }
-}
-
-#[cfg(feature = "aws")]
-pub mod aws_lambda {
-    use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
-    use execution_attempt_db::execution_attempts::ExecutionAttemptRepo;
-    use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo;
-    use lambda_runtime::LambdaEvent;
-    use network_db::networks::NetworkRepo;
-    use operator_wallet_db::operator_wallets::OperatorWalletRepo;
-    use receipt_poller_queue::ReceiptPollerQueueMessageBody;
-    use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
-    use standard_sender_queue::StandardSenderQueueEvent;
-    use tx_request_db::tx_requests::TxRequestRepo;
-    use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
-    use wallet_pool::manager::WalletPoolManager;
-
-    use crate::{Config, contract::ContractManager, transaction::TxContextBuilder};
-
-    pub async fn function_handler(
-        event: LambdaEvent<SqsEvent>,
-        pool: &sqlx::Pool<sqlx::Postgres>,
-        aws_config: &aws_config::SdkConfig,
-    ) -> anyhow::Result<SqsBatchResponse, lambda_runtime::Error> {
-        println!("Building standard_tx_sender...");
-
-        let config = Config::build()?;
-
-        let wallet_assignment_repo = WalletAssignmentRepo::new(pool.clone());
-        let operator_wallet_repo = OperatorWalletRepo::new(pool.clone());
-        let network_repo = NetworkRepo::new(pool.clone());
-        let tx_request_repo = TxRequestRepo::new(pool.clone());
-        let execution_attempt_repo = ExecutionAttemptRepo::new(pool.clone());
-        let execution_attempt_item_repo = ExecutionAttemptItemRepo::new(pool.clone());
-        let networks = network_repo.select_all().await?;
-
-        let wallet_pool_manager = WalletPoolManager::build(operator_wallet_repo, &networks);
-        let tx_context_builder = TxContextBuilder::build(&tx_request_repo);
-        let contract_manager = ContractManager::build(&networks).await?;
-        let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
-        let receipt_poller_queue = SqsQueue::build(
-            &sqs_client,
-            &config.receipt_poller_queue_url,
-            &config.receipt_poller_queue_message_group_id,
-        )?;
-
-        let mut sqs_batch_response = SqsBatchResponse::default();
-
-        println!("Reading...");
-        let tx_sender_queue_event = StandardSenderQueueEvent::from_sqs_event(event)?;
-
-        let tx_ids = tx_sender_queue_event
-            .messages
-            .iter()
-            .map(|message| message.body.tx_id.clone())
-            .collect::<Vec<String>>();
-
-        let execute_batch_context_vec = tx_context_builder
-            .fetch_and_sort_into_batches(&tx_ids)
-            .await?;
-
-        println!("Executing...");
-        for execute_batch_context in execute_batch_context_vec {
-            let Some(wallet) = wallet_pool_manager
-                .acquire(
-                    execute_batch_context.chain_id,
-                    execute_batch_context.use_operator_wallet_id,
-                )
-                .await?
-            else {
-                tx_request_repo
-                    .release_many(&execute_batch_context.tx_ids)
-                    .await?;
-                execute_batch_context.tx_ids.iter().for_each(|tx_id| {
-                    if let Some(message_id) = tx_sender_queue_event.tx_id_to_message_id.get(tx_id) {
-                        sqs_batch_response.add_failure(message_id);
-                    };
-                });
-                continue;
-            };
-
-            let assignment_ids = wallet_assignment_repo
-                .new_assignments(&execute_batch_context.tx_ids, wallet.db_record.id)
-                .await?;
-
-            let new_execution_attempt = contract_manager
-                .send_batch(&execute_batch_context, wallet)
-                .await?;
-
-            let execution_attempt = execution_attempt_repo.insert(new_execution_attempt).await?;
-
-            execution_attempt_item_repo
-                .insert_many(execution_attempt.id, &execute_batch_context.tx_ids)
-                .await?;
-
-            tx_request_repo
-                .mark_many_as_broadcasted(&execute_batch_context.tx_ids)
-                .await?;
-
-            let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
-                execution_attempt_id: execution_attempt.id.to_string(),
-            };
-
-            receipt_poller_queue
-                .send_new(&receipt_poller_queue_message_body.to_json_string()?)
-                .await?;
-        }
-
-        Ok(sqs_batch_response)
     }
 }

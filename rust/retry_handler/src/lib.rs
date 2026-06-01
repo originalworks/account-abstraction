@@ -30,7 +30,7 @@ pub mod aws_lambda {
     use retry_queue::RetryEvent;
     use uuid::Uuid;
 
-    use crate::{handle_dropped, handle_failed, handle_stuck};
+    use crate::{handle_dropped, handle_failed, handle_reverted, handle_stuck};
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
@@ -63,6 +63,7 @@ pub mod aws_lambda {
                     TxExecutionOutcome::STUCK => handle_stuck(&execution_attempt)?,
                     TxExecutionOutcome::DROPPED => handle_dropped(&execution_attempt)?,
                     TxExecutionOutcome::FAILED => handle_failed(&execution_attempt)?,
+                    TxExecutionOutcome::REVERTED => handle_reverted(&execution_attempt)?,
                     TxExecutionOutcome::SUCCEED => continue,
                 }
             }
@@ -84,5 +85,10 @@ fn handle_stuck(execution_attempt: &RetriedExecutionAttempt) -> anyhow::Result<(
 
 fn handle_failed(execution_attempt: &RetriedExecutionAttempt) -> anyhow::Result<()> {
     println!("handle_failed: {execution_attempt:#?}");
+    Ok(())
+}
+
+fn handle_reverted(execution_attempt: &RetriedExecutionAttempt) -> anyhow::Result<()> {
+    println!("handle_reverted: {execution_attempt:#?}");
     Ok(())
 }

@@ -1,14 +1,14 @@
 use std::str::FromStr;
 
 use alloy::{
-    eips::eip1559::Eip1559Estimation,
     primitives::{Address, Uint},
     providers::{Provider, ProviderBuilder},
 };
 use anyhow::bail;
 use execution_attempt_db::execution_attempts::NewExecutionAttempt;
 use standard_tx_sender::{
-    contract::{BuildNewStandardExecutionAttempt, ContractManager, SEOA},
+    contract::{ContractManager, SEOA},
+    execution_attempt::NewStandardExecutionAttemptBuilder,
     transaction::ExecuteBatchTxContext,
 };
 use wallet_pool::wallet::Wallet;
@@ -69,15 +69,8 @@ impl ContractManagerForTests for ContractManager {
 
         let tx_hash = pending_tx.tx_hash().to_string();
 
-        let new_execution_attempt = NewExecutionAttempt::build_standard(
-            fees,
-            gas_with_buffer,
-            tx_hash,
-            nonce,
-            wallet.db_record.id,
-            tx_context.chain_id,
-            tx_context.batch_tx_value,
-        )?;
+        let new_execution_attempt =
+            NewExecutionAttempt::standard_successful(tx_context, wallet.db_record.id)?;
 
         Ok(new_execution_attempt)
     }

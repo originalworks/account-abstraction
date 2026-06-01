@@ -5505,6 +5505,7 @@ dependencies = [
  "network_db",
  "operator_wallet_db",
  "receipt_poller_queue",
+ "retry_queue",
  "serde",
  "serde_json",
  "sqlx",

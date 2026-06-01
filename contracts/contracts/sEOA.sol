@@ -24,7 +24,6 @@ contract sEOA is EIP712 {
     error AlreadyUsed();
     error InvalidSignature();
     error ExecutionFailed(bytes reason);
-    error ZeroAddress();
     error NotAuthorized();
 
     struct ExecuteInput {

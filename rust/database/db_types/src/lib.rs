@@ -17,10 +17,17 @@ pub enum TxStatus {
     EXECUTED,
     INVALID,
     RETRIED,
+    FAILED,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[sqlx(type_name = "text")]
 pub enum BlobStorageType {
     S3,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionErrorObject {
+    pub error_type: String,
+    pub error_body: Option<String>,
 }

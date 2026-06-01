@@ -5,6 +5,20 @@ Parameters:
     Type: String
   ReceiptPollerDlqName:
     Type: String
+  LambdaFunctionRoleArn:
+    Type: String
+  DatabaseName:
+    Type: String
+  DbSecretsName:
+    Type: String
+  DatabaseAccessSecurityGroup:
+    Type: String
+  PrivateSubnets:
+    Type: String
+  RetryQueueMessageGroupId:
+    Type: String
+  RetryQueueName:
+    Type: String
 
 Resources:
   ReceiptPollerDeadLetterQueue:
@@ -24,3 +38,50 @@ Resources:
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt ReceiptPollerDeadLetterQueue.Arn
         maxReceiveCount: 5
+
+  ReceiptPollerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: provided.al2023
+      Architectures:
+        - x86_64
+      Handler: bootstrap
+      CodeUri: ../../../target/lambda/aws_receipt_poller
+      Timeout: 300
+      Role: !Ref LambdaFunctionRoleArn
+      Environment:
+        Variables:
+          DATABASE_URL: !Join
+            - ""
+            - - "postgresql://"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:username}}"
+              - ":"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:password}}"
+              - "@"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:host}}"
+              - ":"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:port}}"
+              - "/"
+              - !Ref DatabaseName
+          RETRY_QUEUE_MESSAGE_GROUP_ID: !Ref RetryQueueMessageGroupId
+          RETRY_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${RetryQueueName}"
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref DatabaseAccessSecurityGroup
+        SubnetIds: !Split [",", !Ref PrivateSubnets]
+      Events:
+        RetryQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ReceiptPollerQueue.Arn
+            BatchSize: 5
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
