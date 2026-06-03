@@ -7,7 +7,7 @@ use crate::{
     transaction::{ExecuteBatchTxContext, TxContextBuilder},
 };
 use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
-use db_types::ExecutionErrorObject;
+use db_types::{ExecutionErrorObject, TxStatus};
 use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, NewExecutionAttempt};
 use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo;
 use lambda_runtime::{LambdaEvent, tracing};
@@ -86,6 +86,8 @@ impl AwsLambdaOrchestrator {
         println!("Reading...");
         let tx_sender_queue_event = StandardSenderQueueEvent::from_sqs_event(event)?;
 
+        println!("{tx_sender_queue_event:#?}");
+
         let tx_ids = tx_sender_queue_event
             .messages
             .iter()
@@ -147,7 +149,7 @@ impl AwsLambdaOrchestrator {
                 Ok(new_execution_attempt) => {
                     let execution_attempt = self
                         .execution_attempt_repo
-                        .insert(new_execution_attempt)
+                        .insert(&new_execution_attempt)
                         .await?;
 
                     self.execution_attempt_item_repo
@@ -181,12 +183,11 @@ impl AwsLambdaOrchestrator {
         Ok(sqs_batch_response)
     }
 
-    async fn handle_error(
-        &self,
+    fn build_failed_new_execution(
         execute_batch_context: &ExecuteBatchTxContext,
         wallet: &Wallet,
         error: anyhow::Error,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Option<NewExecutionAttempt>> {
         let mut failed_new_execution = NewExecutionAttempt::default_standard(
             execute_batch_context.chain_id,
             wallet.db_record.id,
@@ -234,13 +235,12 @@ impl AwsLambdaOrchestrator {
                                 retryable,
                             )
                             .expect("error parsing failed");
-                            if retryable {}
                         }
                         SEOA::SEOAErrors::AlreadyUsed(_) => {
                             tracing::warn!(
                                 "Tried to send transaction that was already used: {execute_batch_context:#?}"
                             );
-                            return Ok(());
+                            return Ok(None);
                         }
                         _ => {
                             failed_new_execution = NewExecutionAttempt::standard_failed(
@@ -282,20 +282,45 @@ impl AwsLambdaOrchestrator {
                 .expect("error parsing failed");
             }
         };
+        Ok(Some(failed_new_execution))
+    }
 
-        let execution_attempt = self
-            .execution_attempt_repo
-            .insert(failed_new_execution)
-            .await?;
+    async fn handle_error(
+        &self,
+        execute_batch_context: &ExecuteBatchTxContext,
+        wallet: &Wallet,
+        error: anyhow::Error,
+    ) -> anyhow::Result<()> {
+        if let Some(failed_new_execution) =
+            Self::build_failed_new_execution(execute_batch_context, wallet, error)?
+        {
+            let execution_attempt = self
+                .execution_attempt_repo
+                .insert(&failed_new_execution)
+                .await?;
 
-        self.execution_attempt_item_repo
-            .insert_many(execution_attempt.id, &execute_batch_context.tx_ids)
-            .await?;
-        let message_body = &RetryQueueMessageBody {
-            execution_attempt_id: execution_attempt.id.to_string(),
-        };
-        let message_body_string = message_body.to_json_string()?;
-        self.retry_queue.send_new(&message_body_string).await?;
+            self.execution_attempt_item_repo
+                .insert_many(execution_attempt.id, &execute_batch_context.tx_ids)
+                .await?;
+
+            if let Some(retryable) = failed_new_execution.retryable.clone() {
+                if retryable == true {
+                    self.tx_request_repo
+                        .set_status_for_many(&execute_batch_context.tx_ids, TxStatus::RETRIED)
+                        .await?;
+                    let message_body = &RetryQueueMessageBody {
+                        execution_attempt_id: execution_attempt.id.to_string(),
+                    };
+                    let message_body_string = message_body.to_json_string()?;
+                    self.retry_queue.send_new(&message_body_string).await?;
+                } else {
+                    self.tx_request_repo
+                        .set_status_for_many(&execute_batch_context.tx_ids, TxStatus::FAILED)
+                        .await?;
+                }
+            }
+        }
+
         Ok(())
     }
 }

@@ -111,7 +111,7 @@ impl ExecutionAttemptRepo {
 
         Ok(attempt)
     }
-    pub async fn insert(&self, input: NewExecutionAttempt) -> anyhow::Result<ExecutionAttempt> {
+    pub async fn insert(&self, input: &NewExecutionAttempt) -> anyhow::Result<ExecutionAttempt> {
         let attempt = sqlx::query_as!(
             ExecutionAttempt,
             r#"
@@ -154,14 +154,14 @@ impl ExecutionAttemptRepo {
             input.chain_id,
             input.operator_wallet_id,
             input.nonce_used,
-            input.tx_type as TxType,
+            input.tx_type.clone() as TxType,
             input.tx_hash,
             input.gas_limit,
             input.max_fee_per_gas,
             input.max_priority_fee,
             input.max_fee_per_blob_gas,
             input.tx_value,
-            input.outcome as Option<TxExecutionOutcome>,
+            input.outcome.clone() as Option<TxExecutionOutcome>,
             input.error_object,
             input.retryable
         )

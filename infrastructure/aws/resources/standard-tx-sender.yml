@@ -19,6 +19,10 @@ Parameters:
     Type: String
   ReceiptPollerQueueName:
     Type: String
+  RetryQueueMessageGroupId:
+    Type: String
+  RetryQueueName:
+    Type: String
 
 Resources:
   StandardTxSenderDeadLetterQueue:
@@ -73,6 +77,8 @@ Resources:
               - !Ref DatabaseName
           RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID: !Ref ReceiptPollerQueueMessageGroupId
           RECEIPT_POLLER_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${ReceiptPollerQueueName}"
+          RETRY_QUEUE_MESSAGE_GROUP_ID: !Ref RetryQueueMessageGroupId
+          RETRY_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${RetryQueueName}"
       VpcConfig:
         SecurityGroupIds:
           - !Ref DatabaseAccessSecurityGroup
