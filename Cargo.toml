@@ -30,7 +30,6 @@ members = [
     "rust/tx_request",
     "rust/blob_storage",
     "rust/database/tables/tx_input/tx_input_types",
-    "rust/aws_secrets",
 ]
 
 [workspace.dependencies]
@@ -61,7 +60,6 @@ retry_handler = { path = "./rust/retry_handler" }
 tx_request = { path = "./rust/tx_request" }
 receipt_poller = { path = "./rust/receipt_poller" }
 blob_storage = { path = "./rust/blob_storage" }
-aws_secrets = { path = "./rust/aws_secrets" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"
