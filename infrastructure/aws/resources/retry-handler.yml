@@ -1,10 +1,6 @@
 Transform: AWS::Serverless-2016-10-31
 
 Parameters:
-  ReceiptPollerQueueName:
-    Type: String
-  ReceiptPollerDlqName:
-    Type: String
   LambdaFunctionRoleArn:
     Type: String
   DatabaseName:
@@ -15,41 +11,38 @@ Parameters:
     Type: String
   PrivateSubnets:
     Type: String
-  RetryQueueMessageGroupId:
-    Type: String
   RetryQueueName:
     Type: String
-  ReceiptPollerQueueDelay:
-    Type: Number
+  RetryDlqName:
+    Type: String
 
 Resources:
-  ReceiptPollerDeadLetterQueue:
+  RetryDeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Ref ReceiptPollerDlqName
+      QueueName: !Ref RetryDlqName
       FifoQueue: true
       ContentBasedDeduplication: true
 
-  ReceiptPollerQueue:
+  RetryQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Ref ReceiptPollerQueueName
+      QueueName: !Ref RetryQueueName
       FifoQueue: true
       ContentBasedDeduplication: true
-      DelaySeconds: !Ref ReceiptPollerQueueDelay
       VisibilityTimeout: 300
       RedrivePolicy:
-        deadLetterTargetArn: !GetAtt ReceiptPollerDeadLetterQueue.Arn
+        deadLetterTargetArn: !GetAtt RetryDeadLetterQueue.Arn
         maxReceiveCount: 5
 
-  ReceiptPollerFunction:
+  RetryHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
       Runtime: provided.al2023
       Architectures:
         - x86_64
       Handler: bootstrap
-      CodeUri: ../../../target/lambda/aws_receipt_poller
+      CodeUri: ../../../target/lambda/aws_retry_handler
       Timeout: 300
       Role: !Ref LambdaFunctionRoleArn
       Environment:
@@ -74,17 +67,15 @@ Resources:
               - ":SecretString:port}}"
               - "/"
               - !Ref DatabaseName
-          RETRY_QUEUE_MESSAGE_GROUP_ID: !Ref RetryQueueMessageGroupId
-          RETRY_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${RetryQueueName}"
       VpcConfig:
         SecurityGroupIds:
           - !Ref DatabaseAccessSecurityGroup
         SubnetIds: !Split [",", !Ref PrivateSubnets]
       Events:
-        ReceiptPollerQueueEvent:
+        RetryHandlerQueueEvent:
           Type: SQS
           Properties:
-            Queue: !GetAtt ReceiptPollerQueue.Arn
+            Queue: !GetAtt RetryQueue.Arn
             BatchSize: 5
             FunctionResponseTypes:
               - ReportBatchItemFailures

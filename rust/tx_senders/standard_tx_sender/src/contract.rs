@@ -78,6 +78,8 @@ impl ContractManager {
 
         let tx_value = Uint::<256, 4>::from(tx_context.batch_tx_value);
 
+        println!("simulating tx with nonce: {}", nonce);
+
         let fees = provider.estimate_eip1559_fees().await?;
         let call = contract
             .executeBatch(tx_context.execute_batch_input.clone())
@@ -88,7 +90,8 @@ impl ContractManager {
 
         let execute_batch_return = call.call().await?;
 
-        println!("execute_batch_return: {:?}", execute_batch_return);
+        // println!("execute_batch_return: {:?}", execute_batch_return);
+        println!("simulated, all good. Tx nonce: {}", nonce);
 
         let estimated_gas = call.estimate_gas().await?;
 
@@ -137,6 +140,7 @@ impl ContractManager {
             Address::from_str(network.contract_address.as_str())?,
             &provider,
         );
+        println!("broadcasting tx with nonce: {}", nonce);
 
         let pending_tx = contract
             .executeBatch(tx_context.execute_batch_input.clone())
@@ -147,6 +151,7 @@ impl ContractManager {
             .gas(gas_limit)
             .send()
             .await?;
+        println!("braodcasted, all good. Tx nonce: {}", nonce);
 
         tx_context.tx_hash = Some(pending_tx.tx_hash().to_string());
 

@@ -127,7 +127,9 @@ pub mod aws_lambda {
                 .send_blob_batch(&blob_batch_context, wallet)
                 .await?;
 
-            let execution_attempt = execution_attempt_repo.insert(new_execution_attempt).await?;
+            let execution_attempt = execution_attempt_repo
+                .insert(&new_execution_attempt)
+                .await?;
 
             execution_attempt_item_repo
                 .insert_many(execution_attempt.id, &blob_batch_context.tx_ids)

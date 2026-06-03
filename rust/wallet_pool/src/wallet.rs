@@ -1,6 +1,6 @@
 use alloy::providers::Provider;
 use alloy::{eips::BlockId, primitives::U256};
-use anyhow::{Ok, bail};
+use anyhow::bail;
 use network_db::networks::Network;
 use operator_wallet_db::operator_wallets::{KeyType, OperatorWallet};
 use ow_wallet_adapter::{OwWalletConfig, wallet::OwWallet};
@@ -60,7 +60,7 @@ impl Wallet {
             )
         }
         if latest_nonce == db_nonce {
-            self.next_nonce = Some(latest_nonce + 1);
+            self.next_nonce = Some(latest_nonce);
         } else {
             bail!(
                 "Nonce mismatch! latest nonce: {}, db nonce: {}",

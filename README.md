@@ -1,4 +1,4 @@
-Example of JSON input for standard TX request:
+### Example of JSON input for standard TX request
 
 ```json
 {
@@ -15,3 +15,7 @@ Example of JSON input for standard TX request:
   "use_operator_wallet_id": "00000000-0000-0000-0000-000000000000" // optional, allows to choose specific Operator Wallet
 }
 ```
+
+### How to run e2e test
+
+`docker compose --env-file .env.local run e2e_test_runner`
