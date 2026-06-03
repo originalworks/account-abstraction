@@ -12,7 +12,8 @@
   "pass_value_from_operator_wallet": true,    // "true" -> tx value ("value_wei") covered from operator wallet balance
                                               // "false" -> tx value covered from sEOA balance
                                               // no effect if "value_wei" is zero
-  "use_operator_wallet_id": "00000000-0000-0000-0000-000000000000" // optional, allows to choose specific Operator Wallet
+  "use_operator_wallet_id": "00000000-0000-0000-0000-000000000000", // optional, allows to choose specific Operator Wallet
+  "metadata": "any string or object"                                // optional, passthrough parameter returned at the end of the flow
 }
 ```
 

@@ -61,6 +61,7 @@ impl StandardTxRequestBodyForTest for StandardTxRequestBody {
                 .unwrap_or(deadline_timestamp.try_into()?),
             pass_value_from_operator_wallet: input.pass_value_from_operator_wallet.unwrap_or(false),
             use_operator_wallet_id: input.use_operator_wallet_id,
+            metadata: None,
         })
     }
 

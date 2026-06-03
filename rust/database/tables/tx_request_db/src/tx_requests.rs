@@ -17,6 +17,7 @@ pub struct TxRequest {
     pub chain_id: i64,
     pub use_operator_wallet_id: Option<Uuid>,
     pub attempts: i32,
+    pub metadata: Option<String>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -29,6 +30,7 @@ pub struct NewTxRequest {
     pub tx_status: TxStatus,
     pub chain_id: i64,
     pub use_operator_wallet_id: Option<Uuid>,
+    pub metadata: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -119,9 +121,10 @@ impl TxRequestRepo {
                 tx_type,
                 tx_status,
                 chain_id,
-                use_operator_wallet_id
+                use_operator_wallet_id,
+                metadata
             )
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (tx_id) DO NOTHING
             "#,
             request.new_tx_request.tx_id,
@@ -129,7 +132,8 @@ impl TxRequestRepo {
             request.new_tx_request.tx_type.clone() as TxType,
             request.new_tx_request.tx_status.clone() as TxStatus,
             request.new_tx_request.chain_id,
-            request.new_tx_request.use_operator_wallet_id
+            request.new_tx_request.use_operator_wallet_id,
+            request.new_tx_request.metadata
         )
         .execute(&mut *postgres_tx)
         .await?;
@@ -214,6 +218,7 @@ impl TxRequestRepo {
                 chain_id,
                 attempts,
                 use_operator_wallet_id,
+                metadata,
                 created_at,
                 updated_at
             FROM 

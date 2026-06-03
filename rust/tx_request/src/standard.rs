@@ -1,7 +1,6 @@
 use db_types::{TxStatus, TxType};
 use serde::{Deserialize, Serialize};
 use standard_tx_input_db::standard_tx_inputs::NewStandardTxInput;
-// use standard_tx_input_db::NewStandardTxInput;
 use tx_request_db::tx_requests::{NewTxInput, NewTxRequest, NewTxRequestWithTxInput};
 use uuid::Uuid;
 
@@ -16,6 +15,7 @@ pub struct StandardTxRequestBody {
     pub deadline_timestamp: i64,
     pub pass_value_from_operator_wallet: bool,
     pub use_operator_wallet_id: Option<Uuid>,
+    pub metadata: Option<String>,
 }
 
 impl StandardTxRequestBody {
@@ -28,6 +28,7 @@ impl StandardTxRequestBody {
                 tx_type: TxType::STANDARD,
                 chain_id: self.chain_id,
                 use_operator_wallet_id: self.use_operator_wallet_id.clone(),
+                metadata: self.metadata.clone(),
             },
             tx_input: NewTxInput::Standard(NewStandardTxInput {
                 tx_id: self.tx_id.clone(),

@@ -38,6 +38,7 @@ impl BlobTxRequestBody {
                 tx_type: TxType::BLOB,
                 chain_id: self.chain_id,
                 use_operator_wallet_id: self.use_operator_wallet_id.clone(),
+                metadata: None,
             },
             tx_input: NewTxInput::Blob(NewBlobTxInput {
                 tx_id: self.tx_id.clone(),
