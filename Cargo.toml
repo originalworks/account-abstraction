@@ -30,6 +30,7 @@ members = [
     "rust/tx_request",
     "rust/blob_storage",
     "rust/database/tables/tx_input/tx_input_types",
+    "rust/outcome_emitter",
 ]
 
 [workspace.dependencies]
@@ -58,6 +59,7 @@ standard_tx_sender = { path = "./rust/tx_senders/standard_tx_sender" }
 blob_tx_sender = { path = "./rust/tx_senders/blob_tx_sender" }
 retry_handler = { path = "./rust/retry_handler" }
 tx_request = { path = "./rust/tx_request" }
+outcome_emitter = { path = "./rust/outcome_emitter" }
 receipt_poller = { path = "./rust/receipt_poller" }
 blob_storage = { path = "./rust/blob_storage" }
 anyhow = "1.0.102"
@@ -76,3 +78,4 @@ aws-config = "1.8.13"
 lambda_runtime = "1.0.2"
 aws-sdk-sqs = "1.85.0"
 aws_lambda_events = "1.0.3"
+aws-sdk-eventbridge = "1.108.0"

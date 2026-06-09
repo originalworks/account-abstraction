@@ -90,5 +90,15 @@ pub async fn happy_path_single_standard_tx(
     }
     assert!(receipt_found);
 
+    println!("receipt was found: {receipt_found}");
+
+    let outcome_queue_event = e2e_test_fixture
+        .test_queue_manager
+        .tx_outcome_queue
+        .receive_messages(1)
+        .await?;
+
+    println!("this should be event from outcome queue: {outcome_queue_event:#?}");
+
     Ok(())
 }

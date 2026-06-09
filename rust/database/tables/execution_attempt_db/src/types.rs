@@ -1,25 +1,73 @@
 use anyhow::anyhow;
 use blob_tx_input_db::blob_tx_inputs::BlobTxInput;
-use db_types::{BlobStorageType, TxStatus, TxType};
+use db_types::{BlobStorageType, TxExecutionOutcome, TxStatus, TxType};
 use sqlx::types::time::OffsetDateTime;
 use standard_tx_input_db::standard_tx_inputs::StandardTxInput;
 use tx_input_types::TxInput;
-use tx_request_db::tx_requests::TxRequestWithInput;
+use tx_request_db::tx_requests::{TxRequest, TxRequestWithInput};
+use uuid::Uuid;
 
 use crate::execution_attempts::ExecutionAttempt;
 
 #[derive(Debug, Clone)]
-pub struct RetriedExecutionAttempt {
+pub struct ExecutionAttemptWithTxs {
+    pub execution_attempt: ExecutionAttempt,
+    pub tx_requests: Vec<TxRequest>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExecutionAttemptWithTxInputs {
     pub execution_attempt: ExecutionAttempt,
     pub tx_requests: Vec<TxRequestWithInput>,
 }
 
+pub struct OutcomePropagationInput {
+    pub execution_attempt_id: Uuid,
+    pub outcome: TxExecutionOutcome,
+    pub tx_requests_status: TxStatus,
+    pub retryable: Option<bool>,
+    pub used_gas: Option<i64>,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct ExecutionAttemptWithTxRow {
+    pub attempt_id: Uuid,
+    pub chain_id: i64,
+    pub operator_wallet_id: Uuid,
+    pub nonce_used: Option<i64>,
+    pub tx_value: i64,
+    pub tx_type: TxType,
+    pub tx_hash: Option<String>,
+    pub gas_limit: Option<i64>,
+    pub used_gas: Option<i64>,
+    pub max_fee_per_gas: Option<i64>,
+    pub max_priority_fee: Option<i64>,
+    pub max_fee_per_blob_gas: Option<i64>,
+    pub outcome: Option<TxExecutionOutcome>,
+    pub error_object: Option<String>,
+    pub attempt_created_at: OffsetDateTime,
+    pub attempt_updated_at: OffsetDateTime,
+
+    pub sequence_id: Option<i64>,
+    pub tx_id: Option<String>,
+    pub requester_id: Option<String>,
+    pub request_tx_type: Option<TxType>,
+    pub tx_status: Option<TxStatus>,
+    pub request_chain_id: Option<i64>,
+    pub use_operator_wallet_id: Option<Uuid>,
+    pub attempts: Option<i16>,
+    pub metadata: Option<String>,
+    pub request_created_at: Option<OffsetDateTime>,
+    pub request_updated_at: Option<OffsetDateTime>,
+}
+
 #[derive(sqlx::FromRow, Debug)]
-pub struct ExecutionAttemptWithTxRequestRow {
+pub struct ExecutionAttemptWithTxInputRequestRow {
     pub tx_id: String,
     pub requester_id: String,
     pub tx_type: TxType,
     pub tx_status: TxStatus,
+    pub metadata: Option<String>,
 
     pub blob_signature: Option<Vec<u8>>,
     pub image_id: Option<Vec<u8>>,
@@ -39,7 +87,7 @@ pub struct ExecutionAttemptWithTxRequestRow {
     pub standard_created_at: Option<OffsetDateTime>,
 }
 
-impl ExecutionAttemptWithTxRequestRow {
+impl ExecutionAttemptWithTxInputRequestRow {
     pub fn into_tx_input(&self) -> anyhow::Result<TxInput> {
         let tx_input: TxInput;
         if self.tx_type == TxType::BLOB {

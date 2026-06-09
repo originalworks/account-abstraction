@@ -1,12 +1,15 @@
 use alloy::{
+    network::ReceiptResponse,
     primitives::FixedBytes,
     providers::{
         Provider, ProviderBuilder,
         fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller},
     },
+    rpc::types::TransactionReceipt,
 };
 use anyhow::bail;
-use execution_attempt_db::execution_attempts::{ExecutionAttempt, TxExecutionOutcome};
+use db_types::TxExecutionOutcome;
+use execution_attempt_db::execution_attempts::ExecutionAttempt;
 use network_db::networks::Network;
 use sqlx::types::time::OffsetDateTime;
 use std::str::FromStr;
@@ -19,6 +22,12 @@ type HardlyTypedProvider = FillProvider<
     >,
     alloy::providers::RootProvider,
 >;
+
+pub struct OutcomeWithGas {
+    pub outcome: TxExecutionOutcome,
+    // receipt: TransactionReceipt<ReceiptEnvelope<Log>>
+    pub used_gas: Option<i64>,
+}
 
 pub struct ReceiptReader {
     providers_by_chain_id: HashMap<i64, HardlyTypedProvider>,
@@ -42,20 +51,20 @@ impl ReceiptReader {
         })
     }
 
-    pub async fn check_execution_outcome(
+    pub async fn check_execution(
         &self,
         execution_attempt: &ExecutionAttempt,
-    ) -> anyhow::Result<Option<TxExecutionOutcome>> {
+    ) -> anyhow::Result<Option<OutcomeWithGas>> {
+        let Some(tx_hash) = execution_attempt.tx_hash.clone() else {
+            return Ok(None);
+        };
         if let Some(outcome) = execution_attempt.outcome.clone() {
-            return Ok(Some(outcome));
+            return Ok(Some(OutcomeWithGas {
+                outcome,
+                used_gas: execution_attempt.used_gas,
+            }));
         }
-        let tx_hash = FixedBytes::<32>::from_str(
-            execution_attempt
-                .tx_hash
-                .clone()
-                .expect("tx_hash is required")
-                .as_str(),
-        )?;
+        let tx_hash = FixedBytes::<32>::from_str(tx_hash.as_str())?;
 
         let Some(provider) = self.providers_by_chain_id.get(&execution_attempt.chain_id) else {
             bail!(
@@ -66,10 +75,17 @@ impl ReceiptReader {
         };
 
         if let Some(receipt) = provider.get_transaction_receipt(tx_hash).await? {
+            let used_gas = Some(i64::try_from(receipt.gas_used())?);
             if receipt.status() == true {
-                return Ok(Some(TxExecutionOutcome::SUCCEED));
+                return Ok(Some(OutcomeWithGas {
+                    outcome: TxExecutionOutcome::SUCCEED,
+                    used_gas,
+                }));
             } else {
-                return Ok(Some(TxExecutionOutcome::FAILED));
+                return Ok(Some(OutcomeWithGas {
+                    outcome: TxExecutionOutcome::FAILED,
+                    used_gas,
+                }));
             }
         } else {
             let tx_max_age = Duration::from_secs(u64::try_from(
@@ -86,9 +102,15 @@ impl ReceiptReader {
             )?);
             if execution_attempt.created_at + tx_max_age < OffsetDateTime::now_utc() {
                 if let Some(_) = provider.get_transaction_by_hash(tx_hash).await? {
-                    return Ok(Some(TxExecutionOutcome::STUCK));
+                    return Ok(Some(OutcomeWithGas {
+                        outcome: TxExecutionOutcome::STUCK,
+                        used_gas: None,
+                    }));
                 } else {
-                    return Ok(Some(TxExecutionOutcome::DROPPED));
+                    return Ok(Some(OutcomeWithGas {
+                        outcome: TxExecutionOutcome::DROPPED,
+                        used_gas: None,
+                    }));
                 }
             } else {
                 return Ok(None);

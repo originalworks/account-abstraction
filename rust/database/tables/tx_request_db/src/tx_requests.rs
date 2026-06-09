@@ -100,6 +100,7 @@ pub struct TxRequestWithInput {
     pub tx_type: TxType,
     pub tx_status: TxStatus,
     pub tx_input: TxInput,
+    pub metadata: Option<String>,
 }
 
 impl TxRequestRepo {

@@ -1,0 +1,20 @@
+[package]
+name = "outcome_emitter"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+serde.workspace = true
+serde_json.workspace = true
+
+aws-sdk-eventbridge = { workspace = true, optional = true }
+aws-config = { workspace = true, features = [
+    "behavior-version-latest",
+], optional = true }
+db_types.workspace = true
+execution_attempt_db.workspace = true
+
+[features]
+aws = ["dep:aws-config", "dep:aws-sdk-eventbridge"]

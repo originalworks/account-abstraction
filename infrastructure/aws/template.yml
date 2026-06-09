@@ -49,12 +49,19 @@ Parameters:
   ReceiptPollerQueueDelay:
     Type: Number
     Default: 15
+  OutcomeEventBusName:
+    Type: String
 
 Resources:
   AaBlobBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Ref AaBlobBucketName
+
+  OutcomeEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Ref OutcomeEventBusName
 
   LambdaFunctionRole:
     Type: AWS::IAM::Role
@@ -150,6 +157,7 @@ Resources:
         RetryQueueMessageGroupId: !Ref RetryQueueMessageGroupId
         RetryQueueName: !Ref RetryQueueName
         ReceiptPollerQueueDelay: !Ref ReceiptPollerQueueDelay
+        OutcomeEventBusName: !Ref OutcomeEventBusName
 
   RetryHandler:
     Type: AWS::Serverless::Application
