@@ -25,7 +25,6 @@ type HardlyTypedProvider = FillProvider<
 
 pub struct OutcomeWithGas {
     pub outcome: TxExecutionOutcome,
-    // receipt: TransactionReceipt<ReceiptEnvelope<Log>>
     pub used_gas: Option<i64>,
 }
 
