@@ -1,22 +1,15 @@
-use crate::retry_types::{ExecutionAttemptWithTxRequestRow, RetriedExecutionAttempt};
-use db_types::BlobStorageType;
+use crate::types::{
+    ExecutionAttemptWithTxInputRequestRow, ExecutionAttemptWithTxInputs, ExecutionAttemptWithTxRow,
+    ExecutionAttemptWithTxs, OutcomePropagationInput,
+};
+use db_types::{BlobStorageType, TxExecutionOutcome};
 use db_types::{TxStatus, TxType};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    PgPool, Type,
+    PgPool,
     types::{Uuid, time::OffsetDateTime},
 };
-use tx_request_db::tx_requests::TxRequestWithInput;
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]
-#[sqlx(type_name = "text")]
-pub enum TxExecutionOutcome {
-    STUCK,
-    DROPPED,
-    SUCCEED,
-    FAILED,
-    REVERTED,
-}
+use tx_request_db::tx_requests::{TxRequest, TxRequestWithInput};
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct ExecutionAttempt {
@@ -28,10 +21,12 @@ pub struct ExecutionAttempt {
     pub tx_type: TxType,
     pub tx_hash: Option<String>,
     pub gas_limit: Option<i64>,
+    pub used_gas: Option<i64>,
     pub max_fee_per_gas: Option<i64>,
     pub max_priority_fee: Option<i64>,
     pub max_fee_per_blob_gas: Option<i64>,
     pub outcome: Option<TxExecutionOutcome>,
+    pub error_object: Option<String>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -44,6 +39,7 @@ pub struct NewExecutionAttempt {
     pub tx_type: TxType,
     pub tx_hash: Option<String>,
     pub gas_limit: Option<i64>,
+    pub used_gas: Option<i64>,
     pub max_fee_per_gas: Option<i64>,
     pub max_priority_fee: Option<i64>,
     pub max_fee_per_blob_gas: Option<i64>,
@@ -62,6 +58,7 @@ impl NewExecutionAttempt {
             tx_type: TxType::STANDARD,
             tx_hash: None,
             gas_limit: None,
+            used_gas: None,
             max_fee_per_gas: None,
             max_priority_fee: None,
             max_fee_per_blob_gas: None,
@@ -94,10 +91,12 @@ impl ExecutionAttemptRepo {
                 tx_value,
                 tx_hash,
                 gas_limit,
+                used_gas,
                 max_fee_per_gas,
                 max_priority_fee,
                 max_fee_per_blob_gas,
                 outcome as "outcome: TxExecutionOutcome",
+                error_object,
                 created_at,
                 updated_at
             FROM
@@ -123,6 +122,7 @@ impl ExecutionAttemptRepo {
                 tx_type,
                 tx_hash,
                 gas_limit,
+                used_gas,
                 max_fee_per_gas,
                 max_priority_fee,
                 max_fee_per_blob_gas,
@@ -132,7 +132,7 @@ impl ExecutionAttemptRepo {
                 retryable
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
             )
             RETURNING
                 id,
@@ -143,10 +143,12 @@ impl ExecutionAttemptRepo {
                 tx_value,
                 tx_hash,
                 gas_limit,
+                used_gas,
                 max_fee_per_gas,
                 max_priority_fee,
                 max_fee_per_blob_gas,
                 outcome as "outcome: TxExecutionOutcome",
+                error_object,
                 created_at,
                 updated_at
             "#,
@@ -157,6 +159,7 @@ impl ExecutionAttemptRepo {
             input.tx_type.clone() as TxType,
             input.tx_hash,
             input.gas_limit,
+            input.used_gas,
             input.max_fee_per_gas,
             input.max_priority_fee,
             input.max_fee_per_blob_gas,
@@ -173,10 +176,7 @@ impl ExecutionAttemptRepo {
 
     pub async fn propagate_outcome(
         &self,
-        execution_attempt_id: Uuid,
-        outcome: TxExecutionOutcome,
-        tx_requests_status: TxStatus,
-        retryable: Option<bool>,
+        propagation_input: &OutcomePropagationInput,
     ) -> anyhow::Result<()> {
         let mut tx = self.pool.begin().await?;
 
@@ -186,7 +186,8 @@ impl ExecutionAttemptRepo {
             UPDATE execution_attempts
             SET
                 outcome = $2,
-                retryable = $3
+                retryable = $3,
+                used_gas = $4
             WHERE
                 id = $1
             RETURNING
@@ -198,16 +199,19 @@ impl ExecutionAttemptRepo {
                 tx_value,
                 tx_hash,
                 gas_limit,
+                used_gas,
                 max_fee_per_gas,
                 max_priority_fee,
                 max_fee_per_blob_gas,
                 outcome as "outcome: TxExecutionOutcome",
+                error_object,
                 created_at,
                 updated_at
             "#,
-            execution_attempt_id,
-            outcome as TxExecutionOutcome,
-            retryable
+            propagation_input.execution_attempt_id,
+            propagation_input.outcome.clone() as TxExecutionOutcome,
+            propagation_input.retryable,
+            propagation_input.used_gas
         )
         .fetch_one(&mut *tx)
         .await?;
@@ -225,8 +229,8 @@ impl ExecutionAttemptRepo {
                 AND ea.id = $1
                 AND ea.outcome IS NOT NULL
             "#,
-            execution_attempt_id,
-            tx_requests_status as TxStatus
+            propagation_input.execution_attempt_id,
+            propagation_input.tx_requests_status.clone() as TxStatus
         )
         .execute(&mut *tx)
         .await?;
@@ -238,41 +242,43 @@ impl ExecutionAttemptRepo {
     pub async fn select_and_lock_for_retry(
         &self,
         execution_attempt_id: Uuid,
-    ) -> anyhow::Result<Option<RetriedExecutionAttempt>> {
+    ) -> anyhow::Result<Option<ExecutionAttemptWithTxInputs>> {
         let mut tx = self.pool.begin().await?;
 
         let execution_attempt = sqlx::query_as!(
             ExecutionAttempt,
             r#"
-        WITH locked AS (
-            SELECT *
-            FROM execution_attempts
-            WHERE
-                id = $1
-                AND outcome IN ('FAILED', 'DROPPED', 'STUCK', 'REVERTED')
-                AND retry_lock = false
-            FOR UPDATE SKIP LOCKED
-        )
-        UPDATE execution_attempts ea
-        SET
-            retry_lock = true
-        FROM locked
-        WHERE ea.id = locked.id
-        RETURNING
-            ea.id,
-            ea.chain_id,
-            ea.operator_wallet_id,
-            ea.tx_type as "tx_type: TxType",
-            ea.nonce_used,
-            ea.tx_value,
-            ea.tx_hash,
-            ea.gas_limit,
-            ea.max_fee_per_gas,
-            ea.max_priority_fee,
-            ea.max_fee_per_blob_gas,
-            ea.outcome as "outcome: TxExecutionOutcome",
-            ea.created_at,
-            ea.updated_at
+                WITH locked AS (
+                    SELECT *
+                    FROM execution_attempts
+                    WHERE
+                        id = $1
+                        AND outcome IN ('FAILED', 'DROPPED', 'STUCK', 'REVERTED')
+                        AND retry_lock = false
+                    FOR UPDATE SKIP LOCKED
+                )
+                UPDATE execution_attempts ea
+                SET
+                    retry_lock = true
+                FROM locked
+                WHERE ea.id = locked.id
+                RETURNING
+                    ea.id,
+                    ea.chain_id,
+                    ea.operator_wallet_id,
+                    ea.tx_type as "tx_type: TxType",
+                    ea.nonce_used,
+                    ea.tx_value,
+                    ea.tx_hash,
+                    ea.gas_limit,
+                    ea.used_gas,
+                    ea.max_fee_per_gas,
+                    ea.max_priority_fee,
+                    ea.max_fee_per_blob_gas,
+                    ea.outcome as "outcome: TxExecutionOutcome",
+                    ea.error_object,
+                    ea.created_at,
+                    ea.updated_at
         "#,
             execution_attempt_id
         )
@@ -285,13 +291,14 @@ impl ExecutionAttemptRepo {
         };
 
         let rows = sqlx::query_as!(
-            ExecutionAttemptWithTxRequestRow,
+            ExecutionAttemptWithTxInputRequestRow,
             r#"
                 SELECT
                     tr.tx_id,
                     tr.requester_id,
                     tr.tx_type as "tx_type: TxType",
                     tr.tx_status as "tx_status: TxStatus",
+                    metadata,
 
                     bti.signature as "blob_signature?",
                     bti.image_id as "image_id?",
@@ -340,13 +347,111 @@ impl ExecutionAttemptRepo {
                     tx_type: row.tx_type,
                     tx_status: row.tx_status,
                     tx_input,
+                    metadata: row.metadata,
                 }
             })
             .collect();
 
         tx.commit().await?;
 
-        Ok(Some(RetriedExecutionAttempt {
+        Ok(Some(ExecutionAttemptWithTxInputs {
+            execution_attempt,
+            tx_requests,
+        }))
+    }
+
+    pub async fn select_with_txs(
+        &self,
+        execution_attempt_id: Uuid,
+    ) -> anyhow::Result<Option<ExecutionAttemptWithTxs>> {
+        let rows = sqlx::query_as!(
+            ExecutionAttemptWithTxRow,
+            r#"
+                SELECT
+                    ea.id as attempt_id,
+                    ea.chain_id,
+                    ea.operator_wallet_id,
+                    ea.nonce_used,
+                    ea.tx_value,
+                    ea.tx_type as "tx_type: TxType",
+                    ea.tx_hash,
+                    ea.gas_limit,
+                    ea.used_gas,
+                    ea.max_fee_per_gas,
+                    ea.max_priority_fee,
+                    ea.max_fee_per_blob_gas,
+                    ea.outcome as "outcome: TxExecutionOutcome",
+                    ea.error_object,
+                    ea.created_at as attempt_created_at,
+                    ea.updated_at as attempt_updated_at,
+
+                    tr.sequence_id,
+                    tr.tx_id,
+                    tr.requester_id,
+                    tr.tx_type as "request_tx_type?: TxType",
+                    tr.tx_status as "tx_status?: TxStatus",
+                    tr.chain_id as request_chain_id,
+                    tr.use_operator_wallet_id,
+                    tr.attempts,
+                    tr.metadata,
+                    tr.created_at as request_created_at,
+                    tr.updated_at as request_updated_at
+
+                FROM execution_attempts ea
+                LEFT JOIN execution_attempt_items eai
+                    ON eai.execution_attempt_id = ea.id
+                LEFT JOIN tx_requests tr
+                    ON tr.tx_id = eai.tx_id
+                WHERE ea.id = $1
+        "#,
+            execution_attempt_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let Some(first) = rows.first() else {
+            return Ok(None);
+        };
+
+        let execution_attempt = ExecutionAttempt {
+            id: first.attempt_id,
+            chain_id: first.chain_id,
+            operator_wallet_id: first.operator_wallet_id,
+            nonce_used: first.nonce_used,
+            tx_value: first.tx_value,
+            tx_type: first.tx_type.clone(),
+            tx_hash: first.tx_hash.clone(),
+            gas_limit: first.gas_limit,
+            used_gas: first.used_gas,
+            max_fee_per_gas: first.max_fee_per_gas,
+            max_priority_fee: first.max_priority_fee,
+            max_fee_per_blob_gas: first.max_fee_per_blob_gas,
+            outcome: first.outcome.clone(),
+            error_object: first.error_object.clone(),
+            created_at: first.attempt_created_at,
+            updated_at: first.attempt_updated_at,
+        };
+
+        let tx_requests = rows
+            .into_iter()
+            .filter_map(|row| {
+                Some(TxRequest {
+                    sequence_id: row.sequence_id?,
+                    tx_id: row.tx_id?,
+                    requester_id: row.requester_id?,
+                    tx_type: row.request_tx_type?,
+                    tx_status: row.tx_status?,
+                    chain_id: row.request_chain_id?,
+                    use_operator_wallet_id: row.use_operator_wallet_id,
+                    attempts: row.attempts?.into(),
+                    metadata: row.metadata,
+                    created_at: row.request_created_at?,
+                    updated_at: row.request_updated_at?,
+                })
+            })
+            .collect();
+
+        Ok(Some(ExecutionAttemptWithTxs {
             execution_attempt,
             tx_requests,
         }))

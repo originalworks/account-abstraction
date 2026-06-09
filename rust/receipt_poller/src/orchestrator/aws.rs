@@ -3,11 +3,14 @@
 use std::str::FromStr;
 
 use aws_lambda_events::sqs::SqsEvent;
-use db_types::TxStatus;
-use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, TxExecutionOutcome};
-use lambda_runtime::LambdaEvent;
+use db_types::{TxExecutionOutcome, TxStatus};
+use execution_attempt_db::{
+    execution_attempts::ExecutionAttemptRepo, types::OutcomePropagationInput,
+};
+use lambda_runtime::{LambdaEvent, tracing};
 use network_db::networks::NetworkRepo;
 use operator_wallet_db::operator_wallets::OperatorWalletRepo;
+use outcome_emitter::{emitter::event_bridge::AwsEventBridgeOutcomeEmitter, outcome::OutcomeEvent};
 use receipt_poller_queue::ReceiptPollerEvent;
 use retry_queue::RetryQueueMessageBody;
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
@@ -20,6 +23,7 @@ pub struct AwsLambdaOrchestrator {
     receipt_reader: ReceiptReader,
     wallet_pool: WalletPoolManager,
     retry_queue: SqsQueue,
+    outcome_emitter: AwsEventBridgeOutcomeEmitter,
 }
 
 impl AwsLambdaOrchestrator {
@@ -36,17 +40,23 @@ impl AwsLambdaOrchestrator {
         let receipt_reader = ReceiptReader::build(&networks).await?;
         let wallet_pool = WalletPoolManager::build(operator_wallet_repo, &networks);
         let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
+        let event_bridge_client = aws_sdk_eventbridge::Client::new(&aws_config);
         let retry_queue = SqsQueue::build(
             &sqs_client,
             &config.retry_queue_url,
             &config.retry_queue_message_group_id,
         )?;
+        let outcome_emitter = AwsEventBridgeOutcomeEmitter::build(
+            &event_bridge_client,
+            config.outcome_event_bus_name,
+        );
 
         Ok(Self {
             execution_attempt_repo,
             receipt_reader,
             wallet_pool,
             retry_queue,
+            outcome_emitter,
         })
     }
 
@@ -58,70 +68,104 @@ impl AwsLambdaOrchestrator {
         for queue_message in event.messages {
             let execution_attempt_uuid =
                 uuid::Uuid::from_str(queue_message.body.execution_attempt_id.as_str())?;
-            let execution_attempt = self
+
+            let Some(execution_attempt_with_txs) = self
                 .execution_attempt_repo
-                .find_by_id(execution_attempt_uuid)
-                .await?;
+                .select_with_txs(execution_attempt_uuid)
+                .await?
+            else {
+                tracing::warn!("Execution attempt not found! {execution_attempt_uuid:?}");
+                return Ok(());
+            };
 
-            let execution_outcome = self
+            if let Some(outcome_with_gas) = self
                 .receipt_reader
-                .check_execution_outcome(&execution_attempt)
-                .await?;
-
-            if let Some(outcome) = execution_outcome {
-                match outcome {
+                .check_execution(&execution_attempt_with_txs.execution_attempt)
+                .await?
+            {
+                match outcome_with_gas.outcome {
                     TxExecutionOutcome::SUCCEED => {
+                        let propagation_input = OutcomePropagationInput {
+                            execution_attempt_id: execution_attempt_with_txs.execution_attempt.id,
+                            outcome: outcome_with_gas.outcome.clone(),
+                            tx_requests_status: TxStatus::EXECUTED,
+                            retryable: None,
+                            used_gas: outcome_with_gas.used_gas,
+                        };
                         self.execution_attempt_repo
-                            .propagate_outcome(
-                                execution_attempt.id,
-                                outcome,
-                                TxStatus::EXECUTED,
-                                None,
-                            )
+                            .propagate_outcome(&propagation_input)
                             .await?;
 
                         self.wallet_pool
-                            .release_used(execution_attempt.operator_wallet_id)
+                            .release_used(
+                                execution_attempt_with_txs
+                                    .execution_attempt
+                                    .operator_wallet_id,
+                            )
+                            .await?;
+                        self.outcome_emitter
+                            .emit_for_execution_attempt(
+                                &execution_attempt_with_txs,
+                                &outcome_with_gas.outcome,
+                                outcome_with_gas.used_gas,
+                            )
                             .await?;
                     }
                     TxExecutionOutcome::FAILED => {
                         if queue_message.body.batch_size > 1 {
+                            let propagation_input = OutcomePropagationInput {
+                                execution_attempt_id: execution_attempt_with_txs
+                                    .execution_attempt
+                                    .id,
+                                outcome: outcome_with_gas.outcome.clone(),
+                                tx_requests_status: TxStatus::RETRIED,
+                                retryable: Some(true),
+                                used_gas: outcome_with_gas.used_gas,
+                            };
                             self.execution_attempt_repo
-                                .propagate_outcome(
-                                    execution_attempt.id,
-                                    outcome,
-                                    TxStatus::RETRIED,
-                                    Some(true),
-                                )
+                                .propagate_outcome(&propagation_input)
                                 .await?;
                             let message_body = &RetryQueueMessageBody {
-                                execution_attempt_id: execution_attempt.id.to_string(),
+                                execution_attempt_id: execution_attempt_with_txs
+                                    .execution_attempt
+                                    .id
+                                    .to_string(),
                             };
                             let message_body_string = message_body.to_json_string()?;
                             self.retry_queue.send_new(&message_body_string).await?;
                         } else {
+                            let propagation_input = OutcomePropagationInput {
+                                execution_attempt_id: execution_attempt_with_txs
+                                    .execution_attempt
+                                    .id,
+                                outcome: outcome_with_gas.outcome.clone(),
+                                tx_requests_status: TxStatus::FAILED,
+                                retryable: Some(false),
+                                used_gas: outcome_with_gas.used_gas,
+                            };
                             self.execution_attempt_repo
-                                .propagate_outcome(
-                                    execution_attempt.id,
-                                    outcome,
-                                    TxStatus::FAILED,
-                                    Some(false),
-                                )
+                                .propagate_outcome(&propagation_input)
                                 .await?;
                         }
                     }
                     TxExecutionOutcome::STUCK | TxExecutionOutcome::DROPPED => {
+                        let propagation_input = OutcomePropagationInput {
+                            execution_attempt_id: execution_attempt_with_txs.execution_attempt.id,
+                            outcome: outcome_with_gas.outcome.clone(),
+                            tx_requests_status: TxStatus::RETRIED,
+                            retryable: Some(true),
+                            used_gas: outcome_with_gas.used_gas,
+                        };
+
                         self.execution_attempt_repo
-                            .propagate_outcome(
-                                execution_attempt.id,
-                                outcome,
-                                TxStatus::RETRIED,
-                                Some(true),
-                            )
+                            .propagate_outcome(&propagation_input)
                             .await?;
 
                         let message_body = &RetryQueueMessageBody {
-                            execution_attempt_id: execution_attempt.id.to_string(),
+                            execution_attempt_id: execution_attempt_with_txs
+                                .execution_attempt
+                                .id
+                                .to_string(),
                         };
                         let message_body_string = message_body.to_json_string()?;
                         self.retry_queue.send_new(&message_body_string).await?;

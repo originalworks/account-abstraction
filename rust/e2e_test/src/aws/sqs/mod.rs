@@ -2,7 +2,8 @@ pub mod event;
 pub mod test_queue;
 
 use crate::constants::{
-    BLOB_SENDER_QUEUE_NAME, RECEIPT_POLLER_QUEUE_NAME, RETRY_QUEUE_NAME, STANDARD_SENDER_QUEUE_NAME,
+    BLOB_SENDER_QUEUE_NAME, RECEIPT_POLLER_QUEUE_NAME, RETRY_QUEUE_NAME,
+    STANDARD_SENDER_QUEUE_NAME, TX_OUTCOME_QUEUE_NAME,
 };
 use sqs_queue::queue::SqsQueue;
 use std::env;
@@ -14,6 +15,7 @@ pub struct TestQueueManager {
     pub standard_sender_queue: SqsQueue,
     pub receipt_poller_queue: SqsQueue,
     pub retry_queue: SqsQueue,
+    pub tx_outcome_queue: SqsQueue,
 }
 
 impl TestQueueManager {
@@ -56,6 +58,8 @@ impl TestQueueManager {
         )
         .await?;
 
+        let tx_outcome_queue = SqsQueue::create_outcome_queue_if_not_exist(&sqs_client).await?;
+
         unsafe {
             env::set_var(
                 "STANDARD_SENDER_QUEUE_URL",
@@ -72,6 +76,7 @@ impl TestQueueManager {
             receipt_poller_queue,
             blob_sender_queue,
             standard_sender_queue,
+            tx_outcome_queue,
         })
     }
 }

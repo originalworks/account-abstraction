@@ -1,7 +1,7 @@
 use crate::transaction::ExecuteBatchTxContext;
 use anyhow::bail;
-use db_types::{ExecutionErrorObject, TxType};
-use execution_attempt_db::execution_attempts::{NewExecutionAttempt, TxExecutionOutcome};
+use db_types::{ExecutionErrorObject, TxExecutionOutcome, TxType};
+use execution_attempt_db::execution_attempts::NewExecutionAttempt;
 use sqs_queue::message_body::ToJsonString;
 use uuid::Uuid;
 
@@ -36,6 +36,7 @@ impl NewStandardExecutionAttemptBuilder for NewExecutionAttempt {
             nonce_used,
             tx_type: TxType::STANDARD,
             tx_hash: tx_context.tx_hash.clone(),
+            used_gas: None,
             gas_limit,
             max_fee_per_gas: Some(i64::try_from(fees.max_fee_per_gas)?),
             max_priority_fee: Some(i64::try_from(fees.max_priority_fee_per_gas)?),
@@ -68,6 +69,7 @@ impl NewStandardExecutionAttemptBuilder for NewExecutionAttempt {
                 tx_type: TxType::STANDARD,
                 tx_hash: tx_context.tx_hash.clone(),
                 gas_limit,
+                used_gas: None,
                 max_fee_per_gas: Some(i64::try_from(fees.max_fee_per_gas)?),
                 max_priority_fee: Some(i64::try_from(fees.max_priority_fee_per_gas)?),
                 max_fee_per_blob_gas: None,
@@ -84,6 +86,7 @@ impl NewStandardExecutionAttemptBuilder for NewExecutionAttempt {
                 tx_type: TxType::STANDARD,
                 tx_hash: None,
                 gas_limit: None,
+                used_gas: None,
                 max_fee_per_gas: None,
                 max_priority_fee: None,
                 max_fee_per_blob_gas: None,

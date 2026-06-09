@@ -37,6 +37,7 @@ services:
       - RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID="aa-receipt-poller-queue"
       - RETRY_QUEUE_MESSAGE_GROUP_ID="aa-retry-queue"
       - BLOB_STORAGE_BUCKET_NAME=blob-storage-bucket
+      - OUTCOME_EVENT_BUS_NAME=aa-test-outcome-event-bus
       - IS_LOCAL=true
     command: ["cargo", "test", "-p", "e2e_test", "--features", "aws", "--", "--no-capture"]
 
@@ -90,7 +91,7 @@ services:
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=sqs,s3
+      - SERVICES=sqs,s3,events,iam,sts
       - AWS_DEFAULT_REGION=us-east-1
       - DEBUG=1
     volumes:

@@ -1,6 +1,7 @@
 use crate::{
     aws::{
-        config::build_aws_sdk_config, s3::S3BlobStorageManagerTestFeatures, sqs::TestQueueManager,
+        config::build_aws_sdk_config, event_bridge::attach_outcome_event_bridge_to_queue,
+        s3::S3BlobStorageManagerTestFeatures, sqs::TestQueueManager,
     },
     db::{get_pool, network::AddAnvilNetwork, operator_wallet::InsertFromMnemonic},
 };
@@ -50,6 +51,7 @@ pub struct E2eTestEnvVars {
     pub anvil_chain_id: i64,
     pub anvil_mnemonic: String,
     pub blob_storage_bucket_name: String,
+    outcome_event_bus_name: String,
 }
 
 pub async fn get_e2e_test_fixture() -> &'static E2eTestFixture {
@@ -66,6 +68,14 @@ pub async fn get_e2e_test_fixture() -> &'static E2eTestFixture {
             let test_queue_manager = TestQueueManager::build(&aws_config)
                 .await
                 .expect("Failed to build TestQueueManager");
+
+            attach_outcome_event_bridge_to_queue(
+                &aws_config,
+                &e2e_test_env_vars.outcome_event_bus_name,
+                &test_queue_manager.tx_outcome_queue,
+            )
+            .await
+            .unwrap();
 
             let blob_storage_manager = S3BlobStorageManager::build(
                 &aws_config,
@@ -116,11 +126,13 @@ fn build_env_vars() -> anyhow::Result<E2eTestEnvVars> {
     let anvil_chain_id = std::env::var("ANVIL_CHAIN_ID").unwrap().parse().unwrap();
     let anvil_mnemonic = std::env::var("ANVIL_MNEMONIC").unwrap();
     let blob_storage_bucket_name = std::env::var("BLOB_STORAGE_BUCKET_NAME").unwrap();
+    let outcome_event_bus_name = std::env::var("OUTCOME_EVENT_BUS_NAME").unwrap();
 
     Ok(E2eTestEnvVars {
         anvil_chain_id,
         anvil_mnemonic,
         blob_storage_bucket_name,
+        outcome_event_bus_name,
     })
 }
 

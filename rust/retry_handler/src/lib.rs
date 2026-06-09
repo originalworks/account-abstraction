@@ -1,7 +1,7 @@
 use std::env;
 
 use execution_attempt_db::{
-    execution_attempts::ExecutionAttempt, retry_types::RetriedExecutionAttempt,
+    execution_attempts::ExecutionAttempt, types::ExecutionAttemptWithTxInputs,
 };
 
 pub struct Config {
@@ -25,7 +25,8 @@ pub mod aws_lambda {
     use std::str::FromStr;
 
     use aws_lambda_events::sqs::SqsEvent;
-    use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, TxExecutionOutcome};
+    use db_types::TxExecutionOutcome;
+    use execution_attempt_db::execution_attempts::ExecutionAttemptRepo;
     use lambda_runtime::LambdaEvent;
     use retry_queue::RetryEvent;
     use uuid::Uuid;
@@ -73,22 +74,22 @@ pub mod aws_lambda {
     }
 }
 
-fn handle_dropped(execution_attempt: &RetriedExecutionAttempt) -> anyhow::Result<()> {
+fn handle_dropped(execution_attempt: &ExecutionAttemptWithTxInputs) -> anyhow::Result<()> {
     println!("handle_dropped: {execution_attempt:#?}");
     Ok(())
 }
 
-fn handle_stuck(execution_attempt: &RetriedExecutionAttempt) -> anyhow::Result<()> {
+fn handle_stuck(execution_attempt: &ExecutionAttemptWithTxInputs) -> anyhow::Result<()> {
     println!("handle_stuck: {execution_attempt:#?}");
     Ok(())
 }
 
-fn handle_failed(execution_attempt: &RetriedExecutionAttempt) -> anyhow::Result<()> {
+fn handle_failed(execution_attempt: &ExecutionAttemptWithTxInputs) -> anyhow::Result<()> {
     println!("handle_failed: {execution_attempt:#?}");
     Ok(())
 }
 
-fn handle_reverted(execution_attempt: &RetriedExecutionAttempt) -> anyhow::Result<()> {
+fn handle_reverted(execution_attempt: &ExecutionAttemptWithTxInputs) -> anyhow::Result<()> {
     println!("handle_reverted: {execution_attempt:#?}");
     Ok(())
 }

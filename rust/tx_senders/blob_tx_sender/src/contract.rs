@@ -56,6 +56,7 @@ impl BuildNewBlobExecutionAttempt for NewExecutionAttempt {
             tx_type: TxType::BLOB,
             tx_hash: Some(tx_hash),
             gas_limit: Some(gas_limit),
+            used_gas: None,
             max_fee_per_gas: Some(i64::try_from(fees.max_fee_per_gas)?),
             max_priority_fee: Some(i64::try_from(fees.max_priority_fee_per_gas)?),
             max_fee_per_blob_gas: Some(i64::try_from(max_fee_per_blob_gas)?),

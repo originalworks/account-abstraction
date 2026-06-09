@@ -31,3 +31,13 @@ pub struct ExecutionErrorObject {
     pub error_type: String,
     pub error_body: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]
+#[sqlx(type_name = "text")]
+pub enum TxExecutionOutcome {
+    STUCK,
+    DROPPED,
+    SUCCEED,
+    FAILED,
+    REVERTED,
+}

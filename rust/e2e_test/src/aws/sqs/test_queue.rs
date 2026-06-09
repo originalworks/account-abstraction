@@ -1,4 +1,7 @@
-use crate::aws::sqs::event::{TestEventMessage, build_lambda_sqs_event};
+use crate::{
+    aws::sqs::event::{TestEventMessage, build_lambda_sqs_event},
+    constants::TX_OUTCOME_QUEUE_NAME,
+};
 use anyhow::bail;
 use aws_lambda_events::sqs::SqsEvent;
 use aws_sdk_sqs::types::QueueAttributeName;
@@ -13,6 +16,10 @@ pub trait SqsQueueTester {
         sqs_client: &aws_sdk_sqs::Client,
         queue_name: String,
         message_group_id: String,
+    ) -> anyhow::Result<SqsQueue>;
+    async fn get_queue_arn(&self) -> anyhow::Result<String>;
+    async fn create_outcome_queue_if_not_exist(
+        sqs_client: &aws_sdk_sqs::Client,
     ) -> anyhow::Result<SqsQueue>;
 }
 
@@ -56,6 +63,57 @@ impl SqsQueueTester for SqsQueue {
             return Ok(lambda_sqs_event);
         } else {
             bail!("No messages received");
+        }
+    }
+
+    async fn get_queue_arn(&self) -> anyhow::Result<String> {
+        let queue_arn = self
+            .client
+            .get_queue_attributes()
+            .queue_url(&self.queue_url)
+            .attribute_names(QueueAttributeName::QueueArn)
+            .send()
+            .await?
+            .attributes()
+            .unwrap()
+            .get(&QueueAttributeName::QueueArn)
+            .unwrap()
+            .to_string();
+        Ok(queue_arn)
+    }
+
+    async fn create_outcome_queue_if_not_exist(
+        sqs_client: &aws_sdk_sqs::Client,
+    ) -> anyhow::Result<SqsQueue> {
+        let message_group_id = "tx_outcome_queue_message_group_id".to_string();
+        match sqs_client
+            .get_queue_url()
+            .queue_name(TX_OUTCOME_QUEUE_NAME.to_string())
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                return Ok(SqsQueue {
+                    queue_url: resp.queue_url.unwrap(),
+                    client: sqs_client.clone(),
+                    message_group_id,
+                });
+            }
+
+            Err(_) => {
+                let create_queue_response = sqs_client
+                    .create_queue()
+                    .queue_name(TX_OUTCOME_QUEUE_NAME.to_string())
+                    .send()
+                    .await?;
+                let queue_url = create_queue_response.queue_url.unwrap();
+
+                return Ok(SqsQueue {
+                    queue_url,
+                    client: sqs_client.clone(),
+                    message_group_id,
+                });
+            }
         }
     }
 

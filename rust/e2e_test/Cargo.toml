@@ -34,6 +34,8 @@ blob_storage = { workspace = true, features = ["aws"] }
 execution_attempt_db.workspace = true
 execution_attempt_item_db.workspace = true
 wallet_assignment_db.workspace = true
+wallet_pool = { workspace = true, features = ["test-keys"] }
+outcome_emitter = { workspace = true, features = ["aws"] }
 
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
@@ -41,7 +43,7 @@ aws-sdk-sqs = { workspace = true, optional = true }
 aws-config = { workspace = true, features = [
     "behavior-version-latest",
 ], optional = true }
-wallet_pool = { workspace = true, features = ["test-keys"] }
+aws-sdk-eventbridge = { workspace = true, optional = true }
 
 
 [features]
@@ -51,4 +53,5 @@ aws = [
     "dep:aws-sdk-sqs",
     "dep:aws-config",
     "dep:sqs_queue",
+    "dep:aws-sdk-eventbridge",
 ]
