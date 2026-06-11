@@ -78,6 +78,7 @@ Resources:
               - !Ref DatabaseName
           RETRY_QUEUE_MESSAGE_GROUP_ID: !Ref RetryQueueMessageGroupId
           RETRY_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${RetryQueueName}"
+          OUTCOME_EVENT_BUS_NAME: !Ref OutcomeEventBusName
       VpcConfig:
         SecurityGroupIds:
           - !Ref DatabaseAccessSecurityGroup
