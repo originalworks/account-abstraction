@@ -108,6 +108,14 @@ Resources:
                   - kms:Sign
                   - kms:GetPublicKey
                 Resource: "*"
+        - PolicyName: OutcomeEventBusAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource: !Sub "arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/${OutcomeEventBusName}"
 
   StandardTxSigner:
     Type: AWS::Serverless::Application
