@@ -78,8 +78,6 @@ impl ContractManager {
 
         let tx_value = Uint::<256, 4>::from(tx_context.batch_tx_value);
 
-        println!("simulating tx with nonce: {}", nonce);
-
         let fees = provider.estimate_eip1559_fees().await?;
         let call = contract
             .executeBatch(tx_context.execute_batch_input.clone())
@@ -88,15 +86,12 @@ impl ContractManager {
             .max_fee_per_gas(fees.max_fee_per_gas)
             .max_priority_fee_per_gas(fees.max_priority_fee_per_gas);
 
-        let execute_batch_return = call.call().await?;
-
-        // println!("execute_batch_return: {:?}", execute_batch_return);
-        println!("simulated, all good. Tx nonce: {}", nonce);
-
         let estimated_gas = call.estimate_gas().await?;
 
         let gas_limit = estimated_gas
             + estimated_gas * u64::try_from(network.gas_estimation_buffer_ppm)? / 1_000_000;
+
+        call.gas(gas_limit).call().await?;
 
         tx_context.assigned_nonce = Some(nonce);
         tx_context.fees = Some(fees);
