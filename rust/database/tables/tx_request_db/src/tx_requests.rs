@@ -60,6 +60,7 @@ pub struct StandardTxRequestRaw {
     pub chain_id: i64,
     pub use_operator_wallet_id: Option<Uuid>,
     pub attempts: i32,
+    pub metadata: Option<String>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 
@@ -142,7 +143,7 @@ impl TxRequestRepo {
         match &request.tx_input {
             NewTxInput::Blob(new_blob_tx_input) => {
                 if request.new_tx_request.tx_type != TxType::BLOB {
-                    bail!("Non BLOB TxType: request: {:#?}", request)
+                    bail!("Non BLOB TxType: request: {:?}", request)
                 }
                 sqlx::query!(
                     r#"
@@ -173,7 +174,7 @@ impl TxRequestRepo {
             }
             NewTxInput::Standard(new_standard_tx_input) => {
                 if request.new_tx_request.tx_type != TxType::STANDARD {
-                    bail!("Non STANDARD TxType: request: {:#?}", request,)
+                    bail!("Non STANDARD TxType: request: {:?}", request,)
                 }
                 sqlx::query!(
                     r#"
@@ -266,6 +267,7 @@ impl TxRequestRepo {
                     t.chain_id,
                     t.use_operator_wallet_id,
                     t.attempts,
+                    t.metadata,
                     t.created_at,
                     t.updated_at
             )
@@ -278,6 +280,7 @@ impl TxRequestRepo {
                 u.chain_id,
                 u.use_operator_wallet_id,
                 u.attempts,
+                u.metadata,
                 u.created_at,
                 u.updated_at,
 

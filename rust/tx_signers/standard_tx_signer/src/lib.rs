@@ -65,7 +65,7 @@ pub mod aws_lambda {
     use crate::{Config, signature::sign_tx_request};
     use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
-    use lambda_runtime::LambdaEvent;
+    use lambda_runtime::{LambdaEvent, tracing};
     use network_db::networks::NetworkRepo;
     use signer_wallet::{IntoSignerWalletConfig, manager::SignerWalletManager};
     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
@@ -78,7 +78,7 @@ pub mod aws_lambda {
         pool: &sqlx::Pool<sqlx::Postgres>,
         aws_config: &aws_config::SdkConfig,
     ) -> anyhow::Result<(), lambda_runtime::Error> {
-        println!("Building standard_tx_signer...");
+        tracing::info!("Building standard_tx_signer...");
 
         let config = Config::build()?;
 
@@ -99,12 +99,12 @@ pub mod aws_lambda {
             SignerWalletManager::build(&networks, &config.into_signer_wallet_config())?;
 
         for tx_request_body in tx_request_body_vec {
-            println!("Signing: {tx_request_body:?}");
+            tracing::info!("Signing: {tx_request_body:?}");
 
             let wallet = wallet_manager.get_wallet(tx_request_body.chain_id).await?;
             let signature = sign_tx_request(&tx_request_body, wallet).await?;
 
-            println!("Saving...");
+            tracing::info!("Saving...");
             let insert_tx_input = tx_request_body.into_db_input(signature.as_bytes().to_vec())?;
             transaction_repo
                 .insert_tx_request_with_tx_input(&insert_tx_input)

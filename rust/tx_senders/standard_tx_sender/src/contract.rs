@@ -135,7 +135,6 @@ impl ContractManager {
             Address::from_str(network.contract_address.as_str())?,
             &provider,
         );
-        println!("broadcasting tx with nonce: {}", nonce);
 
         let pending_tx = contract
             .executeBatch(tx_context.execute_batch_input.clone())
@@ -146,7 +145,6 @@ impl ContractManager {
             .gas(gas_limit)
             .send()
             .await?;
-        println!("braodcasted, all good. Tx nonce: {}", nonce);
 
         tx_context.tx_hash = Some(pending_tx.tx_hash().to_string());
 

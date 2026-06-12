@@ -7,7 +7,7 @@ use standard_tx_signer::{Config, aws_lambda::function_handler};
 
 #[tokio::main]
 async fn main() -> Result<(), lambda_runtime::Error> {
-    println!("Cold start");
+    tracing::info!("Cold start");
     tracing::init_default_subscriber();
 
     let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
