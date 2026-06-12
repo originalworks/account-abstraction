@@ -10,7 +10,7 @@ use execution_attempt_db::{
 use lambda_runtime::{LambdaEvent, tracing};
 use network_db::networks::NetworkRepo;
 use operator_wallet_db::operator_wallets::OperatorWalletRepo;
-use outcome_emitter::{emitter::event_bridge::AwsEventBridgeOutcomeEmitter, outcome::OutcomeEvent};
+use outcome_emitter::emitter::event_bridge::AwsEventBridgeOutcomeEmitter;
 use receipt_poller_queue::ReceiptPollerEvent;
 use retry_queue::RetryQueueMessageBody;
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
@@ -145,6 +145,14 @@ impl AwsLambdaOrchestrator {
                             };
                             self.execution_attempt_repo
                                 .propagate_outcome(&propagation_input)
+                                .await?;
+
+                            self.outcome_emitter
+                                .emit_for_execution_attempt(
+                                    &execution_attempt_with_txs,
+                                    &outcome_with_gas.outcome,
+                                    outcome_with_gas.used_gas,
+                                )
                                 .await?;
                         }
                     }

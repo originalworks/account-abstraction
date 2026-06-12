@@ -33,8 +33,8 @@ impl AwsEventBridgeOutcomeEmitter {
             .event_bus_name(self.event_bus_name.clone()) // or your custom event bus
             .build();
 
-        let resp = self.client.put_events().entries(event).send().await?;
-        println!("this is response from AwsEventBridgeOutcomeEmitter: {resp:#?}");
+        self.client.put_events().entries(event).send().await?;
+
         Ok(())
     }
 

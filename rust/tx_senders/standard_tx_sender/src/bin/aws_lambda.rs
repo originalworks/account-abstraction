@@ -7,8 +7,8 @@ use standard_tx_sender::{Config, orchestrator::aws::AwsLambdaOrchestrator};
 
 #[tokio::main]
 async fn main() -> Result<(), lambda_runtime::Error> {
-    println!("Cold start");
     tracing::init_default_subscriber();
+    tracing::info!("Cold start");
 
     let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
     let aws_config = aws_config::defaults(BehaviorVersion::latest())

@@ -12,6 +12,7 @@ pub struct Config {
     pub receipt_poller_queue_message_group_id: String,
     pub retry_queue_message_group_id: String,
     pub retry_queue_url: String,
+    pub outcome_event_bus_name: String,
 }
 
 impl Config {
@@ -22,6 +23,7 @@ impl Config {
         let receipt_poller_queue_url = Self::get_env_var("RECEIPT_POLLER_QUEUE_URL");
         let retry_queue_message_group_id = Self::get_env_var("RETRY_QUEUE_MESSAGE_GROUP_ID");
         let retry_queue_url = Self::get_env_var("RETRY_QUEUE_URL");
+        let outcome_event_bus_name = Self::get_env_var("OUTCOME_EVENT_BUS_NAME");
 
         Ok(Self {
             database_url,
@@ -29,6 +31,7 @@ impl Config {
             receipt_poller_queue_url,
             retry_queue_message_group_id,
             retry_queue_url,
+            outcome_event_bus_name,
         })
     }
 

@@ -149,6 +149,7 @@ Resources:
         ReceiptPollerQueueName: !Ref ReceiptPollerQueueName
         RetryQueueMessageGroupId: !Ref RetryQueueMessageGroupId
         RetryQueueName: !Ref RetryQueueName
+        OutcomeEventBusName: !Ref OutcomeEventBusName
 
   ReceiptPoller:
     Type: AWS::Serverless::Application

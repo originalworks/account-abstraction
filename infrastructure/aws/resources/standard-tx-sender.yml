@@ -23,6 +23,8 @@ Parameters:
     Type: String
   RetryQueueName:
     Type: String
+  OutcomeEventBusName:
+    Type: String
 
 Resources:
   StandardTxSenderDeadLetterQueue:
@@ -79,6 +81,7 @@ Resources:
           RECEIPT_POLLER_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${ReceiptPollerQueueName}"
           RETRY_QUEUE_MESSAGE_GROUP_ID: !Ref RetryQueueMessageGroupId
           RETRY_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${RetryQueueName}"
+          OUTCOME_EVENT_BUS_NAME: !Ref OutcomeEventBusName
       VpcConfig:
         SecurityGroupIds:
           - !Ref DatabaseAccessSecurityGroup

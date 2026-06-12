@@ -7,12 +7,13 @@ use crate::{
     transaction::{ExecuteBatchTxContext, TxContextBuilder},
 };
 use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
-use db_types::{ExecutionErrorObject, TxStatus};
+use db_types::{ExecutionErrorObject, TxExecutionOutcome, TxStatus};
 use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, NewExecutionAttempt};
 use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo;
 use lambda_runtime::{LambdaEvent, tracing};
 use network_db::networks::NetworkRepo;
 use operator_wallet_db::operator_wallets::OperatorWalletRepo;
+use outcome_emitter::{emitter::event_bridge::AwsEventBridgeOutcomeEmitter, outcome::OutcomeEvent};
 use receipt_poller_queue::ReceiptPollerQueueMessageBody;
 use retry_queue::RetryQueueMessageBody;
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
@@ -31,6 +32,7 @@ pub struct AwsLambdaOrchestrator {
     pub contract_manager: ContractManager,
     pub receipt_poller_queue: SqsQueue,
     pub retry_queue: SqsQueue,
+    pub outcome_emitter: AwsEventBridgeOutcomeEmitter,
 }
 
 impl AwsLambdaOrchestrator {
@@ -38,7 +40,7 @@ impl AwsLambdaOrchestrator {
         pool: &sqlx::Pool<sqlx::Postgres>,
         aws_config: &aws_config::SdkConfig,
     ) -> anyhow::Result<Self> {
-        println!("Building standard_tx_sender...");
+        tracing::info!("Building standard_tx_sender...");
 
         let config = Config::build()?;
 
@@ -59,6 +61,11 @@ impl AwsLambdaOrchestrator {
             &config.receipt_poller_queue_url,
             &config.receipt_poller_queue_message_group_id,
         )?;
+        let event_bridge_client = aws_sdk_eventbridge::Client::new(&aws_config);
+        let outcome_emitter = AwsEventBridgeOutcomeEmitter::build(
+            &event_bridge_client,
+            config.outcome_event_bus_name,
+        );
 
         let retry_queue = SqsQueue::build(
             &sqs_client,
@@ -75,6 +82,7 @@ impl AwsLambdaOrchestrator {
             contract_manager,
             receipt_poller_queue,
             retry_queue,
+            outcome_emitter,
         })
     }
 
@@ -83,10 +91,10 @@ impl AwsLambdaOrchestrator {
         event: LambdaEvent<SqsEvent>,
     ) -> anyhow::Result<SqsBatchResponse, lambda_runtime::Error> {
         let mut sqs_batch_response = SqsBatchResponse::default();
-        println!("Reading...");
+        tracing::info!("Reading...");
         let tx_sender_queue_event = StandardSenderQueueEvent::from_sqs_event(event)?;
 
-        println!("{tx_sender_queue_event:#?}");
+        tracing::info!("{tx_sender_queue_event:?}");
 
         let tx_ids = tx_sender_queue_event
             .messages
@@ -99,7 +107,7 @@ impl AwsLambdaOrchestrator {
             .fetch_and_sort_into_batches(&tx_ids)
             .await?;
 
-        println!("Executing...");
+        tracing::info!("Executing...");
         for mut execute_batch_context in execute_batch_context_vec {
             let Some(mut wallet) = self
                 .wallet_pool_manager
@@ -110,9 +118,9 @@ impl AwsLambdaOrchestrator {
                 .await?
             else {
                 self.tx_request_repo
-                    .release_many(&execute_batch_context.tx_ids)
+                    .release_many(&execute_batch_context.get_tx_ids())
                     .await?;
-                execute_batch_context.tx_ids.iter().for_each(|tx_id| {
+                execute_batch_context.get_tx_ids().iter().for_each(|tx_id| {
                     if let Some(message_id) = tx_sender_queue_event.tx_id_to_message_id.get(tx_id) {
                         sqs_batch_response.add_failure(message_id);
                     };
@@ -122,7 +130,7 @@ impl AwsLambdaOrchestrator {
 
             let wallet_assignment_ids = self
                 .wallet_assignment_repo
-                .new_assignments(&execute_batch_context.tx_ids, wallet.db_record.id)
+                .new_assignments(&execute_batch_context.get_tx_ids(), wallet.db_record.id)
                 .await?;
 
             match self
@@ -132,6 +140,7 @@ impl AwsLambdaOrchestrator {
             {
                 Ok(_) => {}
                 Err(err) => {
+                    tracing::error!("{err:?}");
                     self.wallet_pool_manager
                         .release_unused(wallet.db_record.id)
                         .await?;
@@ -153,19 +162,19 @@ impl AwsLambdaOrchestrator {
                         .await?;
 
                     self.execution_attempt_item_repo
-                        .insert_many(execution_attempt.id, &execute_batch_context.tx_ids)
+                        .insert_many(execution_attempt.id, &execute_batch_context.get_tx_ids())
                         .await?;
 
                     self.tx_request_repo
                         .set_status_for_many(
-                            &execute_batch_context.tx_ids,
+                            &execute_batch_context.get_tx_ids(),
                             db_types::TxStatus::BROADCASTED,
                         )
                         .await?;
 
                     let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
                         execution_attempt_id: execution_attempt.id.to_string(),
-                        batch_size: u8::try_from(execute_batch_context.tx_ids.len())?,
+                        batch_size: u8::try_from(execute_batch_context.raw_tx_requests.len())?,
                     };
 
                     self.receipt_poller_queue
@@ -174,6 +183,7 @@ impl AwsLambdaOrchestrator {
                 }
 
                 Err(err) => {
+                    tracing::error!("{err:?}");
                     self.handle_error(&execute_batch_context, &wallet, err)
                         .await?;
                 }
@@ -223,7 +233,7 @@ impl AwsLambdaOrchestrator {
                             .expect("error parsing failed");
                         }
                         SEOA::SEOAErrors::ExecutionFailed(_) => {
-                            let batch_size = execute_batch_context.tx_ids.len();
+                            let batch_size = execute_batch_context.raw_tx_requests.len();
                             let retryable = if batch_size > 1 { true } else { false };
                             failed_new_execution = NewExecutionAttempt::standard_failed(
                                 execute_batch_context,
@@ -238,7 +248,7 @@ impl AwsLambdaOrchestrator {
                         }
                         SEOA::SEOAErrors::AlreadyUsed(_) => {
                             tracing::warn!(
-                                "Tried to send transaction that was already used: {execute_batch_context:#?}"
+                                "Tried to send transaction that was already used: {execute_batch_context:?}"
                             );
                             return Ok(None);
                         }
@@ -300,13 +310,13 @@ impl AwsLambdaOrchestrator {
                 .await?;
 
             self.execution_attempt_item_repo
-                .insert_many(execution_attempt.id, &execute_batch_context.tx_ids)
+                .insert_many(execution_attempt.id, &execute_batch_context.get_tx_ids())
                 .await?;
 
             if let Some(retryable) = failed_new_execution.retryable.clone() {
                 if retryable == true {
                     self.tx_request_repo
-                        .set_status_for_many(&execute_batch_context.tx_ids, TxStatus::RETRIED)
+                        .set_status_for_many(&execute_batch_context.get_tx_ids(), TxStatus::RETRIED)
                         .await?;
                     let message_body = &RetryQueueMessageBody {
                         execution_attempt_id: execution_attempt.id.to_string(),
@@ -315,8 +325,26 @@ impl AwsLambdaOrchestrator {
                     self.retry_queue.send_new(&message_body_string).await?;
                 } else {
                     self.tx_request_repo
-                        .set_status_for_many(&execute_batch_context.tx_ids, TxStatus::FAILED)
+                        .set_status_for_many(&execute_batch_context.get_tx_ids(), TxStatus::FAILED)
                         .await?;
+
+                    for tx_request in execute_batch_context.raw_tx_requests.clone() {
+                        let outcome = failed_new_execution
+                            .outcome
+                            .clone()
+                            .unwrap_or(TxExecutionOutcome::FAILED);
+
+                        self.outcome_emitter
+                            .emit_outcome(&OutcomeEvent {
+                                outcome,
+                                tx_request_id: tx_request.tx_id,
+                                gas_fee: failed_new_execution.used_gas,
+                                transaction_hash: failed_new_execution.tx_hash.clone(),
+                                error: failed_new_execution.error_object.clone(),
+                                metadata: tx_request.metadata,
+                            })
+                            .await?;
+                    }
                 }
             }
         }

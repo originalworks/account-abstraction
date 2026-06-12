@@ -14,12 +14,22 @@ pub struct ExecuteBatchTxContext {
     pub execute_batch_input: Vec<ExecuteInput>,
     pub use_operator_wallet_id: Option<Uuid>,
     pub batch_tx_value: i64,
-    pub tx_ids: Vec<String>,
+    // pub tx_ids: Vec<String>,
+    pub raw_tx_requests: Vec<StandardTxRequestRaw>,
     pub successfully_simulated: bool,
     pub assigned_nonce: Option<u64>,
     pub fees: Option<Eip1559Estimation>,
     pub gas_limit: Option<u64>,
     pub tx_hash: Option<String>,
+}
+
+impl ExecuteBatchTxContext {
+    pub fn get_tx_ids(&self) -> Vec<String> {
+        self.raw_tx_requests
+            .iter()
+            .map(|val| val.tx_id.clone())
+            .collect()
+    }
 }
 
 pub struct TxContextBuilder {
@@ -67,16 +77,16 @@ impl TxContextBuilder {
     ) -> Option<ExecuteBatchTxContext> {
         let mut execute_batch_input = Vec::new();
         let mut batch_tx_value = 0;
-        let mut tx_ids = Vec::new();
+        // let mut tx_ids = Vec::new();
 
-        for transaction in transactions {
+        for transaction in transactions.clone() {
             match transaction.clone().into_execute_input() {
                 Ok(execute_input) => {
                     if transaction.pass_value_from_operator_wallet && transaction.value_wei > 0 {
                         batch_tx_value += transaction.value_wei;
                     }
 
-                    tx_ids.push(transaction.tx_id.clone());
+                    // tx_ids.push(transaction.tx_id.clone());
                     execute_batch_input.push(execute_input.clone())
                 }
                 Err(_) => {
@@ -97,7 +107,8 @@ impl TxContextBuilder {
             use_operator_wallet_id,
             execute_batch_input,
             batch_tx_value,
-            tx_ids,
+            // tx_ids,
+            raw_tx_requests: transactions,
             successfully_simulated: false,
             assigned_nonce: None,
             fees: None,
