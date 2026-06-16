@@ -1,2 +1,2 @@
-pub const OUTCOME_EVENT_DETAIL_TYPE: &str = "AccountAbstractionTxOutcome";
-pub const OUTCOME_EVENT_SOURCE: &str = "AccountAbstractionLayer";
+pub const OUTCOME_EVENT_DETAIL_TYPE: &str = "aa.tx.completed";
+pub const OUTCOME_EVENT_SOURCE: &str = "ow.account-abstraction";

@@ -92,7 +92,7 @@ impl AwsLambdaOrchestrator {
     ) -> anyhow::Result<SqsBatchResponse, lambda_runtime::Error> {
         let mut sqs_batch_response = SqsBatchResponse::default();
         tracing::info!("Reading...");
-        let tx_sender_queue_event = StandardSenderQueueEvent::from_sqs_event(event)?;
+        let tx_sender_queue_event = StandardSenderQueueEvent::from_sqs_lambda_event(event)?;
 
         tracing::info!("{tx_sender_queue_event:?}");
 

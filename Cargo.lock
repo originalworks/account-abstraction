@@ -4347,6 +4347,8 @@ dependencies = [
  "outcome_emitter",
  "receipt_poller_queue",
  "retry_queue",
+ "serde",
+ "serde_json",
  "sqlx",
  "sqs_queue",
  "tokio",

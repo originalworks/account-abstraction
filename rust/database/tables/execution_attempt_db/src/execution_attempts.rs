@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::types::{
     ExecutionAttemptWithTxInputRequestRow, ExecutionAttemptWithTxInputs, ExecutionAttemptWithTxRow,
     ExecutionAttemptWithTxs, OutcomePropagationInput,
@@ -76,6 +78,131 @@ pub struct ExecutionAttemptRepo {
 impl ExecutionAttemptRepo {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
+    }
+
+    pub async fn find_old_unresolved(&self) -> anyhow::Result<Vec<ExecutionAttemptWithTxs>> {
+        let rows = sqlx::query_as!(
+            ExecutionAttemptWithTxRow,
+            r#"
+            SELECT
+                ea.id as attempt_id,
+                ea.chain_id,
+                ea.operator_wallet_id,
+                ea.nonce_used,
+                ea.tx_value,
+                ea.tx_type as "tx_type: TxType",
+                ea.tx_hash,
+                ea.gas_limit,
+                ea.used_gas,
+                ea.max_fee_per_gas,
+                ea.max_priority_fee,
+                ea.max_fee_per_blob_gas,
+                ea.outcome as "outcome: TxExecutionOutcome",
+                ea.error_object,
+                ea.created_at as attempt_created_at,
+                ea.updated_at as attempt_updated_at,
+
+                tr.sequence_id,
+                tr.tx_id,
+                tr.requester_id,
+                tr.tx_type as "request_tx_type?: TxType",
+                tr.tx_status as "tx_status?: TxStatus",
+                tr.chain_id as request_chain_id,
+                tr.use_operator_wallet_id,
+                tr.attempts,
+                tr.metadata,
+                tr.created_at as request_created_at,
+                tr.updated_at as request_updated_at
+
+            FROM (
+                SELECT *
+                FROM execution_attempts
+                WHERE outcome IS NULL
+                ORDER BY created_at ASC
+                LIMIT 10
+            ) ea
+
+            LEFT JOIN execution_attempt_items eai
+                ON eai.execution_attempt_id = ea.id
+
+            LEFT JOIN tx_requests tr
+                ON tr.tx_id = eai.tx_id
+
+            ORDER BY ea.created_at ASC
+        "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut grouped: HashMap<Uuid, ExecutionAttemptWithTxs> = HashMap::new();
+
+        for row in rows {
+            let entry = grouped
+                .entry(row.attempt_id)
+                .or_insert_with(|| ExecutionAttemptWithTxs {
+                    execution_attempt: ExecutionAttempt {
+                        id: row.attempt_id,
+                        chain_id: row.chain_id,
+                        operator_wallet_id: row.operator_wallet_id,
+                        nonce_used: row.nonce_used,
+                        tx_value: row.tx_value,
+                        tx_type: row.tx_type.clone(),
+                        tx_hash: row.tx_hash.clone(),
+                        gas_limit: row.gas_limit,
+                        used_gas: row.used_gas,
+                        max_fee_per_gas: row.max_fee_per_gas,
+                        max_priority_fee: row.max_priority_fee,
+                        max_fee_per_blob_gas: row.max_fee_per_blob_gas,
+                        outcome: row.outcome.clone(),
+                        error_object: row.error_object.clone(),
+                        created_at: row.attempt_created_at,
+                        updated_at: row.attempt_updated_at,
+                    },
+                    tx_requests: Vec::new(),
+                });
+
+            if let (
+                Some(sequence_id),
+                Some(tx_id),
+                Some(requester_id),
+                Some(tx_type),
+                Some(tx_status),
+                Some(chain_id),
+                Some(attempts),
+                Some(created_at),
+                Some(updated_at),
+            ) = (
+                row.sequence_id,
+                row.tx_id,
+                row.requester_id,
+                row.request_tx_type,
+                row.tx_status,
+                row.request_chain_id,
+                row.attempts,
+                row.request_created_at,
+                row.request_updated_at,
+            ) {
+                entry.tx_requests.push(TxRequest {
+                    sequence_id,
+                    tx_id,
+                    requester_id,
+                    tx_type,
+                    tx_status,
+                    chain_id,
+                    use_operator_wallet_id: row.use_operator_wallet_id,
+                    attempts: attempts.into(),
+                    metadata: row.metadata,
+                    created_at,
+                    updated_at,
+                });
+            }
+        }
+
+        let mut attempts: Vec<_> = grouped.into_values().collect();
+
+        attempts.sort_by_key(|a| a.execution_attempt.created_at);
+
+        Ok(attempts)
     }
 
     pub async fn find_by_id(&self, id: Uuid) -> anyhow::Result<ExecutionAttempt> {
@@ -362,7 +489,7 @@ impl ExecutionAttemptRepo {
 
     pub async fn select_with_txs(
         &self,
-        execution_attempt_id: Uuid,
+        execution_attempt_id: &Uuid,
     ) -> anyhow::Result<Option<ExecutionAttemptWithTxs>> {
         let rows = sqlx::query_as!(
             ExecutionAttemptWithTxRow,

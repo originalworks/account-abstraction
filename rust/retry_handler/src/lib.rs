@@ -39,7 +39,7 @@ pub mod aws_lambda {
     ) -> anyhow::Result<(), lambda_runtime::Error> {
         println!("Building retry_handler...");
 
-        let event = RetryEvent::from_sqs_event(event)?;
+        let event = RetryEvent::from_sqs_lambda_event(event)?;
 
         println!("retry event received: {:?}", event);
 

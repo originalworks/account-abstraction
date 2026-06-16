@@ -25,7 +25,7 @@ mod aws {
     use crate::{BlobSenderQueueMessage, BlobSenderQueueMessageBody};
     use aws_lambda_events::sqs::SqsEvent;
     use lambda_runtime::LambdaEvent;
-    use sqs_queue::event::{FromSqsRecord, build_typed_event};
+    use sqs_queue::event::{FromSqsRecord, build_from_lambda_sqs_event};
     use sqs_queue::parser::parse_sqs_message_body;
 
     impl FromSqsRecord<BlobSenderQueueMessageBody> for BlobSenderQueueMessage {
@@ -35,7 +35,7 @@ mod aws {
     }
 
     impl BlobSenderQueueEvent {
-        pub fn from_sqs_event(event: LambdaEvent<SqsEvent>) -> anyhow::Result<Self> {
+        pub fn from_sqs_lambda_event(event: LambdaEvent<SqsEvent>) -> anyhow::Result<Self> {
             let mut tx_id_to_message_id = HashMap::new();
             for record in &event.payload.records {
                 let Some(message_body) =
@@ -49,9 +49,10 @@ mod aws {
                 tx_id_to_message_id.insert(message_body.tx_id.clone(), message_id.clone());
             }
             Ok(Self {
-                messages: build_typed_event::<BlobSenderQueueMessageBody, BlobSenderQueueMessage>(
-                    event,
-                )?,
+                messages: build_from_lambda_sqs_event::<
+                    BlobSenderQueueMessageBody,
+                    BlobSenderQueueMessage,
+                >(event)?,
                 tx_id_to_message_id,
             })
         }

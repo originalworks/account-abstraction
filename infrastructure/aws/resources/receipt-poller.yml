@@ -23,6 +23,8 @@ Parameters:
     Type: Number
   OutcomeEventBusName:
     Type: String
+  ReceiptPollerCleanupSchedulerRate:
+    Type: String
 
 Resources:
   ReceiptPollerDeadLetterQueue:
@@ -91,3 +93,8 @@ Resources:
             BatchSize: 5
             FunctionResponseTypes:
               - ReportBatchItemFailures
+        CleanupScheduler:
+          Type: Schedule
+          Properties:
+            Schedule: !Sub "rate(${ReceiptPollerCleanupSchedulerRate})"
+            Enabled: true

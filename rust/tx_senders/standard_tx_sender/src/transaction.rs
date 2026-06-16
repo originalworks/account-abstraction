@@ -14,7 +14,6 @@ pub struct ExecuteBatchTxContext {
     pub execute_batch_input: Vec<ExecuteInput>,
     pub use_operator_wallet_id: Option<Uuid>,
     pub batch_tx_value: i64,
-    // pub tx_ids: Vec<String>,
     pub raw_tx_requests: Vec<StandardTxRequestRaw>,
     pub successfully_simulated: bool,
     pub assigned_nonce: Option<u64>,
@@ -77,7 +76,6 @@ impl TxContextBuilder {
     ) -> Option<ExecuteBatchTxContext> {
         let mut execute_batch_input = Vec::new();
         let mut batch_tx_value = 0;
-        // let mut tx_ids = Vec::new();
 
         for transaction in transactions.clone() {
             match transaction.clone().into_execute_input() {
@@ -86,7 +84,6 @@ impl TxContextBuilder {
                         batch_tx_value += transaction.value_wei;
                     }
 
-                    // tx_ids.push(transaction.tx_id.clone());
                     execute_batch_input.push(execute_input.clone())
                 }
                 Err(_) => {

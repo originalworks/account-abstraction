@@ -7,8 +7,8 @@ use sqlx::PgPool;
 
 #[tokio::main]
 async fn main() -> Result<(), lambda_runtime::Error> {
-    println!("Cold start");
     tracing::init_default_subscriber();
+    tracing::info!("Cold start");
 
     let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
     let aws_config = aws_config::defaults(BehaviorVersion::latest())
@@ -22,6 +22,7 @@ async fn main() -> Result<(), lambda_runtime::Error> {
     let aws_lambda_orchestrator = AwsLambdaOrchestrator::build(&pool, &aws_config).await?;
 
     run(service_fn(|event| {
+        tracing::info!("entered service function with event: {event:?}");
         aws_lambda_orchestrator.function_handler(event)
     }))
     .await
