@@ -22,7 +22,7 @@ mod aws {
     use crate::{RetryQueueMessage, RetryQueueMessageBody};
     use aws_lambda_events::sqs::SqsEvent;
     use lambda_runtime::LambdaEvent;
-    use sqs_queue::event::{FromSqsRecord, build_typed_event};
+    use sqs_queue::event::{FromSqsRecord, build_from_lambda_sqs_event};
 
     impl FromSqsRecord<RetryQueueMessageBody> for RetryQueueMessage {
         fn from_parts(message_id: String, body: RetryQueueMessageBody) -> Self {
@@ -31,9 +31,9 @@ mod aws {
     }
 
     impl RetryEvent {
-        pub fn from_sqs_event(event: LambdaEvent<SqsEvent>) -> anyhow::Result<Self> {
+        pub fn from_sqs_lambda_event(event: LambdaEvent<SqsEvent>) -> anyhow::Result<Self> {
             Ok(Self {
-                messages: build_typed_event::<RetryQueueMessageBody, RetryQueueMessage>(event)?,
+                messages: build_from_lambda_sqs_event::<RetryQueueMessageBody, RetryQueueMessage>(event)?,
             })
         }
     }

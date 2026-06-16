@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 sqlx = { workspace = true, features = ["postgres", "time"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 execution_attempt_db.workspace = true

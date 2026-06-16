@@ -89,7 +89,7 @@ pub async fn retry_path_standard_tx_dropped(
     match e2e_test_fixture
         .orchestrators
         .receipt_poller_orchestrator
-        .function_handler(receipt_poller_queue_event.clone())
+        .sqs_event_handler(receipt_poller_queue_event.clone().payload)
         .await
     {
         Ok(_) => {}

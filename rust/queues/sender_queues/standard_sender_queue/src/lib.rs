@@ -26,7 +26,7 @@ mod aws {
     use crate::{StandardSenderQueueMessage, StandardSenderQueueMessageBody};
     use aws_lambda_events::sqs::SqsEvent;
     use lambda_runtime::LambdaEvent;
-    use sqs_queue::event::{FromSqsRecord, build_typed_event};
+    use sqs_queue::event::{FromSqsRecord, build_from_lambda_sqs_event};
     use sqs_queue::parser::parse_sqs_message_body;
 
     impl FromSqsRecord<StandardSenderQueueMessageBody> for StandardSenderQueueMessage {
@@ -36,7 +36,7 @@ mod aws {
     }
 
     impl StandardSenderQueueEvent {
-        pub fn from_sqs_event(event: LambdaEvent<SqsEvent>) -> anyhow::Result<Self> {
+        pub fn from_sqs_lambda_event(event: LambdaEvent<SqsEvent>) -> anyhow::Result<Self> {
             let mut tx_id_to_message_id = HashMap::new();
             for record in &event.payload.records {
                 let Some(message_body) =
@@ -50,7 +50,7 @@ mod aws {
                 tx_id_to_message_id.insert(message_body.tx_id.clone(), message_id.clone());
             }
             Ok(Self {
-                messages: build_typed_event::<
+                messages: build_from_lambda_sqs_event::<
                     StandardSenderQueueMessageBody,
                     StandardSenderQueueMessage,
                 >(event)?,

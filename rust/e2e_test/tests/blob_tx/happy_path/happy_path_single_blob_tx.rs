@@ -67,7 +67,7 @@ pub async fn happy_path_single_blob_tx(e2e_test_fixture: &E2eTestFixture) -> any
         match e2e_test_fixture
             .orchestrators
             .receipt_poller_orchestrator
-            .function_handler(receipt_poller_queue_event.clone())
+            .sqs_event_handler(receipt_poller_queue_event.clone().payload)
             .await
         {
             Ok(_) => {}

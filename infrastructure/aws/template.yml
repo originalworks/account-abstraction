@@ -51,6 +51,8 @@ Parameters:
     Default: 15
   OutcomeEventBusName:
     Type: String
+  ReceiptPollerCleanupSchedulerRate:
+    Type: String
 
 Resources:
   AaBlobBucket:
@@ -167,6 +169,7 @@ Resources:
         RetryQueueName: !Ref RetryQueueName
         ReceiptPollerQueueDelay: !Ref ReceiptPollerQueueDelay
         OutcomeEventBusName: !Ref OutcomeEventBusName
+        ReceiptPollerCleanupSchedulerRate: !Ref ReceiptPollerCleanupSchedulerRate
 
   RetryHandler:
     Type: AWS::Serverless::Application

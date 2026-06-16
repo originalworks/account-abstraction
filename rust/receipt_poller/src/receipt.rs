@@ -57,11 +57,9 @@ impl ReceiptReader {
         let Some(tx_hash) = execution_attempt.tx_hash.clone() else {
             return Ok(None);
         };
-        if let Some(outcome) = execution_attempt.outcome.clone() {
-            return Ok(Some(OutcomeWithGas {
-                outcome,
-                used_gas: execution_attempt.used_gas,
-            }));
+        if execution_attempt.outcome.is_some() {
+            // already resolved by different worker/execution
+            return Ok(None);
         }
         let tx_hash = FixedBytes::<32>::from_str(tx_hash.as_str())?;
 

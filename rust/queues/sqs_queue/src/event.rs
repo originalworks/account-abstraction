@@ -8,7 +8,7 @@ pub trait FromSqsRecord<B> {
     fn from_parts(message_id: String, body: B) -> Self;
 }
 
-pub fn build_typed_event<B, M>(event: LambdaEvent<SqsEvent>) -> anyhow::Result<Vec<M>>
+pub fn build_from_lambda_sqs_event<B, M>(event: LambdaEvent<SqsEvent>) -> anyhow::Result<Vec<M>>
 where
     B: DeserializeOwned,
     M: FromSqsRecord<B>,
@@ -16,6 +16,28 @@ where
     let mut messages = Vec::new();
 
     for record in event.payload.records {
+        let Some(body) = parse_sqs_message_body::<B>(&record)? else {
+            continue;
+        };
+
+        let Some(message_id) = record.message_id else {
+            continue;
+        };
+
+        messages.push(M::from_parts(message_id, body));
+    }
+
+    Ok(messages)
+}
+
+pub fn build_from_sqs_event<B, M>(event: SqsEvent) -> anyhow::Result<Vec<M>>
+where
+    B: DeserializeOwned,
+    M: FromSqsRecord<B>,
+{
+    let mut messages = Vec::new();
+
+    for record in event.records {
         let Some(body) = parse_sqs_message_body::<B>(&record)? else {
             continue;
         };

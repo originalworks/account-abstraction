@@ -14,6 +14,7 @@ parameter_overrides = [
     "PrivateSubnets=/dev-stage/network/private-subnet-ids",
     "DatabaseAccessSecurityGroup=/dev/database/access-security-group-id",
     "OutcomeEventBusName=aa-dev-transaction-outcome-bus",
+    "ReceiptPollerCleanupSchedulerRate='5 minutes'",
 ]
 
 [staging.deploy.parameters]

@@ -87,7 +87,7 @@ pub mod aws_lambda {
         let mut sqs_batch_response = SqsBatchResponse::default();
 
         println!("Reading...");
-        let tx_sender_queue_event = BlobSenderQueueEvent::from_sqs_event(event)?;
+        let tx_sender_queue_event = BlobSenderQueueEvent::from_sqs_lambda_event(event)?;
 
         let tx_ids = tx_sender_queue_event
             .messages
