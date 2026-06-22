@@ -64,6 +64,7 @@ impl BuildNewBlobExecutionAttempt for NewExecutionAttempt {
             outcome: None,
             error_object: None,
             retryable: None,
+            retried_by_execution_attempt_id: None,
         })
     }
 }

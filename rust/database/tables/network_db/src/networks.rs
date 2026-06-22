@@ -27,7 +27,7 @@ pub struct NewNetwork {
 }
 
 pub struct NetworkRepo {
-    pool: PgPool,
+    pub pool: PgPool,
 }
 
 impl NetworkRepo {

@@ -48,6 +48,7 @@ pub struct NewExecutionAttempt {
     pub outcome: Option<TxExecutionOutcome>,
     pub error_object: Option<String>,
     pub retryable: Option<bool>,
+    pub retried_by_execution_attempt_id: Option<Uuid>,
 }
 
 impl NewExecutionAttempt {
@@ -67,6 +68,7 @@ impl NewExecutionAttempt {
             outcome: None,
             error_object: None,
             retryable: None,
+            retried_by_execution_attempt_id: None,
         }
     }
 }

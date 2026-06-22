@@ -3,6 +3,7 @@ use network_db::networks::{NetworkRepo, NewNetwork};
 #[allow(async_fn_in_trait)]
 pub trait AddAnvilNetwork {
     async fn add_anvil(&self, contract_address: String, chain_id: i64) -> anyhow::Result<()>;
+    async fn set_tx_max_age(&self, tx_max_age_sec: i64, chain_id: i64) -> anyhow::Result<()>;
 }
 
 impl AddAnvilNetwork for NetworkRepo {
@@ -18,6 +19,27 @@ impl AddAnvilNetwork for NetworkRepo {
             tx_max_age_sec: 3600,
         })
         .await?;
+        Ok(())
+    }
+
+    async fn set_tx_max_age(&self, tx_max_age_sec: i64, chain_id: i64) -> anyhow::Result<()> {
+        let result = sqlx::query!(
+            r#"
+        UPDATE networks
+        SET
+            tx_max_age_sec = $1
+        WHERE
+            chain_id = $2
+        "#,
+            tx_max_age_sec,
+            chain_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            anyhow::bail!("network not found");
+        }
         Ok(())
     }
 }
