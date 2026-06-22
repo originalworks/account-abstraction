@@ -1,6 +1,4 @@
-use crate::{
-    execution_attempt::NewStandardExecutionAttemptBuilder, transaction::ExecuteBatchTxContext,
-};
+use crate::transaction::ExecuteBatchTxContext;
 use alloy::{
     primitives::{Address, Uint},
     providers::{
@@ -10,7 +8,6 @@ use alloy::{
     sol,
 };
 use anyhow::bail;
-use execution_attempt_db::execution_attempts::NewExecutionAttempt;
 use network_db::networks::Network;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr};
@@ -21,7 +18,7 @@ sol!(
     #[sol(rpc)]
     #[derive(Debug, Deserialize, Serialize)]
     SEOA,
-    "../../../contracts/artifacts/contracts/sEOA.sol/sEOA.json"
+    "../../contracts/artifacts/contracts/sEOA.sol/sEOA.json"
 );
 
 type HardlyTypedProvider = FillProvider<
@@ -105,7 +102,7 @@ impl ContractManager {
         &self,
         tx_context: &mut ExecuteBatchTxContext,
         wallet: &Wallet,
-    ) -> anyhow::Result<NewExecutionAttempt> {
+    ) -> anyhow::Result<()> {
         let Some(network) = self.networks_by_chain_id.get(&tx_context.chain_id) else {
             bail!(
                 "Contract address not found for chain id: {}",
@@ -148,9 +145,6 @@ impl ContractManager {
 
         tx_context.tx_hash = Some(pending_tx.tx_hash().to_string());
 
-        let new_execution_attempt =
-            NewExecutionAttempt::standard_successful(tx_context, wallet.db_record.id)?;
-
-        Ok(new_execution_attempt)
+        Ok(())
     }
 }

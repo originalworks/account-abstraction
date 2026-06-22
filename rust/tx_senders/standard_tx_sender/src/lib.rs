@@ -1,5 +1,5 @@
 #![recursion_limit = "256"]
-pub mod contract;
+
 pub mod execution_attempt;
 pub mod orchestrator;
 pub mod transaction;

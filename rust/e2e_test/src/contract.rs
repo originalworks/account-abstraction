@@ -6,11 +6,11 @@ use alloy::{
 };
 use anyhow::bail;
 use execution_attempt_db::execution_attempts::NewExecutionAttempt;
-use standard_tx_sender::{
+use seoa_contract::{
     contract::{ContractManager, SEOA},
-    execution_attempt::NewStandardExecutionAttemptBuilder,
     transaction::ExecuteBatchTxContext,
 };
+use standard_tx_sender::execution_attempt::NewStandardExecutionAttemptBuilder;
 use wallet_pool::wallet::Wallet;
 
 #[allow(async_fn_in_trait)]

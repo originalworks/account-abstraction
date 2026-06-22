@@ -30,7 +30,8 @@ members = [
     "rust/tx_request",
     "rust/blob_storage",
     "rust/database/tables/tx_input/tx_input_types",
-    "rust/outcome_emitter", "rust/seoa_contract",
+    "rust/outcome_emitter",
+    "rust/seoa_contract",
 ]
 
 [workspace.dependencies]
@@ -62,6 +63,7 @@ tx_request = { path = "./rust/tx_request" }
 outcome_emitter = { path = "./rust/outcome_emitter" }
 receipt_poller = { path = "./rust/receipt_poller" }
 blob_storage = { path = "./rust/blob_storage" }
+seoa_contract = { path = "./rust/seoa_contract" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"

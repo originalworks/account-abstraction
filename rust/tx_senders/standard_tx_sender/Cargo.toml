@@ -7,9 +7,6 @@ edition = "2024"
 anyhow.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tx_request_db = { workspace = true }
-serde.workspace = true
-serde_json.workspace = true
-hex.workspace = true
 sqlx = { workspace = true, features = ["postgres"] }
 standard_sender_queue = { workspace = true, features = ["aws"] }
 wallet_assignment_db.workspace = true
@@ -24,6 +21,7 @@ receipt_poller_queue = { workspace = true, features = ["aws"] }
 wallet_pool.workspace = true
 retry_queue = { workspace = true, features = ["aws"] }
 outcome_emitter = { workspace = true, features = ["aws"] }
+seoa_contract.workspace = true
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }
