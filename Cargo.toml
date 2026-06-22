@@ -30,7 +30,7 @@ members = [
     "rust/tx_request",
     "rust/blob_storage",
     "rust/database/tables/tx_input/tx_input_types",
-    "rust/outcome_emitter",
+    "rust/outcome_emitter", "rust/seoa_contract",
 ]
 
 [workspace.dependencies]

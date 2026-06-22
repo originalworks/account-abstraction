@@ -6,6 +6,7 @@ use e2e_test::{
         test_queue::SqsQueueTester,
     },
     contract::ContractManagerForTests,
+    db::network::AddAnvilNetwork,
     fixture::E2eTestFixture,
     tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional},
 };
@@ -16,9 +17,7 @@ use std::{env, time::Duration};
 use tx_request::standard::StandardTxRequestBody;
 use wallet_pool::manager::WalletPoolManager;
 
-pub async fn retry_path_standard_tx_dropped(
-    e2e_test_fixture: &E2eTestFixture,
-) -> anyhow::Result<()> {
+pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
     let tx_request_body = StandardTxRequestBody::test_build(
         StandardTxRequestBodyOptional::default(e2e_test_fixture.env_vars.anvil_chain_id),
     )?;
@@ -79,10 +78,13 @@ pub async fn retry_path_standard_tx_dropped(
         .receive_messages(5)
         .await?;
 
-    // WIP: tx_max_age_sec is now column in networks, so update networks here instead
-    // unsafe {
-    //     env::set_var("TX_MAX_AGE_SEC", "1");
-    // }
+    let default_tx_max_age_sec = networks[0].tx_max_age_sec;
+
+    e2e_test_fixture
+        .db_repositories
+        .network_repo
+        .set_tx_max_age(1, networks[0].chain_id)
+        .await?;
 
     tokio::time::sleep(Duration::from_millis(3000)).await;
 
@@ -111,21 +113,22 @@ pub async fn retry_path_standard_tx_dropped(
         .receive_messages(5)
         .await?;
 
-    match retry_handler::aws_lambda::function_handler(
-        retry_queue_event.clone(),
-        &e2e_test_fixture.pool,
-    )
-    .await
+    match e2e_test_fixture
+        .orchestrators
+        .retry_handler_orchestrator
+        .function_handler(retry_queue_event.clone())
+        .await
     {
         Ok(_) => {}
         Err(err) => {
             println!("{err:#?}")
         }
     }
-    // WIP: tx_max_age_sec is now column in networks, so update networks here instead
-    // unsafe {
-    //     env::set_var("TX_MAX_AGE_SEC", &e2e_test_fixture.env_vars.tx_max_age_sec);
-    // }
+    e2e_test_fixture
+        .db_repositories
+        .network_repo
+        .set_tx_max_age(default_tx_max_age_sec, networks[0].chain_id)
+        .await?;
 
     Ok(())
 }

@@ -45,6 +45,7 @@ impl NewStandardExecutionAttemptBuilder for NewExecutionAttempt {
             outcome: None,
             error_object: None,
             retryable: None,
+            retried_by_execution_attempt_id: None,
         })
     }
 
@@ -76,6 +77,7 @@ impl NewStandardExecutionAttemptBuilder for NewExecutionAttempt {
                 outcome: Some(TxExecutionOutcome::REVERTED),
                 error_object: Some(error_object.to_json_string()?),
                 retryable: Some(retryable),
+                retried_by_execution_attempt_id: None,
             });
         } else {
             return Ok(NewExecutionAttempt {
@@ -93,6 +95,7 @@ impl NewStandardExecutionAttemptBuilder for NewExecutionAttempt {
                 outcome: Some(TxExecutionOutcome::REVERTED),
                 error_object: Some(error_object.to_json_string()?),
                 retryable: Some(retryable),
+                retried_by_execution_attempt_id: None,
             });
         }
     }

@@ -22,7 +22,6 @@ async fn main() -> Result<(), lambda_runtime::Error> {
     let aws_lambda_orchestrator = AwsLambdaOrchestrator::build(&pool, &aws_config).await?;
 
     run(service_fn(|event| {
-        tracing::info!("entered service function with event: {event:?}");
         aws_lambda_orchestrator.function_handler(event)
     }))
     .await

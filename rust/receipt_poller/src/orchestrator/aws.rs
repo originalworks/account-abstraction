@@ -17,7 +17,6 @@ use receipt_poller_queue::ReceiptPollerEvent;
 use retry_queue::RetryQueueMessageBody;
 use serde::Deserialize;
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
-use uuid::Uuid;
 use wallet_pool::manager::WalletPoolManager;
 
 #[derive(Debug, Deserialize)]
@@ -118,15 +117,6 @@ impl AwsLambdaOrchestrator {
         &self,
         execution_attempt_with_txs: &ExecutionAttemptWithTxs,
     ) -> anyhow::Result<()> {
-        // let Some(execution_attempt_with_txs) = self
-        //     .execution_attempt_repo
-        //     .select_with_txs(execution_attempt_uuid)
-        //     .await?
-        // else {
-        //     tracing::warn!("Execution attempt not found! {execution_attempt_uuid:?}");
-        //     return Ok(());
-        // };
-
         if let Some(outcome_with_gas) = self
             .receipt_reader
             .check_execution(&execution_attempt_with_txs.execution_attempt)
@@ -226,134 +216,6 @@ impl AwsLambdaOrchestrator {
                 TxExecutionOutcome::REVERTED => return Ok(()),
             }
         }
-        Ok(())
-    }
-
-    pub async fn run(
-        &self,
-        event: LambdaEvent<SqsEvent>,
-    ) -> anyhow::Result<(), lambda_runtime::Error> {
-        let event = ReceiptPollerEvent::from_sqs_lambda_event(event)?;
-        for queue_message in event.messages {
-            let execution_attempt_uuid =
-                uuid::Uuid::from_str(queue_message.body.execution_attempt_id.as_str())?;
-
-            // let Some(execution_attempt_with_txs) = self
-            //     .execution_attempt_repo
-            //     .select_with_txs(execution_attempt_uuid)
-            //     .await?
-            // else {
-            //     tracing::warn!("Execution attempt not found! {execution_attempt_uuid:?}");
-            //     return Ok(());
-            // };
-
-            // if let Some(outcome_with_gas) = self
-            //     .receipt_reader
-            //     .check_execution(&execution_attempt_with_txs.execution_attempt)
-            //     .await?
-            // {
-            //     match outcome_with_gas.outcome {
-            //         TxExecutionOutcome::SUCCEED => {
-            //             let propagation_input = OutcomePropagationInput {
-            //                 execution_attempt_id: execution_attempt_with_txs.execution_attempt.id,
-            //                 outcome: outcome_with_gas.outcome.clone(),
-            //                 tx_requests_status: TxStatus::EXECUTED,
-            //                 retryable: None,
-            //                 used_gas: outcome_with_gas.used_gas,
-            //             };
-            //             self.execution_attempt_repo
-            //                 .propagate_outcome(&propagation_input)
-            //                 .await?;
-
-            //             self.wallet_pool
-            //                 .release_used(
-            //                     execution_attempt_with_txs
-            //                         .execution_attempt
-            //                         .operator_wallet_id,
-            //                 )
-            //                 .await?;
-            //             self.outcome_emitter
-            //                 .emit_for_execution_attempt(
-            //                     &execution_attempt_with_txs,
-            //                     &outcome_with_gas.outcome,
-            //                     outcome_with_gas.used_gas,
-            //                 )
-            //                 .await?;
-            //         }
-            //         TxExecutionOutcome::FAILED => {
-            //             if queue_message.body.batch_size > 1 {
-            //                 let propagation_input = OutcomePropagationInput {
-            //                     execution_attempt_id: execution_attempt_with_txs
-            //                         .execution_attempt
-            //                         .id,
-            //                     outcome: outcome_with_gas.outcome.clone(),
-            //                     tx_requests_status: TxStatus::RETRIED,
-            //                     retryable: Some(true),
-            //                     used_gas: outcome_with_gas.used_gas,
-            //                 };
-            //                 self.execution_attempt_repo
-            //                     .propagate_outcome(&propagation_input)
-            //                     .await?;
-            //                 let message_body = &RetryQueueMessageBody {
-            //                     execution_attempt_id: execution_attempt_with_txs
-            //                         .execution_attempt
-            //                         .id
-            //                         .to_string(),
-            //                 };
-            //                 let message_body_string = message_body.to_json_string()?;
-            //                 self.retry_queue.send_new(&message_body_string).await?;
-            //             } else {
-            //                 let propagation_input = OutcomePropagationInput {
-            //                     execution_attempt_id: execution_attempt_with_txs
-            //                         .execution_attempt
-            //                         .id,
-            //                     outcome: outcome_with_gas.outcome.clone(),
-            //                     tx_requests_status: TxStatus::FAILED,
-            //                     retryable: Some(false),
-            //                     used_gas: outcome_with_gas.used_gas,
-            //                 };
-            //                 self.execution_attempt_repo
-            //                     .propagate_outcome(&propagation_input)
-            //                     .await?;
-
-            //                 self.outcome_emitter
-            //                     .emit_for_execution_attempt(
-            //                         &execution_attempt_with_txs,
-            //                         &outcome_with_gas.outcome,
-            //                         outcome_with_gas.used_gas,
-            //                     )
-            //                     .await?;
-            //             }
-            //         }
-            //         TxExecutionOutcome::STUCK | TxExecutionOutcome::DROPPED => {
-            //             let propagation_input = OutcomePropagationInput {
-            //                 execution_attempt_id: execution_attempt_with_txs.execution_attempt.id,
-            //                 outcome: outcome_with_gas.outcome.clone(),
-            //                 tx_requests_status: TxStatus::RETRIED,
-            //                 retryable: Some(true),
-            //                 used_gas: outcome_with_gas.used_gas,
-            //             };
-
-            //             self.execution_attempt_repo
-            //                 .propagate_outcome(&propagation_input)
-            //                 .await?;
-
-            //             let message_body = &RetryQueueMessageBody {
-            //                 execution_attempt_id: execution_attempt_with_txs
-            //                     .execution_attempt
-            //                     .id
-            //                     .to_string(),
-            //             };
-            //             let message_body_string = message_body.to_json_string()?;
-            //             self.retry_queue.send_new(&message_body_string).await?;
-            //         }
-            //         TxExecutionOutcome::REVERTED => {
-            //             continue;
-            //         }
-            //     }
-            // }
-        }
-
         Ok(())
     }
 }
