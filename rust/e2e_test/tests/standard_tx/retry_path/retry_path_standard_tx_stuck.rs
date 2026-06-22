@@ -12,7 +12,7 @@ use e2e_test::{
 };
 use receipt_poller_queue::ReceiptPollerQueueMessageBody;
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
-use standard_tx_sender::{contract::ContractManager, transaction::TxContextBuilder};
+use standard_tx_sender::transaction::TxContextBuilder;
 use std::{env, time::Duration};
 use tx_request::standard::StandardTxRequestBody;
 use wallet_pool::manager::WalletPoolManager;

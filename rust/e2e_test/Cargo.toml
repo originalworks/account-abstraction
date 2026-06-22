@@ -44,6 +44,7 @@ aws-config = { workspace = true, features = [
     "behavior-version-latest",
 ], optional = true }
 aws-sdk-eventbridge = { workspace = true, optional = true }
+seoa_contract.workspace = true
 
 
 [features]

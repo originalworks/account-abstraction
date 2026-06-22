@@ -24,6 +24,7 @@ receipt_poller_queue = { workspace = true, features = ["aws"] }
 wallet_pool.workspace = true
 retry_queue = { workspace = true, features = ["aws"] }
 outcome_emitter = { workspace = true, features = ["aws"] }
+seoa_contract.workspace = true
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }

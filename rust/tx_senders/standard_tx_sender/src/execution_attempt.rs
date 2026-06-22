@@ -1,7 +1,7 @@
-use crate::transaction::ExecuteBatchTxContext;
 use anyhow::bail;
 use db_types::{ExecutionErrorObject, TxExecutionOutcome, TxType};
 use execution_attempt_db::execution_attempts::NewExecutionAttempt;
+use seoa_contract::transaction::ExecuteBatchTxContext;
 use sqs_queue::message_body::ToJsonString;
 use uuid::Uuid;
 

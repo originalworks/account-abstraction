@@ -1,10 +1,7 @@
 #![cfg(feature = "aws")]
 
 use crate::{
-    Config,
-    contract::{ContractManager, SEOA},
-    execution_attempt::NewStandardExecutionAttemptBuilder,
-    transaction::{ExecuteBatchTxContext, TxContextBuilder},
+    Config, execution_attempt::NewStandardExecutionAttemptBuilder, transaction::TxContextBuilder,
 };
 use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
 use db_types::{ExecutionErrorObject, TxExecutionOutcome, TxStatus};
@@ -16,6 +13,10 @@ use operator_wallet_db::operator_wallets::OperatorWalletRepo;
 use outcome_emitter::{emitter::event_bridge::AwsEventBridgeOutcomeEmitter, outcome::OutcomeEvent};
 use receipt_poller_queue::ReceiptPollerQueueMessageBody;
 use retry_queue::RetryQueueMessageBody;
+use seoa_contract::{
+    contract::{ContractManager, SEOA},
+    transaction::ExecuteBatchTxContext,
+};
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
 use standard_sender_queue::StandardSenderQueueEvent;
 use tx_request_db::tx_requests::TxRequestRepo;
@@ -156,9 +157,13 @@ impl AwsLambdaOrchestrator {
                 .await
             {
                 Ok(new_execution_attempt) => {
+                    let execution_attempt_input = NewExecutionAttempt::standard_successful(
+                        &execute_batch_context,
+                        wallet.db_record.id,
+                    )?;
                     let execution_attempt = self
                         .execution_attempt_repo
-                        .insert(&new_execution_attempt)
+                        .insert(&execution_attempt_input)
                         .await?;
 
                     self.execution_attempt_item_repo
