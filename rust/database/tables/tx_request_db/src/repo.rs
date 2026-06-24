@@ -1,107 +1,13 @@
+use crate::types::{
+    BlobTxRequestRaw, NewTxInput, NewTxRequestWithTxInput, StandardTxRequestRaw, TxRequest,
+};
 use anyhow::bail;
-use blob_tx_input_db::blob_tx_inputs::NewBlobTxInput;
 use db_types::{BlobStorageType, TxStatus, TxType};
-use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, types::time::OffsetDateTime};
-use standard_tx_input_db::standard_tx_inputs::NewStandardTxInput;
-use tx_input_types::TxInput;
-use uuid::Uuid;
-
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
-pub struct TxRequest {
-    pub sequence_id: i64,
-    pub tx_id: String,
-    pub requester_id: String,
-    pub tx_type: TxType,
-    pub tx_status: TxStatus,
-    pub chain_id: i64,
-    pub use_operator_wallet_id: Option<Uuid>,
-    pub attempts: i32,
-    pub metadata: Option<String>,
-    pub created_at: OffsetDateTime,
-    pub updated_at: OffsetDateTime,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct NewTxRequest {
-    pub tx_id: String,
-    pub requester_id: String,
-    pub tx_type: TxType,
-    pub tx_status: TxStatus,
-    pub chain_id: i64,
-    pub use_operator_wallet_id: Option<Uuid>,
-    pub metadata: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum NewTxInput {
-    Blob(NewBlobTxInput),
-    Standard(NewStandardTxInput),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct NewTxRequestWithTxInput {
-    pub new_tx_request: NewTxRequest,
-    pub tx_input: NewTxInput,
-}
+use sqlx::PgPool;
 
 #[derive(Debug, Clone)]
 pub struct TxRequestRepo {
     pool: PgPool,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct StandardTxRequestRaw {
-    pub sequence_id: i64,
-    pub tx_id: String,
-    pub requester_id: String,
-    pub tx_type: TxType,
-    pub tx_status: TxStatus,
-    pub chain_id: i64,
-    pub use_operator_wallet_id: Option<Uuid>,
-    pub attempts: i32,
-    pub metadata: Option<String>,
-    pub created_at: OffsetDateTime,
-    pub updated_at: OffsetDateTime,
-
-    pub signature: Vec<u8>,
-    pub calldata: Vec<u8>,
-    pub to_address: String,
-    pub value_wei: i64,
-    pub deadline_timestamp: i64,
-    pub pass_value_from_operator_wallet: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct BlobTxRequestRaw {
-    pub sequence_id: i64,
-    pub tx_id: String,
-    pub requester_id: String,
-    pub tx_type: TxType,
-    pub tx_status: TxStatus,
-    pub chain_id: i64,
-    pub use_operator_wallet_id: Option<Uuid>,
-    pub attempts: i32,
-    pub created_at: OffsetDateTime,
-    pub updated_at: OffsetDateTime,
-
-    pub signature: Vec<u8>,
-    pub image_id: Vec<u8>,
-    pub commitment: Vec<u8>,
-    pub blob_sha2: Vec<u8>,
-    pub deadline_timestamp: i64,
-    pub source_file_path: String,
-    pub storage_type: BlobStorageType,
-}
-
-#[derive(Debug, Clone)]
-pub struct TxRequestWithInput {
-    pub tx_id: String,
-    pub requester_id: String,
-    pub tx_type: TxType,
-    pub tx_status: TxStatus,
-    pub tx_input: TxInput,
-    pub metadata: Option<String>,
 }
 
 impl TxRequestRepo {
@@ -415,6 +321,26 @@ impl TxRequestRepo {
         "#,
             tx_ids,
             tx_status as TxStatus
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn mark_many_as_broadcasted_and_bump_attempts(
+        &self,
+        tx_ids: &Vec<String>,
+    ) -> anyhow::Result<()> {
+        sqlx::query!(
+            r#"
+        UPDATE tx_requests
+        SET 
+            tx_status = $2,
+            attempts = attempts + 1
+        WHERE tx_id = ANY($1)
+        "#,
+            tx_ids,
+            TxStatus::BROADCASTED as TxStatus
         )
         .execute(&self.pool)
         .await?;

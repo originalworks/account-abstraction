@@ -4479,11 +4479,21 @@ dependencies = [
  "aws_lambda_events",
  "db_types",
  "execution_attempt_db",
+ "execution_attempt_item_db",
  "lambda_runtime",
+ "network_db",
+ "operator_wallet_db",
+ "receipt_poller_queue",
  "retry_queue",
+ "seoa_contract",
  "sqlx",
+ "sqs_queue",
+ "standard_tx_sender",
  "tokio",
+ "tx_input_types",
+ "tx_request_db",
  "uuid",
+ "wallet_pool",
 ]
 
 [[package]]
@@ -4875,6 +4885,7 @@ dependencies = [
  "execution_attempt_db",
  "network_db",
  "serde",
+ "tx_input_types",
  "tx_request_db",
  "uuid",
  "wallet_pool",
@@ -5436,6 +5447,7 @@ dependencies = [
  "sqs_queue",
  "standard_sender_queue",
  "tokio",
+ "tx_input_types",
  "tx_request_db",
  "uuid",
  "wallet_assignment_db",
@@ -5927,6 +5939,8 @@ name = "tx_input_types"
 version = "0.1.0"
 dependencies = [
  "blob_tx_input_db",
+ "serde",
+ "serde_json",
  "standard_tx_input_db",
 ]
 

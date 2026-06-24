@@ -11,6 +11,7 @@ pub struct Network {
     pub gas_estimation_buffer_ppm: i64,
     pub blob_gas_estimation_buffer_ppm: i64,
     pub tx_max_age_sec: i64,
+    pub max_retry_attempts: i32,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -22,6 +23,7 @@ pub struct NewNetwork {
     pub contract_address: String,
     pub min_operator_wallet_balance: i64,
     pub tx_max_age_sec: i64,
+    pub max_retry_attempts: i32,
     pub gas_estimation_buffer_ppm: i64,
     pub blob_gas_estimation_buffer_ppm: i64,
 }
@@ -48,6 +50,7 @@ impl NetworkRepo {
                 gas_estimation_buffer_ppm,
                 blob_gas_estimation_buffer_ppm,
                 tx_max_age_sec,
+                max_retry_attempts,
                 created_at,
                 updated_at
             FROM
@@ -75,6 +78,7 @@ impl NetworkRepo {
                 gas_estimation_buffer_ppm,
                 blob_gas_estimation_buffer_ppm,
                 tx_max_age_sec,
+                max_retry_attempts,
                 created_at,
                 updated_at
             FROM
@@ -86,7 +90,7 @@ impl NetworkRepo {
         Ok(networks)
     }
 
-    pub async fn insert_new_network(&self, network: &NewNetwork) -> Result<bool, sqlx::Error> {
+    pub async fn insert_new_network(&self, network: &NewNetwork) -> anyhow::Result<bool> {
         let result = sqlx::query!(
             r#"
             INSERT INTO networks (
@@ -97,9 +101,10 @@ impl NetworkRepo {
                 min_operator_wallet_balance,
                 gas_estimation_buffer_ppm,
                 blob_gas_estimation_buffer_ppm,
+                max_retry_attempts,
                 tx_max_age_sec
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
             network.chain_id,
             network.chain_name,
             network.rpc_url,
@@ -107,6 +112,7 @@ impl NetworkRepo {
             network.min_operator_wallet_balance,
             network.gas_estimation_buffer_ppm,
             network.blob_gas_estimation_buffer_ppm,
+            i16::try_from(network.max_retry_attempts)?,
             network.tx_max_age_sec,
         )
         .execute(&self.pool)

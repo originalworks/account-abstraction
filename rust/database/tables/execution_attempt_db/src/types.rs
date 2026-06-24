@@ -4,7 +4,7 @@ use db_types::{BlobStorageType, TxExecutionOutcome, TxStatus, TxType};
 use sqlx::types::time::OffsetDateTime;
 use standard_tx_input_db::standard_tx_inputs::StandardTxInput;
 use tx_input_types::TxInput;
-use tx_request_db::tx_requests::{TxRequest, TxRequestWithInput};
+use tx_request_db::types::{TxRequest, TxRequestWithInput};
 use uuid::Uuid;
 
 use crate::execution_attempts::ExecutionAttempt;
@@ -67,6 +67,7 @@ pub struct ExecutionAttemptWithTxInputRequestRow {
     pub requester_id: String,
     pub tx_type: TxType,
     pub tx_status: TxStatus,
+    pub attempts: i32,
     pub metadata: Option<String>,
 
     pub blob_signature: Option<Vec<u8>>,

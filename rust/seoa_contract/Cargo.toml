@@ -12,3 +12,4 @@ network_db.workspace = true
 wallet_pool.workspace = true
 uuid.workspace = true
 tx_request_db.workspace = true
+tx_input_types.workspace = true

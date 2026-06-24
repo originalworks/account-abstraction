@@ -113,4 +113,22 @@ impl WalletPoolManager {
             .await?;
         Ok(())
     }
+
+    pub async fn get_by_id(&self, operator_wallet_id: Uuid) -> anyhow::Result<Wallet> {
+        let operator_wallet = self
+            .operator_wallet_repo
+            .find_by_id(operator_wallet_id)
+            .await?;
+
+        let Some(network) = self.networks_map.get(&operator_wallet.chain_id) else {
+            bail!(
+                "Network not found for chain_id: {}",
+                &operator_wallet.chain_id
+            );
+        };
+
+        let mut wallet = Wallet::build(&operator_wallet, &network).await?;
+
+        Ok(wallet)
+    }
 }

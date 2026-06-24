@@ -11,7 +11,7 @@ use sqlx::{
     PgPool,
     types::{Uuid, time::OffsetDateTime},
 };
-use tx_request_db::tx_requests::{TxRequest, TxRequestWithInput};
+use tx_request_db::types::{TxRequest, TxRequestWithInput};
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct ExecutionAttempt {
@@ -74,7 +74,7 @@ impl NewExecutionAttempt {
 }
 
 pub struct ExecutionAttemptRepo {
-    pool: PgPool,
+    pub pool: PgPool,
 }
 
 impl ExecutionAttemptRepo {
@@ -239,6 +239,31 @@ impl ExecutionAttemptRepo {
 
         Ok(attempt)
     }
+    pub async fn update_retried_by(
+        &self,
+        original_execution_id: &Uuid,
+        retried_by_id: &Uuid,
+    ) -> anyhow::Result<()> {
+        let result = sqlx::query!(
+            r#"
+                    UPDATE execution_attempts
+                    SET
+                        retried_by_execution_attempt_id = $2
+                    WHERE
+                        id = $1
+                "#,
+            original_execution_id,
+            retried_by_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            anyhow::bail!("execution not found {original_execution_id:?}");
+        }
+
+        Ok(())
+    }
     pub async fn insert(&self, input: &NewExecutionAttempt) -> anyhow::Result<ExecutionAttempt> {
         let attempt = sqlx::query_as!(
             ExecutionAttempt,
@@ -382,7 +407,7 @@ impl ExecutionAttemptRepo {
                     FROM execution_attempts
                     WHERE
                         id = $1
-                        AND outcome IN ('FAILED', 'DROPPED', 'STUCK', 'REVERTED')
+                        AND outcome IN ('DROPPED', 'STUCK', 'REVERTED')
                         AND retry_lock = false
                     FOR UPDATE SKIP LOCKED
                 )
@@ -427,6 +452,7 @@ impl ExecutionAttemptRepo {
                     tr.requester_id,
                     tr.tx_type as "tx_type: TxType",
                     tr.tx_status as "tx_status: TxStatus",
+                    attempts,
                     metadata,
 
                     bti.signature as "blob_signature?",
@@ -475,6 +501,7 @@ impl ExecutionAttemptRepo {
                     requester_id: row.requester_id,
                     tx_type: row.tx_type,
                     tx_status: row.tx_status,
+                    attempts: row.attempts,
                     tx_input,
                     metadata: row.metadata,
                 }

@@ -10,7 +10,7 @@ use seoa_contract::{
     contract::{ContractManager, SEOA},
     transaction::ExecuteBatchTxContext,
 };
-use standard_tx_sender::execution_attempt::NewStandardExecutionAttemptBuilder;
+use standard_tx_sender::execution_attempt::ExecutionAttemptFromStandardSuccessful;
 use wallet_pool::wallet::Wallet;
 
 #[allow(async_fn_in_trait)]

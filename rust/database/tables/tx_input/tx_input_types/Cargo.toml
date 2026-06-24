@@ -6,3 +6,5 @@ edition = "2024"
 [dependencies]
 standard_tx_input_db.workspace = true
 blob_tx_input_db.workspace = true
+serde.workspace = true
+serde_json.workspace = true
