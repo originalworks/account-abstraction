@@ -1,6 +1,9 @@
 use seoa_contract::transaction::{ExecuteBatchTxContext, IntoExecuteInput};
 use std::collections::HashMap;
-use tx_request_db::tx_requests::{StandardTxRequestRaw, TxRequestRepo};
+use tx_request_db::{
+    repo::TxRequestRepo,
+    types::{IntoTxRequestWithInput, StandardTxRequestRaw},
+};
 use uuid::Uuid;
 
 pub struct TxContextBuilder {
@@ -30,7 +33,7 @@ impl TxContextBuilder {
             for (use_operator_wallet_id, transactions) in wallet_map {
                 let context = self
                     .build_batch_context(chain_id, use_operator_wallet_id, transactions)
-                    .await;
+                    .await?;
                 if let Some(ctx) = context {
                     batch_contexts.push(ctx);
                 }
@@ -45,9 +48,10 @@ impl TxContextBuilder {
         chain_id: i64,
         use_operator_wallet_id: Option<Uuid>,
         transactions: Vec<StandardTxRequestRaw>,
-    ) -> Option<ExecuteBatchTxContext> {
+    ) -> anyhow::Result<Option<ExecuteBatchTxContext>> {
         let mut execute_batch_input = Vec::new();
         let mut batch_tx_value = 0;
+        let mut tx_requests = Vec::new();
 
         for transaction in transactions.clone() {
             match transaction.clone().into_execute_input() {
@@ -65,24 +69,26 @@ impl TxContextBuilder {
                         .ok();
                 }
             }
+            let tx_request = transaction.into_tx_request_with_input()?;
+            tx_requests.push(tx_request);
         }
 
         if execute_batch_input.is_empty() {
-            return None;
+            return Ok(None);
         }
 
-        Some(ExecuteBatchTxContext {
+        Ok(Some(ExecuteBatchTxContext {
             chain_id,
             use_operator_wallet_id,
             execute_batch_input,
             batch_tx_value,
-            raw_tx_requests: transactions,
+            tx_requests,
             successfully_simulated: false,
             assigned_nonce: None,
             fees: None,
             gas_limit: None,
             tx_hash: None,
-        })
+        }))
     }
 
     fn group_by_chain_and_wallet(

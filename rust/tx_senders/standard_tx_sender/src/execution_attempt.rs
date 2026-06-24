@@ -5,21 +5,14 @@ use seoa_contract::transaction::ExecuteBatchTxContext;
 use sqs_queue::message_body::ToJsonString;
 use uuid::Uuid;
 
-pub trait NewStandardExecutionAttemptBuilder {
+pub trait ExecutionAttemptFromStandardSuccessful {
     fn standard_successful(
         tx_context: &ExecuteBatchTxContext,
         operator_wallet_id: Uuid,
     ) -> anyhow::Result<NewExecutionAttempt>;
-
-    fn standard_failed(
-        tx_context: &ExecuteBatchTxContext,
-        operator_wallet_id: Uuid,
-        error_object: ExecutionErrorObject,
-        retryable: bool,
-    ) -> anyhow::Result<NewExecutionAttempt>;
 }
 
-impl NewStandardExecutionAttemptBuilder for NewExecutionAttempt {
+impl ExecutionAttemptFromStandardSuccessful for NewExecutionAttempt {
     fn standard_successful(
         tx_context: &ExecuteBatchTxContext,
         operator_wallet_id: Uuid,
@@ -48,7 +41,18 @@ impl NewStandardExecutionAttemptBuilder for NewExecutionAttempt {
             retried_by_execution_attempt_id: None,
         })
     }
+}
 
+pub trait ExecutionAttemptFromStandardFailed {
+    fn standard_failed(
+        tx_context: &ExecuteBatchTxContext,
+        operator_wallet_id: Uuid,
+        error_object: ExecutionErrorObject,
+        retryable: bool,
+    ) -> anyhow::Result<NewExecutionAttempt>;
+}
+
+impl ExecutionAttemptFromStandardFailed for NewExecutionAttempt {
     fn standard_failed(
         tx_context: &ExecuteBatchTxContext,
         operator_wallet_id: Uuid,

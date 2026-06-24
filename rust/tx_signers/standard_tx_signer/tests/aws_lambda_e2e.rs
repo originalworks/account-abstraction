@@ -11,7 +11,7 @@ mod tests {
     use sqlx::PgPool;
     use standard_tx_input_db::standard_tx_inputs::StandardTxInputRepo;
     use standard_tx_signer::{Config, aws_lambda::function_handler};
-    use tx_request_db::tx_requests::TxRequestRepo;
+    use tx_request_db::repo::TxRequestRepo;
 
     async fn create_transaction_sender_queue() -> anyhow::Result<()> {
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
@@ -41,6 +41,7 @@ mod tests {
                 min_operator_wallet_balance: 1_000_000,
                 gas_estimation_buffer_ppm: 120_000,
                 blob_gas_estimation_buffer_ppm: 1_000_000,
+                max_retry_attempts: 3,
                 tx_max_age_sec: 3600,
             })
             .await?;

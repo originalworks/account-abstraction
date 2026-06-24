@@ -16,6 +16,7 @@ impl AddAnvilNetwork for NetworkRepo {
             min_operator_wallet_balance: 1_000_000,
             gas_estimation_buffer_ppm: 1_200_000,
             blob_gas_estimation_buffer_ppm: 200_000_000,
+            max_retry_attempts: 3,
             tx_max_age_sec: 3600,
         })
         .await?;

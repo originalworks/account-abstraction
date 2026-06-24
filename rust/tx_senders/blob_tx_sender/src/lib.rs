@@ -45,7 +45,7 @@ pub mod aws_lambda {
     use operator_wallet_db::operator_wallets::OperatorWalletRepo;
     use receipt_poller_queue::ReceiptPollerQueueMessageBody;
     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
-    use tx_request_db::tx_requests::TxRequestRepo;
+    use tx_request_db::repo::TxRequestRepo;
     use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
     use wallet_pool::manager::WalletPoolManager;
 

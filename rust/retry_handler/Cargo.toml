@@ -11,6 +11,12 @@ alloy.workspace = true
 execution_attempt_db.workspace = true
 uuid.workspace = true
 db_types.workspace = true
+seoa_contract.workspace = true
+wallet_pool.workspace = true
+network_db.workspace = true
+operator_wallet_db.workspace = true
+tx_request_db.workspace = true
+tx_input_types.workspace = true
 
 
 # aws
@@ -21,6 +27,10 @@ aws-config = { workspace = true, features = [
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
 retry_queue = { workspace = true, features = ["aws"] }
+standard_tx_sender = { workspace = true, features = ["aws"] }
+execution_attempt_item_db.workspace = true
+sqs_queue.workspace = true
+receipt_poller_queue = { workspace = true, features = ["aws"] }
 
 
 [features]

@@ -5,7 +5,7 @@ use alloy::{
 };
 use blob_storage::storage::s3::S3BlobStorageManager;
 use std::collections::HashMap;
-use tx_request_db::tx_requests::{BlobTxRequestRaw, TxRequestRepo};
+use tx_request_db::{repo::TxRequestRepo, types::BlobTxRequestRaw};
 use uuid::Uuid;
 
 #[derive(Debug)]

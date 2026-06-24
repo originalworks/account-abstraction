@@ -1,7 +1,11 @@
 #![cfg(feature = "aws")]
 
 use crate::{
-    Config, execution_attempt::NewStandardExecutionAttemptBuilder, transaction::TxContextBuilder,
+    Config,
+    execution_attempt::{
+        ExecutionAttemptFromStandardFailed, ExecutionAttemptFromStandardSuccessful,
+    },
+    transaction::TxContextBuilder,
 };
 use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
 use db_types::{ExecutionErrorObject, TxExecutionOutcome, TxStatus};
@@ -19,7 +23,7 @@ use seoa_contract::{
 };
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
 use standard_sender_queue::StandardSenderQueueEvent;
-use tx_request_db::tx_requests::TxRequestRepo;
+use tx_request_db::repo::TxRequestRepo;
 use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
 use wallet_pool::{manager::WalletPoolManager, wallet::Wallet};
 
@@ -156,7 +160,7 @@ impl AwsLambdaOrchestrator {
                 .send_batch(&mut execute_batch_context, &wallet)
                 .await
             {
-                Ok(new_execution_attempt) => {
+                Ok(_) => {
                     let execution_attempt_input = NewExecutionAttempt::standard_successful(
                         &execute_batch_context,
                         wallet.db_record.id,
@@ -179,7 +183,7 @@ impl AwsLambdaOrchestrator {
 
                     let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
                         execution_attempt_id: execution_attempt.id.to_string(),
-                        batch_size: u8::try_from(execute_batch_context.raw_tx_requests.len())?,
+                        batch_size: u8::try_from(execute_batch_context.tx_requests.len())?,
                     };
 
                     self.receipt_poller_queue
@@ -238,7 +242,7 @@ impl AwsLambdaOrchestrator {
                             .expect("error parsing failed");
                         }
                         SEOA::SEOAErrors::ExecutionFailed(_) => {
-                            let batch_size = execute_batch_context.raw_tx_requests.len();
+                            let batch_size = execute_batch_context.tx_requests.len();
                             let retryable = if batch_size > 1 { true } else { false };
                             failed_new_execution = NewExecutionAttempt::standard_failed(
                                 execute_batch_context,
@@ -333,7 +337,7 @@ impl AwsLambdaOrchestrator {
                         .set_status_for_many(&execute_batch_context.get_tx_ids(), TxStatus::FAILED)
                         .await?;
 
-                    for tx_request in execute_batch_context.raw_tx_requests.clone() {
+                    for tx_request in execute_batch_context.tx_requests.clone() {
                         let outcome = failed_new_execution
                             .outcome
                             .clone()

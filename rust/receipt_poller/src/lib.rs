@@ -1,4 +1,3 @@
-#[cfg(feature = "aws")]
 pub mod orchestrator;
 pub mod receipt;
 

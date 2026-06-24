@@ -1,7 +1,7 @@
 use db_types::{TxStatus, TxType};
 use serde::{Deserialize, Serialize};
 use standard_tx_input_db::standard_tx_inputs::NewStandardTxInput;
-use tx_request_db::tx_requests::{NewTxInput, NewTxRequest, NewTxRequestWithTxInput};
+use tx_request_db::types::{NewTxInput, NewTxRequest, NewTxRequestWithTxInput};
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

@@ -71,7 +71,7 @@ pub mod aws_lambda {
     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
     use standard_sender_queue::StandardSenderQueueMessageBody;
     use tx_request::{sqs_parser::tx_requests_from_sqs_event, standard::StandardTxRequestBody};
-    use tx_request_db::tx_requests::TxRequestRepo;
+    use tx_request_db::repo::TxRequestRepo;
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,

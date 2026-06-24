@@ -71,7 +71,7 @@ pub mod aws_lambda {
     use signer_wallet::{IntoSignerWalletConfig, manager::SignerWalletManager};
     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
     use tx_request::{blob_tx::BlobTxRequestBody, sqs_parser::tx_requests_from_sqs_event};
-    use tx_request_db::tx_requests::TxRequestRepo;
+    use tx_request_db::repo::TxRequestRepo;
 
     use crate::{Config, signature::sign_tx_request};
 

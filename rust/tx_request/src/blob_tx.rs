@@ -2,7 +2,7 @@ use alloy::{consensus::BlobTransactionSidecarEip7594, primitives::FixedBytes};
 use blob_tx_input_db::blob_tx_inputs::NewBlobTxInput;
 use db_types::{BlobStorageType, TxStatus, TxType};
 use serde::{Deserialize, Serialize};
-use tx_request_db::tx_requests::{NewTxInput, NewTxRequest, NewTxRequestWithTxInput};
+use tx_request_db::types::{NewTxInput, NewTxRequest, NewTxRequestWithTxInput};
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

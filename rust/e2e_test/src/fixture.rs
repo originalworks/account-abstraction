@@ -15,7 +15,7 @@ use operator_wallet_db::operator_wallets::OperatorWalletRepo;
 use sqlx::PgPool;
 use standard_tx_input_db::standard_tx_inputs::StandardTxInputRepo;
 use tokio::sync::OnceCell;
-use tx_request_db::tx_requests::TxRequestRepo;
+use tx_request_db::repo::TxRequestRepo;
 use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
 
 static E2E_TEST_FIXTURE: OnceCell<E2eTestFixture> = OnceCell::const_new();
