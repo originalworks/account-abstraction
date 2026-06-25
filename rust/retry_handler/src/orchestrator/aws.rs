@@ -122,10 +122,7 @@ impl AwsLambdaOrchestrator {
 
             if let Some(ref outcome) = execution_attempt.execution_attempt.outcome {
                 match outcome {
-                    TxExecutionOutcome::STUCK => {
-                        self.handle_stuck_or_dropped(&execution_attempt).await?
-                    }
-                    TxExecutionOutcome::DROPPED => {
+                    TxExecutionOutcome::STUCK | TxExecutionOutcome::DROPPED => {
                         self.handle_stuck_or_dropped(&execution_attempt).await?
                     }
                     TxExecutionOutcome::REVERTED => self.handle_reverted(&execution_attempt)?,
