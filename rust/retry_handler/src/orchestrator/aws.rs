@@ -11,11 +11,14 @@ use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo
 use lambda_runtime::{LambdaEvent, tracing};
 use network_db::networks::{Network, NetworkRepo};
 use operator_wallet_db::operator_wallets::OperatorWalletRepo;
+use outcome_emitter::{emitter::event_bridge::AwsEventBridgeOutcomeEmitter, outcome::OutcomeEvent};
 use receipt_poller_queue::ReceiptPollerQueueMessageBody;
 use retry_queue::RetryEvent;
 use seoa_contract::contract::ContractManager;
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
-use standard_tx_sender::execution_attempt::ExecutionAttemptFromStandardSuccessful;
+use standard_tx_sender::{
+    error::ExecutionErrorHandler, execution_attempt::ExecutionAttemptFromStandardSuccessful,
+};
 use tx_request_db::repo::TxRequestRepo;
 use uuid::Uuid;
 use wallet_pool::manager::WalletPoolManager;
@@ -33,6 +36,8 @@ pub struct AwsLambdaOrchestrator {
     pub contract_manager: ContractManager,
     pub networks_by_chain_id: HashMap<i64, Network>,
     pub receipt_poller_queue: SqsQueue,
+    pub retry_queue: SqsQueue,
+    pub outcome_emitter: AwsEventBridgeOutcomeEmitter,
 }
 
 impl AwsLambdaOrchestrator {
@@ -60,6 +65,18 @@ impl AwsLambdaOrchestrator {
             &config.receipt_poller_queue_message_group_id,
         )?;
 
+        let retry_queue = SqsQueue::build(
+            &sqs_client,
+            &config.retry_queue_url,
+            &config.retry_queue_message_group_id,
+        )?;
+
+        let event_bridge_client = aws_sdk_eventbridge::Client::new(&aws_config);
+        let outcome_emitter = AwsEventBridgeOutcomeEmitter::build(
+            &event_bridge_client,
+            config.outcome_event_bus_name,
+        );
+
         for network in networks {
             networks_by_chain_id.insert(network.chain_id, network.clone());
         }
@@ -72,6 +89,8 @@ impl AwsLambdaOrchestrator {
             execution_attempt_item_repo,
             tx_request_repo,
             receipt_poller_queue,
+            outcome_emitter,
+            retry_queue,
         })
     }
 
@@ -142,19 +161,7 @@ impl AwsLambdaOrchestrator {
 
         let latest_nonce = wallet.get_latest_nonce().await?;
         let pending_nonce = wallet.get_pending_nonce().await?;
-        println!("pending: {pending_nonce}, latest: {latest_nonce}");
-        let attempts = retried_execution_attempt.tx_requests[0].attempts;
-        if attempts >= network.max_retry_attempts {
-            self.execution_attempt_repo
-                .propagate_outcome(&OutcomePropagationInput {
-                    execution_attempt_id: retried_execution_attempt.execution_attempt.id,
-                    outcome: TxExecutionOutcome::FAILED,
-                    tx_requests_status: TxStatus::FAILED,
-                    retryable: Some(false),
-                    used_gas: retried_execution_attempt.execution_attempt.used_gas,
-                })
-                .await?;
-        }
+
         if latest_nonce < pending_nonce {
             let mut tx_context = retried_execution_attempt.into_execute_batch_context()?;
 
@@ -200,7 +207,7 @@ impl AwsLambdaOrchestrator {
                 }
                 Err(err) => {
                     println!("{err:#?}");
-                    self.handle_error()?;
+                    self.handle_error(&tx_context, &wallet, err).await?;
                 }
             };
         } else {
@@ -211,9 +218,7 @@ impl AwsLambdaOrchestrator {
 
         Ok(())
     }
-    fn handle_error(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
+
     fn handle_reverted(
         &self,
         execution_attempt: &ExecutionAttemptWithTxInputs,
@@ -222,6 +227,4 @@ impl AwsLambdaOrchestrator {
         // break batch into two and retry
         Ok(())
     }
-
-    // async fn propagate_successful_tx(&self, )
 }

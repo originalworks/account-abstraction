@@ -1,6 +1,6 @@
 #![cfg(feature = "aws")]
 
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use crate::{Config, receipt::ReceiptReader};
 use aws_lambda_events::{eventbridge::EventBridgeEvent, sqs::SqsEvent};
@@ -10,7 +10,7 @@ use execution_attempt_db::{
     types::{ExecutionAttemptWithTxs, OutcomePropagationInput},
 };
 use lambda_runtime::{LambdaEvent, tracing};
-use network_db::networks::NetworkRepo;
+use network_db::networks::{Network, NetworkRepo};
 use operator_wallet_db::operator_wallets::OperatorWalletRepo;
 use outcome_emitter::emitter::event_bridge::AwsEventBridgeOutcomeEmitter;
 use receipt_poller_queue::ReceiptPollerEvent;
@@ -32,6 +32,7 @@ pub struct AwsLambdaOrchestrator {
     wallet_pool: WalletPoolManager,
     retry_queue: SqsQueue,
     outcome_emitter: AwsEventBridgeOutcomeEmitter,
+    networks_by_chain_id: HashMap<i64, Network>,
 }
 
 impl AwsLambdaOrchestrator {
@@ -59,12 +60,19 @@ impl AwsLambdaOrchestrator {
             config.outcome_event_bus_name,
         );
 
+        let mut networks_by_chain_id = HashMap::new();
+
+        for network in networks {
+            networks_by_chain_id.insert(network.chain_id, network.clone());
+        }
+
         Ok(Self {
             execution_attempt_repo,
             receipt_reader,
             wallet_pool,
             retry_queue,
             outcome_emitter,
+            networks_by_chain_id,
         })
     }
 
@@ -192,26 +200,53 @@ impl AwsLambdaOrchestrator {
                     }
                 }
                 TxExecutionOutcome::STUCK | TxExecutionOutcome::DROPPED => {
-                    let propagation_input = OutcomePropagationInput {
-                        execution_attempt_id: execution_attempt_with_txs.execution_attempt.id,
-                        outcome: outcome_with_gas.outcome.clone(),
-                        tx_requests_status: TxStatus::RETRIED,
-                        retryable: Some(true),
-                        used_gas: outcome_with_gas.used_gas,
-                    };
+                    let execution_atttempts = execution_attempt_with_txs.tx_requests[0].attempts;
+                    let max_attempts = self
+                        .networks_by_chain_id
+                        .get(&execution_attempt_with_txs.execution_attempt.chain_id)
+                        .ok_or(anyhow::anyhow!("Network not found"))?
+                        .max_retry_attempts;
+                    if execution_atttempts >= max_attempts {
+                        let propagation_input = OutcomePropagationInput {
+                            execution_attempt_id: execution_attempt_with_txs.execution_attempt.id,
+                            outcome: outcome_with_gas.outcome.clone(),
+                            tx_requests_status: TxStatus::FAILED,
+                            retryable: Some(false),
+                            used_gas: outcome_with_gas.used_gas,
+                        };
+                        self.execution_attempt_repo
+                            .propagate_outcome(&propagation_input)
+                            .await?;
 
-                    self.execution_attempt_repo
-                        .propagate_outcome(&propagation_input)
-                        .await?;
+                        self.outcome_emitter
+                            .emit_for_execution_attempt(
+                                &execution_attempt_with_txs,
+                                &outcome_with_gas.outcome,
+                                outcome_with_gas.used_gas,
+                            )
+                            .await?;
+                    } else {
+                        let propagation_input = OutcomePropagationInput {
+                            execution_attempt_id: execution_attempt_with_txs.execution_attempt.id,
+                            outcome: outcome_with_gas.outcome.clone(),
+                            tx_requests_status: TxStatus::RETRIED,
+                            retryable: Some(true),
+                            used_gas: outcome_with_gas.used_gas,
+                        };
 
-                    let message_body = &RetryQueueMessageBody {
-                        execution_attempt_id: execution_attempt_with_txs
-                            .execution_attempt
-                            .id
-                            .to_string(),
-                    };
-                    let message_body_string = message_body.to_json_string()?;
-                    self.retry_queue.send_new(&message_body_string).await?;
+                        self.execution_attempt_repo
+                            .propagate_outcome(&propagation_input)
+                            .await?;
+
+                        let message_body = &RetryQueueMessageBody {
+                            execution_attempt_id: execution_attempt_with_txs
+                                .execution_attempt
+                                .id
+                                .to_string(),
+                        };
+                        let message_body_string = message_body.to_json_string()?;
+                        self.retry_queue.send_new(&message_body_string).await?;
+                    }
                 }
                 TxExecutionOutcome::REVERTED => return Ok(()),
             }
