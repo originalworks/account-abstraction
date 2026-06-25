@@ -122,8 +122,12 @@ impl AwsLambdaOrchestrator {
 
             if let Some(ref outcome) = execution_attempt.execution_attempt.outcome {
                 match outcome {
-                    TxExecutionOutcome::STUCK => self.handle_stuck(&execution_attempt).await?,
-                    TxExecutionOutcome::DROPPED => self.handle_dropped(&execution_attempt)?,
+                    TxExecutionOutcome::STUCK => {
+                        self.handle_stuck_or_dropped(&execution_attempt).await?
+                    }
+                    TxExecutionOutcome::DROPPED => {
+                        self.handle_stuck_or_dropped(&execution_attempt).await?
+                    }
                     TxExecutionOutcome::REVERTED => self.handle_reverted(&execution_attempt)?,
                     TxExecutionOutcome::FAILED | TxExecutionOutcome::SUCCEED => continue,
                 }
@@ -133,16 +137,7 @@ impl AwsLambdaOrchestrator {
         Ok(sqs_batch_response)
     }
 
-    fn handle_dropped(
-        &self,
-        execution_attempt: &ExecutionAttemptWithTxInputs,
-    ) -> anyhow::Result<()> {
-        println!("handle_dropped: {execution_attempt:#?}");
-        // recheck nonces of wallet and resend it with higher gas
-        Ok(())
-    }
-
-    async fn handle_stuck(
+    async fn handle_stuck_or_dropped(
         &self,
         retried_execution_attempt: &ExecutionAttemptWithTxInputs,
     ) -> anyhow::Result<()> {
@@ -160,9 +155,16 @@ impl AwsLambdaOrchestrator {
             .await?;
 
         let latest_nonce = wallet.get_latest_nonce().await?;
-        let pending_nonce = wallet.get_pending_nonce().await?;
+        let retried_execution_nonce = u64::try_from(
+            retried_execution_attempt
+                .execution_attempt
+                .nonce_used
+                .ok_or(anyhow::anyhow!(
+                    "Stuck/Dropped executions should have nonce"
+                ))?,
+        )?;
 
-        if latest_nonce < pending_nonce {
+        if latest_nonce == retried_execution_nonce {
             let mut tx_context = retried_execution_attempt.into_execute_batch_context()?;
 
             tx_context.apply_fee_buffer(u128::try_from(network.gas_estimation_buffer_ppm)?)?;
