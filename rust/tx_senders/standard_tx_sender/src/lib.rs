@@ -1,5 +1,6 @@
 #![recursion_limit = "256"]
 
+pub mod error;
 pub mod execution_attempt;
 pub mod orchestrator;
 pub mod transaction;

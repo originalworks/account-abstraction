@@ -17,7 +17,12 @@ network_db.workspace = true
 operator_wallet_db.workspace = true
 tx_request_db.workspace = true
 tx_input_types.workspace = true
-
+retry_queue = { workspace = true, features = ["aws"] }
+standard_tx_sender = { workspace = true, features = ["aws"] }
+execution_attempt_item_db.workspace = true
+sqs_queue.workspace = true
+receipt_poller_queue = { workspace = true, features = ["aws"] }
+outcome_emitter = { workspace = true, features = ["aws"] }
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }
@@ -26,11 +31,7 @@ aws-config = { workspace = true, features = [
 ], optional = true }
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
-retry_queue = { workspace = true, features = ["aws"] }
-standard_tx_sender = { workspace = true, features = ["aws"] }
-execution_attempt_item_db.workspace = true
-sqs_queue.workspace = true
-receipt_poller_queue = { workspace = true, features = ["aws"] }
+aws-sdk-eventbridge = { workspace = true, optional = true }
 
 
 [features]
@@ -39,6 +40,7 @@ aws = [
     "dep:aws-config",
     "dep:aws_lambda_events",
     "dep:lambda_runtime",
+    "dep:aws-sdk-eventbridge",
 ]
 
 [[bin]]
