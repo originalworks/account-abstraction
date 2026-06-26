@@ -70,7 +70,7 @@ impl ContractManagerForTests for ContractManager {
         let tx_hash = pending_tx.tx_hash().to_string();
 
         let new_execution_attempt =
-            NewExecutionAttempt::standard_successful(tx_context, wallet.db_record.id)?;
+            NewExecutionAttempt::standard_successful(tx_context, wallet.db_record.id, None)?;
 
         Ok(new_execution_attempt)
     }

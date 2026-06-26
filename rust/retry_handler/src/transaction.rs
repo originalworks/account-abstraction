@@ -61,7 +61,7 @@ fn try_option_i64_to_option_u64(input: Option<i64>) -> anyhow::Result<Option<u64
     Ok(output)
 }
 
-fn calculate_batch_tx_value(tx_requests: &Vec<TxRequestWithInput>) -> anyhow::Result<i64> {
+pub fn calculate_batch_tx_value(tx_requests: &Vec<TxRequestWithInput>) -> anyhow::Result<i64> {
     let mut batch_tx_value = 0;
 
     for tx_request in tx_requests {

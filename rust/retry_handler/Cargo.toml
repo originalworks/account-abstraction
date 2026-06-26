@@ -32,6 +32,7 @@ aws-config = { workspace = true, features = [
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
 aws-sdk-eventbridge = { workspace = true, optional = true }
+wallet_assignment_db.workspace = true
 
 
 [features]

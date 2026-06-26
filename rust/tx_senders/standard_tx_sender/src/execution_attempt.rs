@@ -9,6 +9,7 @@ pub trait ExecutionAttemptFromStandardSuccessful {
     fn standard_successful(
         tx_context: &ExecuteBatchTxContext,
         operator_wallet_id: Uuid,
+        source_execution_attempt_id: Option<Uuid>,
     ) -> anyhow::Result<NewExecutionAttempt>;
 }
 
@@ -16,9 +17,13 @@ impl ExecutionAttemptFromStandardSuccessful for NewExecutionAttempt {
     fn standard_successful(
         tx_context: &ExecuteBatchTxContext,
         operator_wallet_id: Uuid,
+        source_execution_attempt_id: Option<Uuid>,
     ) -> anyhow::Result<Self> {
         let Some(fees) = tx_context.fees else {
             bail!("Can't build successful tx without fees");
+        };
+        if tx_context.tx_hash.is_none() {
+            bail!("Can't build successful tx without tx_hash");
         };
         let nonce_used = try_option_u64_to_option_i64(tx_context.assigned_nonce)?;
         let gas_limit = try_option_u64_to_option_i64(tx_context.gas_limit)?;
@@ -38,7 +43,7 @@ impl ExecutionAttemptFromStandardSuccessful for NewExecutionAttempt {
             outcome: None,
             error_object: None,
             retryable: None,
-            retried_by_execution_attempt_id: None,
+            source_execution_attempt_id,
         })
     }
 }
@@ -81,7 +86,7 @@ impl ExecutionAttemptFromStandardFailed for NewExecutionAttempt {
                 outcome: Some(TxExecutionOutcome::REVERTED),
                 error_object: Some(error_object.to_json_string()?),
                 retryable: Some(retryable),
-                retried_by_execution_attempt_id: None,
+                source_execution_attempt_id: None,
             });
         } else {
             return Ok(NewExecutionAttempt {
@@ -99,7 +104,7 @@ impl ExecutionAttemptFromStandardFailed for NewExecutionAttempt {
                 outcome: Some(TxExecutionOutcome::REVERTED),
                 error_object: Some(error_object.to_json_string()?),
                 retryable: Some(retryable),
-                retried_by_execution_attempt_id: None,
+                source_execution_attempt_id: None,
             });
         }
     }

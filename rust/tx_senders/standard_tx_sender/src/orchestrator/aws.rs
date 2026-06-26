@@ -5,19 +5,21 @@ use crate::{
     execution_attempt::ExecutionAttemptFromStandardSuccessful, transaction::TxContextBuilder,
 };
 use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
-use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, NewExecutionAttempt};
+use execution_attempt_db::execution_attempts::{
+    ExecutionAttempt, ExecutionAttemptRepo, NewExecutionAttempt,
+};
 use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo;
 use lambda_runtime::{LambdaEvent, tracing};
 use network_db::networks::NetworkRepo;
 use operator_wallet_db::operator_wallets::OperatorWalletRepo;
 use outcome_emitter::emitter::event_bridge::AwsEventBridgeOutcomeEmitter;
 use receipt_poller_queue::ReceiptPollerQueueMessageBody;
-use seoa_contract::contract::ContractManager;
+use seoa_contract::{contract::ContractManager, transaction::ExecuteBatchTxContext};
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
 use standard_sender_queue::StandardSenderQueueEvent;
 use tx_request_db::repo::TxRequestRepo;
 use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
-use wallet_pool::manager::WalletPoolManager;
+use wallet_pool::{manager::WalletPoolManager, wallet::Wallet};
 
 pub struct AwsLambdaOrchestrator {
     pub wallet_assignment_repo: WalletAssignmentRepo,
@@ -153,34 +155,15 @@ impl AwsLambdaOrchestrator {
                 .await
             {
                 Ok(_) => {
-                    let execution_attempt_input = NewExecutionAttempt::standard_successful(
-                        &execute_batch_context,
-                        wallet.db_record.id,
-                    )?;
                     let execution_attempt = self
-                        .execution_attempt_repo
-                        .insert(&execution_attempt_input)
+                        .save_successful_execution(&execute_batch_context, &wallet)
                         .await?;
 
-                    self.execution_attempt_item_repo
-                        .insert_many(execution_attempt.id, &execute_batch_context.get_tx_ids())
-                        .await?;
-
-                    self.tx_request_repo
-                        .set_status_for_many(
-                            &execute_batch_context.get_tx_ids(),
-                            db_types::TxStatus::BROADCASTED,
-                        )
-                        .await?;
-
-                    let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
-                        execution_attempt_id: execution_attempt.id.to_string(),
-                        batch_size: u8::try_from(execute_batch_context.tx_requests.len())?,
-                    };
-
-                    self.receipt_poller_queue
-                        .send_new(&receipt_poller_queue_message_body.to_json_string()?)
-                        .await?;
+                    self.send_receipt_poller_queue_message(
+                        &execute_batch_context,
+                        &execution_attempt.id.to_string(),
+                    )
+                    .await?;
                 }
 
                 Err(err) => {
@@ -192,5 +175,51 @@ impl AwsLambdaOrchestrator {
         }
 
         Ok(sqs_batch_response)
+    }
+
+    pub async fn save_successful_execution(
+        &self,
+        execute_batch_context: &ExecuteBatchTxContext,
+        wallet: &Wallet,
+    ) -> anyhow::Result<ExecutionAttempt> {
+        let execution_attempt_input = NewExecutionAttempt::standard_successful(
+            execute_batch_context,
+            wallet.db_record.id,
+            None,
+        )?;
+        let execution_attempt = self
+            .execution_attempt_repo
+            .insert(&execution_attempt_input)
+            .await?;
+
+        self.execution_attempt_item_repo
+            .insert_many(execution_attempt.id, &execute_batch_context.get_tx_ids())
+            .await?;
+
+        self.tx_request_repo
+            .set_status_for_many(
+                &execute_batch_context.get_tx_ids(),
+                db_types::TxStatus::BROADCASTED,
+            )
+            .await?;
+
+        Ok(execution_attempt)
+    }
+
+    pub async fn send_receipt_poller_queue_message(
+        &self,
+        execute_batch_context: &ExecuteBatchTxContext,
+        execution_attempt_id: &String,
+    ) -> anyhow::Result<()> {
+        let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
+            execution_attempt_id: execution_attempt_id.clone(),
+            batch_size: u8::try_from(execute_batch_context.tx_requests.len())?,
+        };
+
+        self.receipt_poller_queue
+            .send_new(&receipt_poller_queue_message_body.to_json_string()?)
+            .await?;
+
+        Ok(())
     }
 }

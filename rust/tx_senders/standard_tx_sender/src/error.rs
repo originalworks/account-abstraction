@@ -119,7 +119,13 @@ pub fn build_failed_new_execution(
                     }
                     SEOA::SEOAErrors::ExecutionFailed(_) => {
                         let batch_size = execute_batch_context.tx_requests.len();
-                        let retryable = if batch_size > 1 { true } else { false };
+                        let retryable = if batch_size > 1
+                            && execute_batch_context.use_operator_wallet_id.is_none()
+                        {
+                            true
+                        } else {
+                            false
+                        };
                         failed_new_execution = NewExecutionAttempt::standard_failed(
                             execute_batch_context,
                             wallet.db_record.id,
