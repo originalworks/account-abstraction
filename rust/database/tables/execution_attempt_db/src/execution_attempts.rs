@@ -48,7 +48,7 @@ pub struct NewExecutionAttempt {
     pub outcome: Option<TxExecutionOutcome>,
     pub error_object: Option<String>,
     pub retryable: Option<bool>,
-    pub retried_by_execution_attempt_id: Option<Uuid>,
+    pub source_execution_attempt_id: Option<Uuid>,
 }
 
 impl NewExecutionAttempt {
@@ -68,7 +68,7 @@ impl NewExecutionAttempt {
             outcome: None,
             error_object: None,
             retryable: None,
-            retried_by_execution_attempt_id: None,
+            source_execution_attempt_id: None,
         }
     }
 }
@@ -239,31 +239,7 @@ impl ExecutionAttemptRepo {
 
         Ok(attempt)
     }
-    pub async fn update_retried_by(
-        &self,
-        original_execution_id: &Uuid,
-        retried_by_id: &Uuid,
-    ) -> anyhow::Result<()> {
-        let result = sqlx::query!(
-            r#"
-                    UPDATE execution_attempts
-                    SET
-                        retried_by_execution_attempt_id = $2
-                    WHERE
-                        id = $1
-                "#,
-            original_execution_id,
-            retried_by_id
-        )
-        .execute(&self.pool)
-        .await?;
 
-        if result.rows_affected() == 0 {
-            anyhow::bail!("execution not found {original_execution_id:?}");
-        }
-
-        Ok(())
-    }
     pub async fn insert(&self, input: &NewExecutionAttempt) -> anyhow::Result<ExecutionAttempt> {
         let attempt = sqlx::query_as!(
             ExecutionAttempt,
@@ -283,10 +259,11 @@ impl ExecutionAttemptRepo {
                 tx_value,
                 outcome,
                 error_object,
-                retryable
+                retryable,
+                source_execution_attempt_id
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
             )
             RETURNING
                 id,
@@ -320,7 +297,8 @@ impl ExecutionAttemptRepo {
             input.tx_value,
             input.outcome.clone() as Option<TxExecutionOutcome>,
             input.error_object,
-            input.retryable
+            input.retryable,
+            input.source_execution_attempt_id
         )
         .fetch_one(&self.pool)
         .await?;
@@ -454,6 +432,7 @@ impl ExecutionAttemptRepo {
                     tr.tx_status as "tx_status: TxStatus",
                     attempts,
                     metadata,
+                    use_operator_wallet_id,
 
                     bti.signature as "blob_signature?",
                     bti.image_id as "image_id?",
@@ -504,6 +483,7 @@ impl ExecutionAttemptRepo {
                     attempts: row.attempts,
                     tx_input,
                     metadata: row.metadata,
+                    use_operator_wallet_id: row.use_operator_wallet_id,
                 }
             })
             .collect();

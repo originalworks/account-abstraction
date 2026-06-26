@@ -1,12 +1,12 @@
 use network_db::networks::{NetworkRepo, NewNetwork};
 
 #[allow(async_fn_in_trait)]
-pub trait AddAnvilNetwork {
+pub trait AnvilTestNetwork {
     async fn add_anvil(&self, contract_address: String, chain_id: i64) -> anyhow::Result<()>;
     async fn set_tx_max_age(&self, tx_max_age_sec: i64, chain_id: i64) -> anyhow::Result<()>;
 }
 
-impl AddAnvilNetwork for NetworkRepo {
+impl AnvilTestNetwork for NetworkRepo {
     async fn add_anvil(&self, contract_address: String, chain_id: i64) -> anyhow::Result<()> {
         self.insert_new_network(&NewNetwork {
             rpc_url: "http://anvil:8545".to_string(),

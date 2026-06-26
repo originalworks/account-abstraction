@@ -69,6 +69,7 @@ pub struct ExecutionAttemptWithTxInputRequestRow {
     pub tx_status: TxStatus,
     pub attempts: i32,
     pub metadata: Option<String>,
+    pub use_operator_wallet_id: Option<Uuid>,
 
     pub blob_signature: Option<Vec<u8>>,
     pub image_id: Option<Vec<u8>>,

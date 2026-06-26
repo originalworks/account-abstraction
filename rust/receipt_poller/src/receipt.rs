@@ -23,6 +23,7 @@ type HardlyTypedProvider = FillProvider<
     alloy::providers::RootProvider,
 >;
 
+#[derive(Debug, Clone)]
 pub struct OutcomeWithGas {
     pub outcome: TxExecutionOutcome,
     pub used_gas: Option<i64>,
@@ -110,6 +111,7 @@ impl ReceiptReader {
                     }));
                 }
             } else {
+                println!("dudu");
                 return Ok(None);
             }
         }

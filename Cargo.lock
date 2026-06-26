@@ -4495,6 +4495,7 @@ dependencies = [
  "tx_input_types",
  "tx_request_db",
  "uuid",
+ "wallet_assignment_db",
  "wallet_pool",
 ]
 

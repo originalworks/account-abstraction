@@ -3,7 +3,7 @@ use crate::{
         config::build_aws_sdk_config, event_bridge::attach_outcome_event_bridge_to_queue,
         s3::S3BlobStorageManagerTestFeatures, sqs::TestQueueManager,
     },
-    db::{get_pool, network::AddAnvilNetwork, operator_wallet::InsertFromMnemonic},
+    db::{get_pool, network::AnvilTestNetwork, operator_wallet::InsertFromMnemonic},
 };
 use alloy::{primitives::Address, signers::local::PrivateKeySigner};
 use blob_storage::storage::s3::S3BlobStorageManager;

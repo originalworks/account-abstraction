@@ -60,6 +60,7 @@ pub struct TxRequestWithInput {
     pub tx_input: TxInput,
     pub attempts: i32,
     pub metadata: Option<String>,
+    pub use_operator_wallet_id: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -127,6 +128,7 @@ impl IntoTxRequestWithInput for StandardTxRequestRaw {
                 attempts: self.attempts,
                 tx_input,
                 metadata: self.metadata.clone(),
+                use_operator_wallet_id: self.use_operator_wallet_id.clone(),
             })
         }
     }

@@ -1,5 +1,5 @@
 ALTER TABLE execution_attempts
-ADD COLUMN retried_by_execution_attempt_id UUID
+ADD COLUMN source_execution_attempt_id UUID
 REFERENCES execution_attempts(id);
 
 ALTER TABLE networks

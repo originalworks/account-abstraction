@@ -1,6 +1,8 @@
 #![cfg(feature = "aws")]
-use std::{collections::HashMap, str::FromStr};
-
+use crate::{
+    Config,
+    transaction::{FeeBufferExt, IntoExecuteBatchTxContext, calculate_batch_tx_value},
+};
 use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
 use db_types::{TxExecutionOutcome, TxStatus};
 use execution_attempt_db::{
@@ -14,21 +16,22 @@ use operator_wallet_db::operator_wallets::OperatorWalletRepo;
 use outcome_emitter::{emitter::event_bridge::AwsEventBridgeOutcomeEmitter, outcome::OutcomeEvent};
 use receipt_poller_queue::ReceiptPollerQueueMessageBody;
 use retry_queue::RetryEvent;
-use seoa_contract::contract::ContractManager;
+use seoa_contract::{
+    contract::{ContractManager, sEOA::ExecuteInput},
+    transaction::{ExecuteBatchTxContext, IntoExecuteInput},
+};
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
 use standard_tx_sender::{
     error::ExecutionErrorHandler, execution_attempt::ExecutionAttemptFromStandardSuccessful,
 };
+use std::{collections::HashMap, str::FromStr};
 use tx_request_db::repo::TxRequestRepo;
 use uuid::Uuid;
-use wallet_pool::manager::WalletPoolManager;
-
-use crate::{
-    Config,
-    transaction::{FeeBufferExt, IntoExecuteBatchTxContext},
-};
+use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
+use wallet_pool::{manager::WalletPoolManager, wallet::Wallet};
 
 pub struct AwsLambdaOrchestrator {
+    pub wallet_assignment_repo: WalletAssignmentRepo,
     pub tx_request_repo: TxRequestRepo,
     pub execution_attempt_repo: ExecutionAttemptRepo,
     pub execution_attempt_item_repo: ExecutionAttemptItemRepo,
@@ -49,6 +52,7 @@ impl AwsLambdaOrchestrator {
 
         let config = Config::build()?;
 
+        let wallet_assignment_repo = WalletAssignmentRepo::new(pool.clone());
         let execution_attempt_repo = ExecutionAttemptRepo::new(pool.clone());
         let execution_attempt_item_repo = ExecutionAttemptItemRepo::new(pool.clone());
         let tx_request_repo = TxRequestRepo::new(pool.clone());
@@ -82,6 +86,7 @@ impl AwsLambdaOrchestrator {
         }
 
         Ok(Self {
+            wallet_assignment_repo,
             execution_attempt_repo,
             wallet_pool_manager,
             contract_manager,
@@ -113,7 +118,7 @@ impl AwsLambdaOrchestrator {
                 )?)
                 .await?
             else {
-                println!(
+                tracing::warn!(
                     "execution_attempt not found: {:?}",
                     queue_message.body.execution_attempt_id
                 );
@@ -123,9 +128,16 @@ impl AwsLambdaOrchestrator {
             if let Some(ref outcome) = execution_attempt.execution_attempt.outcome {
                 match outcome {
                     TxExecutionOutcome::STUCK | TxExecutionOutcome::DROPPED => {
-                        self.handle_stuck_or_dropped(&execution_attempt).await?
+                        self.retry_stuck_or_dropped(&execution_attempt).await?
                     }
-                    TxExecutionOutcome::REVERTED => self.handle_reverted(&execution_attempt)?,
+                    TxExecutionOutcome::REVERTED => {
+                        self.retry_reverted(
+                            &execution_attempt,
+                            &mut sqs_batch_response,
+                            &queue_message.message_id,
+                        )
+                        .await?
+                    }
                     TxExecutionOutcome::FAILED | TxExecutionOutcome::SUCCEED => continue,
                 }
             }
@@ -134,7 +146,7 @@ impl AwsLambdaOrchestrator {
         Ok(sqs_batch_response)
     }
 
-    async fn handle_stuck_or_dropped(
+    async fn retry_stuck_or_dropped(
         &self,
         retried_execution_attempt: &ExecutionAttemptWithTxInputs,
     ) -> anyhow::Result<()> {
@@ -172,40 +184,15 @@ impl AwsLambdaOrchestrator {
                 .await
             {
                 Ok(_) => {
-                    let execution_attempt_input =
-                        NewExecutionAttempt::standard_successful(&tx_context, wallet.db_record.id)?;
-
-                    let new_execution_attempt = self
-                        .execution_attempt_repo
-                        .insert(&execution_attempt_input)
-                        .await?;
-
-                    self.execution_attempt_repo
-                        .update_retried_by(
-                            &retried_execution_attempt.execution_attempt.id,
-                            &new_execution_attempt.id,
-                        )
-                        .await?;
-
-                    self.execution_attempt_item_repo
-                        .insert_many(new_execution_attempt.id, &tx_context.get_tx_ids())
-                        .await?;
-
-                    self.tx_request_repo
-                        .mark_many_as_broadcasted_and_bump_attempts(&tx_context.get_tx_ids())
-                        .await?;
-
-                    let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
-                        execution_attempt_id: new_execution_attempt.id.to_string(),
-                        batch_size: u8::try_from(tx_context.tx_requests.len())?,
-                    };
-
-                    self.receipt_poller_queue
-                        .send_new(&receipt_poller_queue_message_body.to_json_string()?)
-                        .await?;
+                    self.save_successful_tx(
+                        &tx_context,
+                        &wallet,
+                        &retried_execution_attempt.execution_attempt.id,
+                    )
+                    .await?;
                 }
                 Err(err) => {
-                    println!("{err:#?}");
+                    tracing::error!("{err:?}");
                     self.handle_error(&tx_context, &wallet, err).await?;
                 }
             };
@@ -218,12 +205,205 @@ impl AwsLambdaOrchestrator {
         Ok(())
     }
 
-    fn handle_reverted(
+    async fn save_successful_tx(
+        &self,
+        tx_context: &ExecuteBatchTxContext,
+        wallet: &Wallet,
+        retried_execution_attempt_id: &Uuid,
+    ) -> anyhow::Result<()> {
+        let execution_attempt_input = NewExecutionAttempt::standard_successful(
+            &tx_context,
+            wallet.db_record.id,
+            Some(retried_execution_attempt_id.clone()),
+        )?;
+
+        let new_execution_attempt = self
+            .execution_attempt_repo
+            .insert(&execution_attempt_input)
+            .await?;
+
+        self.execution_attempt_item_repo
+            .insert_many(new_execution_attempt.id, &tx_context.get_tx_ids())
+            .await?;
+
+        self.tx_request_repo
+            .mark_many_as_broadcasted_and_bump_attempts(&tx_context.get_tx_ids())
+            .await?;
+
+        let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
+            execution_attempt_id: new_execution_attempt.id.to_string(),
+            batch_size: u8::try_from(tx_context.tx_requests.len())?,
+        };
+
+        self.receipt_poller_queue
+            .send_new(&receipt_poller_queue_message_body.to_json_string()?)
+            .await?;
+        Ok(())
+    }
+
+    fn split_into_execute_batch_context(
         &self,
         execution_attempt: &ExecutionAttemptWithTxInputs,
+    ) -> anyhow::Result<Vec<ExecuteBatchTxContext>> {
+        let mut execute_batch_contexts = Vec::new();
+
+        let use_operator_wallet_id = execution_attempt.tx_requests[0].use_operator_wallet_id;
+
+        let mid = execution_attempt.tx_requests.len().div_ceil(2);
+
+        let (tx_request_batch_a, tx_request_batch_b) = execution_attempt.tx_requests.split_at(mid);
+
+        let context_a = ExecuteBatchTxContext {
+            chain_id: execution_attempt.execution_attempt.chain_id,
+            use_operator_wallet_id,
+            execute_batch_input: tx_request_batch_a
+                .iter()
+                .map(|tx_request| tx_request.into_execute_input())
+                .collect::<anyhow::Result<Vec<ExecuteInput>>>()?,
+            batch_tx_value: calculate_batch_tx_value(&tx_request_batch_a.to_vec())?,
+            tx_requests: tx_request_batch_a.to_vec(),
+            successfully_simulated: false,
+            assigned_nonce: None,
+            fees: None,
+            gas_limit: None,
+            tx_hash: None,
+        };
+
+        let context_b = ExecuteBatchTxContext {
+            chain_id: execution_attempt.execution_attempt.chain_id,
+            use_operator_wallet_id,
+            execute_batch_input: tx_request_batch_b
+                .iter()
+                .map(|tx_request| tx_request.into_execute_input())
+                .collect::<anyhow::Result<Vec<ExecuteInput>>>()?,
+            batch_tx_value: calculate_batch_tx_value(&tx_request_batch_b.to_vec())?,
+            tx_requests: tx_request_batch_b.to_vec(),
+            successfully_simulated: false,
+            assigned_nonce: None,
+            fees: None,
+            gas_limit: None,
+            tx_hash: None,
+        };
+
+        execute_batch_contexts.push(context_a);
+        execute_batch_contexts.push(context_b);
+
+        Ok(execute_batch_contexts)
+    }
+
+    async fn retry_reverted(
+        &self,
+        execution_attempt: &ExecutionAttemptWithTxInputs,
+        sqs_batch_response: &mut SqsBatchResponse,
+        queue_message_id: &String,
     ) -> anyhow::Result<()> {
-        println!("handle_reverted: {execution_attempt:#?}");
-        // break batch into two and retry
+        if execution_attempt.tx_requests[0]
+            .use_operator_wallet_id
+            .is_some()
+        {
+            tracing::warn!(
+                "Can't handle reverted execution with use_operator_wallet_id. Marking as FAILED..."
+            );
+            self.execution_attempt_repo
+                .propagate_outcome(&OutcomePropagationInput {
+                    execution_attempt_id: execution_attempt.execution_attempt.id,
+                    outcome: TxExecutionOutcome::FAILED,
+                    tx_requests_status: TxStatus::FAILED,
+                    retryable: Some(false),
+                    used_gas: execution_attempt.execution_attempt.used_gas,
+                })
+                .await?;
+            for tx_request in execution_attempt.tx_requests.clone() {
+                self.outcome_emitter
+                    .emit_outcome(&OutcomeEvent {
+                        outcome: TxExecutionOutcome::FAILED,
+                        tx_request_id: tx_request.tx_id,
+                        gas_fee: execution_attempt.execution_attempt.used_gas,
+                        transaction_hash: execution_attempt.execution_attempt.tx_hash.clone(),
+                        error: execution_attempt.execution_attempt.error_object.clone(),
+                        metadata: tx_request.metadata,
+                    })
+                    .await?;
+            }
+            return Ok(());
+        }
+        if execution_attempt.tx_requests.len() > 1 {
+            let original_execution_id = execution_attempt.execution_attempt.id;
+            let split_execute_batch_context =
+                self.split_into_execute_batch_context(execution_attempt)?;
+
+            for mut tx_context in split_execute_batch_context {
+                let Some(mut wallet) = self
+                    .wallet_pool_manager
+                    .acquire(tx_context.chain_id, None)
+                    .await?
+                else {
+                    sqs_batch_response.add_failure(queue_message_id);
+                    continue;
+                };
+
+                let wallet_assignment_ids = self
+                    .wallet_assignment_repo
+                    .new_assignments(&tx_context.get_tx_ids(), wallet.db_record.id)
+                    .await?;
+
+                match self
+                    .contract_manager
+                    .simulate_send_batch_tx(&mut tx_context, &mut wallet)
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(err) => {
+                        tracing::error!("{err:?}");
+                        self.wallet_pool_manager
+                            .release_unused(wallet.db_record.id)
+                            .await?;
+                        self.handle_error(&tx_context, &wallet, err).await?;
+                        continue;
+                    }
+                };
+                match self
+                    .contract_manager
+                    .send_batch(&mut tx_context, &wallet)
+                    .await
+                {
+                    Ok(_) => {
+                        self.save_successful_tx(&tx_context, &wallet, &original_execution_id)
+                            .await?;
+                    }
+                    Err(err) => {
+                        tracing::error!("{err:?}");
+                        self.handle_error(&tx_context, &wallet, err).await?;
+                    }
+                }
+            }
+        } else {
+            tracing::warn!(
+                "Can't handle reverted execution with only one tx. Marking as FAILED..."
+            );
+            self.execution_attempt_repo
+                .propagate_outcome(&OutcomePropagationInput {
+                    execution_attempt_id: execution_attempt.execution_attempt.id,
+                    outcome: TxExecutionOutcome::FAILED,
+                    tx_requests_status: TxStatus::FAILED,
+                    retryable: Some(false),
+                    used_gas: execution_attempt.execution_attempt.used_gas,
+                })
+                .await?;
+
+            for tx_request in execution_attempt.tx_requests.clone() {
+                self.outcome_emitter
+                    .emit_outcome(&OutcomeEvent {
+                        outcome: TxExecutionOutcome::FAILED,
+                        tx_request_id: tx_request.tx_id,
+                        gas_fee: execution_attempt.execution_attempt.used_gas,
+                        transaction_hash: execution_attempt.execution_attempt.tx_hash.clone(),
+                        error: execution_attempt.execution_attempt.error_object.clone(),
+                        metadata: tx_request.metadata,
+                    })
+                    .await?;
+            }
+        }
         Ok(())
     }
 }
