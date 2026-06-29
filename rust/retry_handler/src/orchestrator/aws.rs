@@ -6,7 +6,7 @@ use crate::{
 use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
 use db_types::{TxExecutionOutcome, TxStatus};
 use execution_attempt_db::{
-    execution_attempts::{ExecutionAttemptRepo, NewExecutionAttempt},
+    execution_attempts::{ExecutionAttempt, ExecutionAttemptRepo, NewExecutionAttempt},
     types::{ExecutionAttemptWithTxInputs, OutcomePropagationInput},
 };
 use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo;
@@ -184,10 +184,17 @@ impl AwsLambdaOrchestrator {
                 .await
             {
                 Ok(_) => {
-                    self.save_successful_tx(
+                    let new_execution_attempt = self
+                        .save_successful_tx(
+                            &tx_context,
+                            &wallet,
+                            &retried_execution_attempt.execution_attempt.id,
+                        )
+                        .await?;
+
+                    self.send_receipt_poller_queue_message(
                         &tx_context,
-                        &wallet,
-                        &retried_execution_attempt.execution_attempt.id,
+                        &new_execution_attempt.id.to_string(),
                     )
                     .await?;
                 }
@@ -210,7 +217,7 @@ impl AwsLambdaOrchestrator {
         tx_context: &ExecuteBatchTxContext,
         wallet: &Wallet,
         retried_execution_attempt_id: &Uuid,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<ExecutionAttempt> {
         let execution_attempt_input = NewExecutionAttempt::standard_successful(
             &tx_context,
             wallet.db_record.id,
@@ -230,8 +237,16 @@ impl AwsLambdaOrchestrator {
             .mark_many_as_broadcasted_and_bump_attempts(&tx_context.get_tx_ids())
             .await?;
 
+        Ok(new_execution_attempt)
+    }
+
+    async fn send_receipt_poller_queue_message(
+        &self,
+        tx_context: &ExecuteBatchTxContext,
+        execution_attempt_id: &String,
+    ) -> anyhow::Result<()> {
         let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
-            execution_attempt_id: new_execution_attempt.id.to_string(),
+            execution_attempt_id: execution_attempt_id.clone(),
             batch_size: u8::try_from(tx_context.tx_requests.len())?,
         };
 
@@ -293,11 +308,11 @@ impl AwsLambdaOrchestrator {
 
     async fn retry_reverted(
         &self,
-        execution_attempt: &ExecutionAttemptWithTxInputs,
+        retried_execution_attempt: &ExecutionAttemptWithTxInputs,
         sqs_batch_response: &mut SqsBatchResponse,
         queue_message_id: &String,
     ) -> anyhow::Result<()> {
-        if execution_attempt.tx_requests[0]
+        if retried_execution_attempt.tx_requests[0]
             .use_operator_wallet_id
             .is_some()
         {
@@ -306,31 +321,37 @@ impl AwsLambdaOrchestrator {
             );
             self.execution_attempt_repo
                 .propagate_outcome(&OutcomePropagationInput {
-                    execution_attempt_id: execution_attempt.execution_attempt.id,
+                    execution_attempt_id: retried_execution_attempt.execution_attempt.id,
                     outcome: TxExecutionOutcome::FAILED,
                     tx_requests_status: TxStatus::FAILED,
                     retryable: Some(false),
-                    used_gas: execution_attempt.execution_attempt.used_gas,
+                    used_gas: retried_execution_attempt.execution_attempt.used_gas,
                 })
                 .await?;
-            for tx_request in execution_attempt.tx_requests.clone() {
+            for tx_request in retried_execution_attempt.tx_requests.clone() {
                 self.outcome_emitter
                     .emit_outcome(&OutcomeEvent {
                         outcome: TxExecutionOutcome::FAILED,
                         tx_request_id: tx_request.tx_id,
-                        gas_fee: execution_attempt.execution_attempt.used_gas,
-                        transaction_hash: execution_attempt.execution_attempt.tx_hash.clone(),
-                        error: execution_attempt.execution_attempt.error_object.clone(),
+                        gas_fee: retried_execution_attempt.execution_attempt.used_gas,
+                        transaction_hash: retried_execution_attempt
+                            .execution_attempt
+                            .tx_hash
+                            .clone(),
+                        error: retried_execution_attempt
+                            .execution_attempt
+                            .error_object
+                            .clone(),
                         metadata: tx_request.metadata,
                     })
                     .await?;
             }
             return Ok(());
         }
-        if execution_attempt.tx_requests.len() > 1 {
-            let original_execution_id = execution_attempt.execution_attempt.id;
+        if retried_execution_attempt.tx_requests.len() > 1 {
+            let original_execution_id = retried_execution_attempt.execution_attempt.id;
             let split_execute_batch_context =
-                self.split_into_execute_batch_context(execution_attempt)?;
+                self.split_into_execute_batch_context(retried_execution_attempt)?;
 
             for mut tx_context in split_execute_batch_context {
                 let Some(mut wallet) = self
@@ -358,7 +379,14 @@ impl AwsLambdaOrchestrator {
                         self.wallet_pool_manager
                             .release_unused(wallet.db_record.id)
                             .await?;
-                        self.handle_error(&tx_context, &wallet, err).await?;
+                        let failed_execution_attempt =
+                            self.handle_error(&tx_context, &wallet, err).await?;
+                        self.execution_attempt_repo
+                            .set_source_execution_attempt_id(
+                                &failed_execution_attempt.id,
+                                &retried_execution_attempt.execution_attempt.id,
+                            )
+                            .await?;
                         continue;
                     }
                 };
@@ -368,8 +396,14 @@ impl AwsLambdaOrchestrator {
                     .await
                 {
                     Ok(_) => {
-                        self.save_successful_tx(&tx_context, &wallet, &original_execution_id)
+                        let new_execution_attempt = self
+                            .save_successful_tx(&tx_context, &wallet, &original_execution_id)
                             .await?;
+                        self.send_receipt_poller_queue_message(
+                            &tx_context,
+                            &new_execution_attempt.id.to_string(),
+                        )
+                        .await?;
                     }
                     Err(err) => {
                         tracing::error!("{err:?}");
@@ -383,22 +417,28 @@ impl AwsLambdaOrchestrator {
             );
             self.execution_attempt_repo
                 .propagate_outcome(&OutcomePropagationInput {
-                    execution_attempt_id: execution_attempt.execution_attempt.id,
+                    execution_attempt_id: retried_execution_attempt.execution_attempt.id,
                     outcome: TxExecutionOutcome::FAILED,
                     tx_requests_status: TxStatus::FAILED,
                     retryable: Some(false),
-                    used_gas: execution_attempt.execution_attempt.used_gas,
+                    used_gas: retried_execution_attempt.execution_attempt.used_gas,
                 })
                 .await?;
 
-            for tx_request in execution_attempt.tx_requests.clone() {
+            for tx_request in retried_execution_attempt.tx_requests.clone() {
                 self.outcome_emitter
                     .emit_outcome(&OutcomeEvent {
                         outcome: TxExecutionOutcome::FAILED,
                         tx_request_id: tx_request.tx_id,
-                        gas_fee: execution_attempt.execution_attempt.used_gas,
-                        transaction_hash: execution_attempt.execution_attempt.tx_hash.clone(),
-                        error: execution_attempt.execution_attempt.error_object.clone(),
+                        gas_fee: retried_execution_attempt.execution_attempt.used_gas,
+                        transaction_hash: retried_execution_attempt
+                            .execution_attempt
+                            .tx_hash
+                            .clone(),
+                        error: retried_execution_attempt
+                            .execution_attempt
+                            .error_object
+                            .clone(),
                         metadata: tx_request.metadata,
                     })
                     .await?;

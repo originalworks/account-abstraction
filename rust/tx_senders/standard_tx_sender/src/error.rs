@@ -1,8 +1,11 @@
 use crate::{
     execution_attempt::ExecutionAttemptFromStandardFailed, orchestrator::aws::AwsLambdaOrchestrator,
 };
+use anyhow::bail;
 use db_types::{ExecutionErrorObject, TxExecutionOutcome, TxStatus};
-use execution_attempt_db::execution_attempts::{ExecutionAttemptRepo, NewExecutionAttempt};
+use execution_attempt_db::execution_attempts::{
+    ExecutionAttempt, ExecutionAttemptRepo, NewExecutionAttempt,
+};
 use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo;
 use lambda_runtime::tracing;
 use outcome_emitter::{emitter::event_bridge::AwsEventBridgeOutcomeEmitter, outcome::OutcomeEvent};
@@ -25,7 +28,8 @@ pub trait ExecutionErrorHandler {
         execute_batch_context: &ExecuteBatchTxContext,
         wallet: &Wallet,
         error: anyhow::Error,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<ExecutionAttempt> {
+        let error_string = error.to_string();
         if let Some(failed_new_execution) =
             build_failed_new_execution(execute_batch_context, wallet, error)?
         {
@@ -72,9 +76,15 @@ pub trait ExecutionErrorHandler {
                     }
                 }
             }
+            return Ok(execution_attempt);
+        } else {
+            bail!(
+                "Failed to handle execution error. Context: {:?}, wallet_id: {}, error: {:?}",
+                execute_batch_context,
+                wallet.db_record.id,
+                error_string
+            )
         }
-
-        Ok(())
     }
 }
 
