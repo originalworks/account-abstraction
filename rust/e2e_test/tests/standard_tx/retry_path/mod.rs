@@ -1,4 +1,5 @@
 pub mod retry_path_standard_dropped;
+pub mod retry_path_standard_reverted;
 pub mod retry_path_standard_tx_stuck;
 
 use e2e_test::{db::network::AnvilTestNetwork, fixture::E2eTestFixture};

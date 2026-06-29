@@ -5,7 +5,6 @@ use alloy::{
         Provider, ProviderBuilder,
         fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller},
     },
-    rpc::types::TransactionReceipt,
 };
 use anyhow::bail;
 use db_types::TxExecutionOutcome;
@@ -111,7 +110,6 @@ impl ReceiptReader {
                     }));
                 }
             } else {
-                println!("dudu");
                 return Ok(None);
             }
         }

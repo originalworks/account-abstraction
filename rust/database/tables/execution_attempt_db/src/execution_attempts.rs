@@ -207,7 +207,27 @@ impl ExecutionAttemptRepo {
         Ok(attempts)
     }
 
-    pub async fn find_by_id(&self, id: Uuid) -> anyhow::Result<ExecutionAttempt> {
+    pub async fn set_source_execution_attempt_id(
+        &self,
+        set_for: &Uuid,
+        source_execuiton_attempt_id: &Uuid,
+    ) -> anyhow::Result<()> {
+        sqlx::query!(
+            r#"
+                UPDATE execution_attempts
+                SET 
+                    source_execution_attempt_id = $2
+                WHERE id = $1
+            "#,
+            set_for,
+            source_execuiton_attempt_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn find_by_id(&self, id: &Uuid) -> anyhow::Result<ExecutionAttempt> {
         let attempt = sqlx::query_as!(
             ExecutionAttempt,
             r#"

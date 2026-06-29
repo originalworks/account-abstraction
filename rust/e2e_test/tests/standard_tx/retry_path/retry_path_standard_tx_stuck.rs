@@ -5,7 +5,7 @@ use e2e_test::{
         event::{TestEventMessage, build_lambda_sqs_event},
         test_queue::SqsQueueTester,
     },
-    db::{execution_attempt::FindExecutionByTxId, network::AnvilTestNetwork},
+    db::execution_attempt::ExecutionAttemptTestExt,
     fixture::E2eTestFixture,
     tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional},
 };

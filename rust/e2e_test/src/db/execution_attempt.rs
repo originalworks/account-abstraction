@@ -1,12 +1,55 @@
 use db_types::{TxExecutionOutcome, TxType};
 use execution_attempt_db::execution_attempts::{ExecutionAttempt, ExecutionAttemptRepo};
+use uuid::Uuid;
 
 #[allow(async_fn_in_trait)]
-pub trait FindExecutionByTxId {
+pub trait ExecutionAttemptTestExt {
     async fn find_by_tx_id(&self, tx_id: &String) -> anyhow::Result<Vec<ExecutionAttempt>>;
+    async fn find_by_source_execution_attempt_id(
+        &self,
+        source_execution_attempt_id: &Uuid,
+    ) -> anyhow::Result<Vec<ExecutionAttempt>>;
 }
 
-impl FindExecutionByTxId for ExecutionAttemptRepo {
+impl ExecutionAttemptTestExt for ExecutionAttemptRepo {
+    async fn find_by_source_execution_attempt_id(
+        &self,
+        source_execution_attempt_id: &Uuid,
+    ) -> anyhow::Result<Vec<ExecutionAttempt>> {
+        let attempts = sqlx::query_as!(
+            ExecutionAttempt,
+            r#"
+        SELECT
+            id,
+            chain_id,
+            operator_wallet_id,
+            tx_type as "tx_type: TxType",
+            nonce_used,
+            tx_value,
+            tx_hash,
+            gas_limit,
+            used_gas,
+            max_fee_per_gas,
+            max_priority_fee,
+            max_fee_per_blob_gas,
+            outcome as "outcome: TxExecutionOutcome",
+            error_object,
+            created_at,
+            updated_at
+        FROM
+            execution_attempts
+        WHERE
+            source_execution_attempt_id = $1
+        ORDER BY
+            created_at DESC
+        "#,
+            source_execution_attempt_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(attempts)
+    }
     async fn find_by_tx_id(&self, tx_id: &String) -> anyhow::Result<Vec<ExecutionAttempt>> {
         let attempts = sqlx::query_as!(
             ExecutionAttempt,

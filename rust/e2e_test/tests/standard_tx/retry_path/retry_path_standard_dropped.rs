@@ -7,7 +7,7 @@ use e2e_test::{
         event::{TestEventMessage, build_lambda_sqs_event},
         test_queue::SqsQueueTester,
     },
-    db::execution_attempt::FindExecutionByTxId,
+    db::execution_attempt::ExecutionAttemptTestExt,
     fixture::E2eTestFixture,
     tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional},
 };
@@ -153,6 +153,7 @@ pub async fn retry_path_standard_dropped(e2e_test_fixture: &E2eTestFixture) -> a
 
     assert_eq!(tx_request.tx_status, TxStatus::BROADCASTED);
 
+    // POLL FOR RECEIPT AGAIN
     let receipt_poller_queue_event_2 = e2e_test_fixture
         .test_queue_manager
         .receipt_poller_queue
