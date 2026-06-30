@@ -13,45 +13,50 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
   DatabaseAccessSecurityGroup:
     Type: AWS::SSM::Parameter::Value<String>
-  StandardSenderQueueMessageGroupId:
-    Type: String
-    Default: standard-sender-queue-group
-  RetryQueueMessageGroupId:
-    Type: String
-    Default: retry-queue-group
-  ReceiptPollerQueueMessageGroupId:
-    Type: String
-    Default: receipt-poller-queue-group
-  StandardTxSenderQueueName:
-    Type: String
-    Default: standard-tx-sender.fifo
-  StandardTxSenderDlqName:
-    Type: String
-    Default: standard-tx-sender-dlq.fifo
+
   StandardTxSignerQueueName:
     Type: String
     Default: standard-tx-signer.fifo
   StandardTxSignerDlqName:
     Type: String
     Default: standard-tx-signer-dlq.fifo
+
+  StandardSenderQueueMessageGroupId:
+    Type: String
+    Default: standard-sender-queue-group
+  StandardTxSenderQueueName:
+    Type: String
+    Default: standard-tx-sender.fifo
+  StandardTxSenderDlqName:
+    Type: String
+    Default: standard-tx-sender-dlq.fifo
+
+  ReceiptPollerQueueMessageGroupId:
+    Type: String
+    Default: receipt-poller-queue-group
   ReceiptPollerQueueName:
     Type: String
     Default: receipt-poller.fifo
   ReceiptPollerDlqName:
     Type: String
     Default: receipt-poller-dlq.fifo
+  ReceiptPollerCleanupSchedulerRate:
+    Type: String
+  ReceiptPollerQueueDelay:
+    Type: Number
+    Default: 15
+
   RetryQueueName:
     Type: String
     Default: aa-tx-retry.fifo
   RetryDlqName:
     Type: String
     Default: aa-tx-retry-dlq.fifo
-  ReceiptPollerQueueDelay:
-    Type: Number
-    Default: 15
-  OutcomeEventBusName:
+  RetryQueueMessageGroupId:
     Type: String
-  ReceiptPollerCleanupSchedulerRate:
+    Default: retry-queue-group
+
+  OutcomeEventBusName:
     Type: String
 
 Resources:
