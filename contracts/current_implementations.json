@@ -1,0 +1,14 @@
+{
+    "dev": {
+        "polygonAmoy": "0xF10A60D2394f6fc66b1E6967790F96E3F9b239d6",
+        "baseSepolia": "0xb5fd5b244165FdAC4290CD852A7532141CA840E0",
+        "gnosisChiado": "0xF10A60D2394f6fc66b1E6967790F96E3F9b239d6",
+        "ethereumSepolia": "0xb5fd5b244165FdAC4290CD852A7532141CA840E0"
+    },
+    "stage": {
+        "polygonAmoy": "0x15bc34E50eA5d9da93c0Fa3E2B6bDBa808C3E9C1",
+        "baseSepolia": "0x98b3258a99aC817C0461DBA91c843a1719F78876",
+        "gnosisChiado": "0x98b3258a99aC817C0461DBA91c843a1719F78876",
+        "ethereumSepolia": "0xAd907fcc79ea17a557b5516Ff8B80BbD4d075158"
+    }
+}
