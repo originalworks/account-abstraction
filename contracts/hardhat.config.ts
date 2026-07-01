@@ -1,5 +1,6 @@
 import type { HardhatUserConfig } from "hardhat/config";
-
+import * as dotenv from "dotenv";
+dotenv.config();
 import hardhatEthers from "@nomicfoundation/hardhat-ethers";
 import hardhatEthersChaiMatchers from "@nomicfoundation/hardhat-ethers-chai-matchers";
 import hardhatKeystore from "@nomicfoundation/hardhat-keystore";
@@ -67,12 +68,7 @@ const config: HardhatUserConfig = {
     },
     sepolia: {
       type: "http",
-      chainType: "l1",
-      url: "https://eth-sepolia.g.alchemy.com/v2/PlbpBvp7JeNHwWFG0TY1X",
-      accounts: [
-        configVariable("WALLET_ONE_PK"),
-        configVariable("WALLET_TWO_PK"),
-      ],
+      url: "https://eth-sepolia.g.alchemy.com/v2/s52DQvjWKuzeYvBadyLNC",
     },
   },
 };
