@@ -1,6 +1,8 @@
 Transform: AWS::Serverless-2016-10-31
 
 Parameters:
+  Environment:
+    Type: String
   DatabaseName:
     Type: String
   DbSecretsName:
@@ -199,3 +201,13 @@ Resources:
         DatabaseName: !Ref DatabaseName
         DatabaseAccessSecurityGroup: !Ref DatabaseAccessSecurityGroup
         PrivateSubnets: !Ref PrivateSubnets
+
+  SsmParameters:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./resources/ssm.yml
+      Parameters:
+        StandardTxSignerQueueUrl: !GetAtt StandardTxSigner.Outputs.StandardTxSignerQueueUrl
+        StandardTxSignerQueueArn: !GetAtt StandardTxSigner.Outputs.StandardTxSignerQueueArn
+        OutcomeEventBusName: !Ref OutcomeEventBusName
+        Environment: !Ref Environment
