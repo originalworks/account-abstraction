@@ -93,3 +93,12 @@ Resources:
             BatchSize: 5
             FunctionResponseTypes:
               - ReportBatchItemFailures
+
+Outputs:
+  StandardTxSignerQueueArn:
+    Description: ARN of the StandardTxSigner SQS queue
+    Value: !GetAtt StandardTxSignerQueue.Arn
+
+  StandardTxSignerQueueUrl:
+    Description: URL of the StandardTxSigner SQS queue
+    Value: !Ref StandardTxSignerQueue

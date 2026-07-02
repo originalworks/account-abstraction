@@ -1,0 +1,33 @@
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  StandardTxSignerQueueUrl:
+    Type: String
+  StandardTxSignerQueueArn:
+    Type: String
+  OutcomeEventBusName:
+    Type: String
+  Environment:
+    Type: String
+
+Resources:
+  StandardTxSignerQueueUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /account-abstraction/${Environment}/sqs/standard-tx-signer/url
+      Type: String
+      Value: !Ref StandardTxSignerQueueUrl
+
+  StandardTxSignerQueueArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /account-abstraction/${Environment}/sqs/standard-tx-signer/arn
+      Type: String
+      Value: !Ref StandardTxSignerQueueArn
+
+  OutcomeEventBusNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /account-abstraction/${Environment}/event-bus/tx-outcome/name
+      Type: String
+      Value: !Ref StandardTxSignerQueueArn
