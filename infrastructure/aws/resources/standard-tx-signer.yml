@@ -36,7 +36,7 @@ Resources:
       QueueName: !Ref StandardTxSignerQueueName
       FifoQueue: true
       ContentBasedDeduplication: true
-      VisibilityTimeout: 300
+      VisibilityTimeout: 35
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt StandardTxSignerDeadLetterQueue.Arn
         maxReceiveCount: 5
@@ -49,7 +49,7 @@ Resources:
         - x86_64
       Handler: bootstrap
       CodeUri: ../../../target/lambda/aws_standard_tx_signer
-      Timeout: 300
+      Timeout: 25
       Role: !Ref LambdaFunctionRoleArn
       Environment:
         Variables:

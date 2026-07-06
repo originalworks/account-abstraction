@@ -41,7 +41,7 @@ Resources:
       FifoQueue: true
       ContentBasedDeduplication: true
       DelaySeconds: !Ref ReceiptPollerQueueDelay
-      VisibilityTimeout: 300
+      VisibilityTimeout: 35
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt ReceiptPollerDeadLetterQueue.Arn
         maxReceiveCount: 5
@@ -54,7 +54,7 @@ Resources:
         - x86_64
       Handler: bootstrap
       CodeUri: ../../../target/lambda/aws_receipt_poller
-      Timeout: 300
+      Timeout: 25
       Role: !Ref LambdaFunctionRoleArn
       Environment:
         Variables:
