@@ -43,9 +43,13 @@ pub async fn retry_path_blob_tx_dropped(e2e_test_fixture: &E2eTestFixture) -> an
         None,
     )])?;
 
-    blob_tx_signer::aws_lambda::function_handler(tx_request_event, &e2e_test_fixture.pool)
-        .await
-        .unwrap();
+    blob_tx_signer::aws_lambda::function_handler(
+        tx_request_event,
+        &e2e_test_fixture.pool,
+        &e2e_test_fixture.aws_config,
+    )
+    .await
+    .unwrap();
 
     // receive message to clear the queue
     e2e_test_fixture
