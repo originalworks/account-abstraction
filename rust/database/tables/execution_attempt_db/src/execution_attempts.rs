@@ -29,6 +29,7 @@ pub struct ExecutionAttempt {
     pub max_fee_per_blob_gas: Option<i64>,
     pub outcome: Option<TxExecutionOutcome>,
     pub error_object: Option<String>,
+    pub retryable: Option<bool>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -71,6 +72,26 @@ impl NewExecutionAttempt {
             source_execution_attempt_id: None,
         }
     }
+
+    pub fn default_blob(chain_id: i64, operator_wallet_id: Uuid) -> Self {
+        Self {
+            chain_id,
+            operator_wallet_id,
+            nonce_used: None,
+            tx_value: 0,
+            tx_type: TxType::BLOB,
+            tx_hash: None,
+            gas_limit: None,
+            used_gas: None,
+            max_fee_per_gas: None,
+            max_priority_fee: None,
+            max_fee_per_blob_gas: None,
+            outcome: None,
+            error_object: None,
+            retryable: None,
+            source_execution_attempt_id: None,
+        }
+    }
 }
 
 pub struct ExecutionAttemptRepo {
@@ -101,6 +122,7 @@ impl ExecutionAttemptRepo {
                 ea.max_fee_per_blob_gas,
                 ea.outcome as "outcome: TxExecutionOutcome",
                 ea.error_object,
+                ea.retryable,
                 ea.created_at as attempt_created_at,
                 ea.updated_at as attempt_updated_at,
 
@@ -156,6 +178,7 @@ impl ExecutionAttemptRepo {
                         max_priority_fee: row.max_priority_fee,
                         max_fee_per_blob_gas: row.max_fee_per_blob_gas,
                         outcome: row.outcome.clone(),
+                        retryable: row.retryable.clone(),
                         error_object: row.error_object.clone(),
                         created_at: row.attempt_created_at,
                         updated_at: row.attempt_updated_at,
@@ -246,6 +269,7 @@ impl ExecutionAttemptRepo {
                 max_fee_per_blob_gas,
                 outcome as "outcome: TxExecutionOutcome",
                 error_object,
+                retryable,
                 created_at,
                 updated_at
             FROM
@@ -300,6 +324,7 @@ impl ExecutionAttemptRepo {
                 max_fee_per_blob_gas,
                 outcome as "outcome: TxExecutionOutcome",
                 error_object,
+                retryable,
                 created_at,
                 updated_at
             "#,
@@ -332,7 +357,7 @@ impl ExecutionAttemptRepo {
     ) -> anyhow::Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        let attempt = sqlx::query_as!(
+        let _attempt = sqlx::query_as!(
             ExecutionAttempt,
             r#"
             UPDATE execution_attempts
@@ -357,6 +382,7 @@ impl ExecutionAttemptRepo {
                 max_fee_per_blob_gas,
                 outcome as "outcome: TxExecutionOutcome",
                 error_object,
+                retryable,
                 created_at,
                 updated_at
             "#,
@@ -429,6 +455,7 @@ impl ExecutionAttemptRepo {
                     ea.max_fee_per_blob_gas,
                     ea.outcome as "outcome: TxExecutionOutcome",
                     ea.error_object,
+                    ea.retryable,
                     ea.created_at,
                     ea.updated_at
         "#,
@@ -538,6 +565,7 @@ impl ExecutionAttemptRepo {
                     ea.max_fee_per_blob_gas,
                     ea.outcome as "outcome: TxExecutionOutcome",
                     ea.error_object,
+                    ea.retryable,
                     ea.created_at as attempt_created_at,
                     ea.updated_at as attempt_updated_at,
 
@@ -584,6 +612,7 @@ impl ExecutionAttemptRepo {
             max_fee_per_blob_gas: first.max_fee_per_blob_gas,
             outcome: first.outcome.clone(),
             error_object: first.error_object.clone(),
+            retryable: first.retryable,
             created_at: first.attempt_created_at,
             updated_at: first.attempt_updated_at,
         };

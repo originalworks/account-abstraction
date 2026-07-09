@@ -2,10 +2,7 @@
 
 use aws_sdk_eventbridge::types::PutEventsRequestEntry;
 use db_types::TxExecutionOutcome;
-use execution_attempt_db::{
-    execution_attempts::ExecutionAttempt,
-    types::{ExecutionAttemptWithTxInputs, ExecutionAttemptWithTxs},
-};
+use execution_attempt_db::types::ExecutionAttemptWithTxs;
 
 use crate::{
     constants::{OUTCOME_EVENT_DETAIL_TYPE, OUTCOME_EVENT_SOURCE},
@@ -18,10 +15,10 @@ pub struct AwsEventBridgeOutcomeEmitter {
 }
 
 impl AwsEventBridgeOutcomeEmitter {
-    pub fn build(client: &aws_sdk_eventbridge::Client, event_bus_name: String) -> Self {
+    pub fn build(client: &aws_sdk_eventbridge::Client, event_bus_name: &String) -> Self {
         Self {
             client: client.clone(),
-            event_bus_name,
+            event_bus_name: event_bus_name.clone(),
         }
     }
 

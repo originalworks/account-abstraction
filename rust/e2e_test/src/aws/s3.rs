@@ -32,7 +32,7 @@ impl S3BlobStorageManagerTestFeatures for S3BlobStorageManager {
         for blob_file_name in BLOB_JSON_TEST_FILES {
             let body =
                 ByteStream::from_path(Path::new(TEST_BLOB_FOLDER).join(blob_file_name)).await?;
-            let response = self
+            let _response = self
                 .client
                 .put_object()
                 .bucket(self.bucket_name.clone())

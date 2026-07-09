@@ -33,7 +33,7 @@ impl S3BlobStorageManager {
         )
     }
 
-    pub async fn read_json_file(&self, file_path: String) -> anyhow::Result<BlobInputJsonFile> {
+    pub async fn read_json_file(&self, file_path: &String) -> anyhow::Result<BlobInputJsonFile> {
         let resp = self
             .client
             .get_object()

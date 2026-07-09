@@ -34,6 +34,7 @@ pub struct DbRepositories {
 pub struct TestOrchestrators {
     pub standard_tx_sender_orchestrator:
         standard_tx_sender::orchestrator::aws::AwsLambdaOrchestrator,
+    pub blob_tx_sender_orchestrator: blob_tx_sender::orchestrator::aws::AwsLambdaOrchestrator,
     pub receipt_poller_orchestrator: receipt_poller::orchestrator::aws::AwsLambdaOrchestrator,
     pub retry_handler_orchestrator: retry_handler::orchestrator::aws::AwsLambdaOrchestrator,
 }
@@ -88,6 +89,14 @@ pub async fn get_e2e_test_fixture() -> &'static E2eTestFixture {
             let orchestrators = TestOrchestrators {
                 standard_tx_sender_orchestrator:
                     standard_tx_sender::orchestrator::aws::AwsLambdaOrchestrator::build(
+                        &pool,
+                        &aws_config,
+                    )
+                    .await
+                    .unwrap(),
+
+                blob_tx_sender_orchestrator:
+                    blob_tx_sender::orchestrator::aws::AwsLambdaOrchestrator::build(
                         &pool,
                         &aws_config,
                     )

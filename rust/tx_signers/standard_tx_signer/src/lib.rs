@@ -63,7 +63,6 @@ impl Config {
 pub mod aws_lambda {
 
     use crate::{Config, signature::sign_tx_request};
-    use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
     use lambda_runtime::{LambdaEvent, tracing};
     use network_db::networks::NetworkRepo;

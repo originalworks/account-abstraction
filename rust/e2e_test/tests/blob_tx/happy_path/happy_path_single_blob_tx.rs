@@ -43,11 +43,11 @@ pub async fn happy_path_single_blob_tx(e2e_test_fixture: &E2eTestFixture) -> any
         .receive_messages(1)
         .await?;
 
-    match blob_tx_sender::aws_lambda::function_handler(
-        blob_sender_queue_event,
-        &e2e_test_fixture.pool,
-    )
-    .await
+    match e2e_test_fixture
+        .orchestrators
+        .blob_tx_sender_orchestrator
+        .function_handler(blob_sender_queue_event)
+        .await
     {
         Ok(_) => {}
         Err(err) => {
@@ -86,6 +86,8 @@ pub async fn happy_path_single_blob_tx(e2e_test_fixture: &E2eTestFixture) -> any
         tokio::time::sleep(Duration::from_millis(1000)).await;
     }
     assert!(receipt_found);
+
+    println!("happy_path_single_blob_tx PASSED");
 
     Ok(())
 }

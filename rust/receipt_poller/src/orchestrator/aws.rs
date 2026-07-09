@@ -57,7 +57,7 @@ impl AwsLambdaOrchestrator {
         )?;
         let outcome_emitter = AwsEventBridgeOutcomeEmitter::build(
             &event_bridge_client,
-            config.outcome_event_bus_name,
+            &config.outcome_event_bus_name,
         );
 
         let mut networks_by_chain_id = HashMap::new();

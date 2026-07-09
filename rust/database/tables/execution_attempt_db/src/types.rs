@@ -44,6 +44,7 @@ pub struct ExecutionAttemptWithTxRow {
     pub max_priority_fee: Option<i64>,
     pub max_fee_per_blob_gas: Option<i64>,
     pub outcome: Option<TxExecutionOutcome>,
+    pub retryable: Option<bool>,
     pub error_object: Option<String>,
     pub attempt_created_at: OffsetDateTime,
     pub attempt_updated_at: OffsetDateTime,

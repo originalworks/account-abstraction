@@ -1,13 +1,14 @@
-use db_types::TxStatus;
+use db_types::{TxExecutionOutcome, TxStatus};
 use e2e_test::{
     aws::sqs::{
         event::{TestEventMessage, build_lambda_sqs_event},
         test_queue::SqsQueueTester,
     },
+    db::execution_attempt::ExecutionAttemptTestExt,
     fixture::E2eTestFixture,
     tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional},
 };
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tx_request::standard::StandardTxRequestBody;
 
 pub async fn expired_standard_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
@@ -21,7 +22,7 @@ pub async fn expired_standard_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::R
     tx_request_body_optional.deadline_timestamp =
         Some(i64::try_from(current_timestamp).unwrap() - 3600);
 
-    let mut tx_request_body = StandardTxRequestBody::test_build(tx_request_body_optional)?;
+    let tx_request_body = StandardTxRequestBody::test_build(tx_request_body_optional)?;
 
     let tx_request_event = build_lambda_sqs_event(vec![TestEventMessage::new(
         &tx_request_body.to_string(),
@@ -64,49 +65,25 @@ pub async fn expired_standard_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::R
         }
     }
 
-    // let receipt_poller_queue_event = e2e_test_fixture
-    //     .test_queue_manager
-    //     .receipt_poller_queue
-    //     .receive_messages(5)
-    //     .await?;
+    let tx_request = e2e_test_fixture
+        .db_repositories
+        .tx_request_repo
+        .find_by_tx_id(&tx_request_body.tx_id)
+        .await?;
+    let execution_attempt_vec = e2e_test_fixture
+        .db_repositories
+        .execution_attempt_repo
+        .find_by_tx_id(&tx_request.tx_id)
+        .await?;
 
-    // let mut receipt_found = false;
+    let execution_attempt = execution_attempt_vec.first().unwrap();
 
-    // while receipt_found == false {
-    //     match receipt_poller::aws_lambda::function_handler(
-    //         receipt_poller_queue_event.clone(),
-    //         &e2e_test_fixture.pool,
-    //     )
-    //     .await
-    //     {
-    //         Ok(_) => {}
-    //         Err(err) => {
-    //             println!("{err:#?}")
-    //         }
-    //     }
-    //     let tx_request = e2e_test_fixture
-    //         .db_repositories
-    //         .tx_request_repo
-    //         .find_by_tx_id(&standard_tx_input.tx_id)
-    //         .await?;
-    //     if tx_request.tx_status == TxStatus::EXECUTED {
-    //         receipt_found = true;
-    //     }
-    //     tokio::time::sleep(Duration::from_millis(1000)).await;
-    // }
-    // assert!(receipt_found);
-
-    // match e2e_test_fixture
-    //     .orchestrators
-    //     .standard_tx_sender_orchestrator
-    //     .function_handler(sender_queue_event)
-    //     .await
-    // {
-    //     Ok(_) => {}
-    //     Err(err) => {
-    //         println!("{err:#?}")
-    //     }
-    // }
+    assert_eq!(tx_request.tx_status, TxStatus::FAILED);
+    assert_eq!(
+        execution_attempt.outcome,
+        Some(TxExecutionOutcome::REVERTED)
+    );
+    assert_eq!(execution_attempt.retryable, Some(false));
 
     Ok(())
 }

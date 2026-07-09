@@ -1,5 +1,5 @@
 use crate::{
-    execution_attempt::ExecutionAttemptFromStandardFailed, orchestrator::aws::AwsLambdaOrchestrator,
+    execution_attempt::ExecutionAttemptFromFailedBlobTx, orchestrator::aws::AwsLambdaOrchestrator,
 };
 use anyhow::bail;
 use db_types::{ExecutionErrorObject, TxExecutionOutcome, TxStatus};
@@ -10,13 +10,13 @@ use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo
 use lambda_runtime::tracing;
 use outcome_emitter::{emitter::event_bridge::AwsEventBridgeOutcomeEmitter, outcome::OutcomeEvent};
 use retry_queue::RetryQueueMessageBody;
-use seoa_contract::{contract::SEOA, transaction::ExecuteBatchTxContext};
+use seoa_contract::{contract::SEOA, transaction::BlobBatchTxContext};
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
 use tx_request_db::repo::TxRequestRepo;
 use wallet_pool::wallet::Wallet;
 
 #[allow(async_fn_in_trait)]
-pub trait StandardExecutionErrorHandler {
+pub trait BlobTxExecutionErrorHandler {
     fn execution_attempt_repo(&self) -> &ExecutionAttemptRepo;
     fn execution_attempt_item_repo(&self) -> &ExecutionAttemptItemRepo;
     fn tx_request_repo(&self) -> &TxRequestRepo;
@@ -25,27 +25,25 @@ pub trait StandardExecutionErrorHandler {
 
     async fn handle_error(
         &self,
-        execute_batch_context: &ExecuteBatchTxContext,
+        tx_context: &BlobBatchTxContext,
         wallet: &Wallet,
         error: anyhow::Error,
     ) -> anyhow::Result<ExecutionAttempt> {
         let error_string = error.to_string();
-        if let Some(failed_new_execution) =
-            build_failed_new_execution(execute_batch_context, wallet, error)?
-        {
+        if let Some(failed_new_execution) = build_failed_new_execution(tx_context, wallet, error)? {
             let execution_attempt = self
                 .execution_attempt_repo()
                 .insert(&failed_new_execution)
                 .await?;
 
             self.execution_attempt_item_repo()
-                .insert_many(execution_attempt.id, &execute_batch_context.get_tx_ids())
+                .insert_many(execution_attempt.id, &tx_context.get_tx_ids())
                 .await?;
 
             if let Some(retryable) = failed_new_execution.retryable.clone() {
                 if retryable == true {
                     self.tx_request_repo()
-                        .set_status_for_many(&execute_batch_context.get_tx_ids(), TxStatus::RETRIED)
+                        .set_status_for_many(&tx_context.get_tx_ids(), TxStatus::RETRIED)
                         .await?;
                     let message_body = &RetryQueueMessageBody {
                         execution_attempt_id: execution_attempt.id.to_string(),
@@ -54,10 +52,10 @@ pub trait StandardExecutionErrorHandler {
                     self.retry_queue().send_new(&message_body_string).await?;
                 } else {
                     self.tx_request_repo()
-                        .set_status_for_many(&execute_batch_context.get_tx_ids(), TxStatus::FAILED)
+                        .set_status_for_many(&tx_context.get_tx_ids(), TxStatus::FAILED)
                         .await?;
 
-                    for tx_request in execute_batch_context.tx_requests.clone() {
+                    for tx_request in tx_context.tx_requests.clone() {
                         let outcome = failed_new_execution
                             .outcome
                             .clone()
@@ -80,7 +78,7 @@ pub trait StandardExecutionErrorHandler {
         } else {
             bail!(
                 "Failed to handle execution error. Context: {:?}, wallet_id: {}, error: {:?}",
-                execute_batch_context,
+                tx_context,
                 wallet.db_record.id,
                 error_string
             )
@@ -89,23 +87,20 @@ pub trait StandardExecutionErrorHandler {
 }
 
 pub fn build_failed_new_execution(
-    execute_batch_context: &ExecuteBatchTxContext,
+    tx_context: &BlobBatchTxContext,
     wallet: &Wallet,
     error: anyhow::Error,
 ) -> anyhow::Result<Option<NewExecutionAttempt>> {
-    let mut failed_new_execution = NewExecutionAttempt::default_standard(
-        execute_batch_context.chain_id,
-        wallet.db_record.id,
-        execute_batch_context.batch_tx_value,
-    );
+    let mut failed_new_execution =
+        NewExecutionAttempt::default_blob(tx_context.chain_id, wallet.db_record.id);
 
     match error.downcast::<alloy::contract::Error>() {
         Ok(alloy_error) => {
             match alloy_error.try_decode_into_interface_error::<SEOA::SEOAErrors>() {
                 Ok(decoded) => match decoded {
                     SEOA::SEOAErrors::Expired(_) => {
-                        failed_new_execution = NewExecutionAttempt::standard_failed(
-                            execute_batch_context,
+                        failed_new_execution = NewExecutionAttempt::blob_tx_failed(
+                            tx_context,
                             wallet.db_record.id,
                             ExecutionErrorObject {
                                 error_type: "Expired".to_string(),
@@ -116,32 +111,31 @@ pub fn build_failed_new_execution(
                         .expect("error parsing failed");
                     }
                     SEOA::SEOAErrors::InvalidSignature(_) => {
-                        failed_new_execution = NewExecutionAttempt::standard_failed(
-                            execute_batch_context,
+                        failed_new_execution = NewExecutionAttempt::blob_tx_failed(
+                            tx_context,
                             wallet.db_record.id,
                             ExecutionErrorObject {
                                 error_type: "InvalidSignature".to_string(),
-                                error_body: Some(execute_batch_context.to_json_string()?),
+                                error_body: Some(tx_context.to_json_string()?),
                             },
                             false,
                         )
                         .expect("error parsing failed");
                     }
                     SEOA::SEOAErrors::ExecutionFailed(_) => {
-                        let batch_size = execute_batch_context.tx_requests.len();
-                        let retryable = if batch_size > 1
-                            && execute_batch_context.use_operator_wallet_id.is_none()
-                        {
-                            true
-                        } else {
-                            false
-                        };
-                        failed_new_execution = NewExecutionAttempt::standard_failed(
-                            execute_batch_context,
+                        let batch_size = tx_context.tx_requests.len();
+                        let retryable =
+                            if batch_size > 1 && tx_context.use_operator_wallet_id.is_none() {
+                                true
+                            } else {
+                                false
+                            };
+                        failed_new_execution = NewExecutionAttempt::blob_tx_failed(
+                            tx_context,
                             wallet.db_record.id,
                             ExecutionErrorObject {
                                 error_type: "ExecutionFailed".to_string(),
-                                error_body: Some(execute_batch_context.to_json_string()?),
+                                error_body: Some(tx_context.to_json_string()?),
                             },
                             retryable,
                         )
@@ -149,17 +143,17 @@ pub fn build_failed_new_execution(
                     }
                     SEOA::SEOAErrors::AlreadyUsed(_) => {
                         tracing::warn!(
-                            "Tried to send transaction that was already used: {execute_batch_context:?}"
+                            "Tried to send transaction that was already used: {tx_context:?}"
                         );
                         return Ok(None);
                     }
                     _ => {
-                        failed_new_execution = NewExecutionAttempt::standard_failed(
-                            execute_batch_context,
+                        failed_new_execution = NewExecutionAttempt::blob_tx_failed(
+                            tx_context,
                             wallet.db_record.id,
                             ExecutionErrorObject {
                                 error_type: "Unknown".to_string(),
-                                error_body: Some(execute_batch_context.to_json_string()?),
+                                error_body: Some(tx_context.to_json_string()?),
                             },
                             false,
                         )
@@ -167,8 +161,8 @@ pub fn build_failed_new_execution(
                     }
                 },
                 Err(encoded_error) => {
-                    failed_new_execution = NewExecutionAttempt::standard_failed(
-                        execute_batch_context,
+                    failed_new_execution = NewExecutionAttempt::blob_tx_failed(
+                        tx_context,
                         wallet.db_record.id,
                         ExecutionErrorObject {
                             error_type: "Generic alloy error".to_string(),
@@ -181,8 +175,8 @@ pub fn build_failed_new_execution(
             };
         }
         Err(generic_error) => {
-            failed_new_execution = NewExecutionAttempt::standard_failed(
-                execute_batch_context,
+            failed_new_execution = NewExecutionAttempt::blob_tx_failed(
+                tx_context,
                 wallet.db_record.id,
                 ExecutionErrorObject {
                     error_type: "Generic error".to_string(),
@@ -196,7 +190,7 @@ pub fn build_failed_new_execution(
     Ok(Some(failed_new_execution))
 }
 
-impl StandardExecutionErrorHandler for AwsLambdaOrchestrator {
+impl BlobTxExecutionErrorHandler for AwsLambdaOrchestrator {
     fn execution_attempt_repo(&self) -> &ExecutionAttemptRepo {
         &self.execution_attempt_repo
     }

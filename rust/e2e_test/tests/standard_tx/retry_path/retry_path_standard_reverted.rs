@@ -8,10 +8,7 @@ use e2e_test::{
     fixture::E2eTestFixture,
     tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional},
 };
-use execution_attempt_db::execution_attempts::ExecutionAttemptRepo;
 use tx_request::standard::StandardTxRequestBody;
-use tx_request_db::repo::TxRequestRepo;
-use uuid::Uuid;
 
 pub async fn retry_path_standard_reverted(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
     let network = e2e_test_fixture

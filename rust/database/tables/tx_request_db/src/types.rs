@@ -1,5 +1,5 @@
 use anyhow::bail;
-use blob_tx_input_db::blob_tx_inputs::NewBlobTxInput;
+use blob_tx_input_db::blob_tx_inputs::{BlobTxInput, NewBlobTxInput};
 use db_types::{BlobStorageType, TxStatus, TxType};
 use serde::{Deserialize, Serialize};
 use standard_tx_input_db::standard_tx_inputs::{NewStandardTxInput, StandardTxInput};
@@ -39,6 +39,7 @@ pub struct BlobTxRequestRaw {
     pub chain_id: i64,
     pub use_operator_wallet_id: Option<Uuid>,
     pub attempts: i32,
+    pub metadata: Option<String>,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 
@@ -119,6 +120,36 @@ impl IntoTxRequestWithInput for StandardTxRequestRaw {
                 deadline_timestamp: self.deadline_timestamp.clone(),
                 pass_value_from_operator_wallet: self.pass_value_from_operator_wallet.clone(),
                 created_at: self.created_at.clone(),
+            });
+            Ok(TxRequestWithInput {
+                tx_id: self.tx_id.clone(),
+                requester_id: self.requester_id.clone(),
+                tx_type: self.tx_type.clone(),
+                tx_status: self.tx_status.clone(),
+                attempts: self.attempts,
+                tx_input,
+                metadata: self.metadata.clone(),
+                use_operator_wallet_id: self.use_operator_wallet_id.clone(),
+            })
+        }
+    }
+}
+
+impl IntoTxRequestWithInput for BlobTxRequestRaw {
+    fn into_tx_request_with_input(&self) -> anyhow::Result<TxRequestWithInput> {
+        if self.tx_type == TxType::STANDARD {
+            bail!("Trying to parse BlobTxRequestRaw into STANDARD tx");
+        } else {
+            let tx_input = TxInput::Blob(BlobTxInput {
+                tx_id: self.tx_id.clone(),
+                signature: self.signature.clone(),
+                image_id: self.image_id.clone(),
+                commitment: self.commitment.clone(),
+                blob_sha2: self.blob_sha2.clone(),
+                deadline_timestamp: self.deadline_timestamp.clone(),
+                created_at: self.created_at.clone(),
+                source_file_path: self.source_file_path.clone(),
+                storage_type: self.storage_type.clone(),
             });
             Ok(TxRequestWithInput {
                 tx_id: self.tx_id.clone(),
