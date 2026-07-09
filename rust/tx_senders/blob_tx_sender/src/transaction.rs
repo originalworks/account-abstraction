@@ -1,7 +1,4 @@
-use alloy::{
-    // consensus::BlobTransactionSidecarEip7594,
-    primitives::{FixedBytes, Uint, keccak256},
-};
+use alloy::primitives::{FixedBytes, Uint, keccak256};
 use blob_storage::storage::s3::S3BlobStorageManager;
 use seoa_contract::{
     contract::sEOA::BlobBatchInput,
@@ -13,20 +10,6 @@ use tx_request_db::{
     types::{BlobTxRequestRaw, IntoTxRequestWithInput},
 };
 use uuid::Uuid;
-
-// #[derive(Debug)]
-// pub struct BlobBatchInputWithSidecar {
-//     pub blob_batch_input: BlobBatchInput,
-//     pub sidecar: BlobTransactionSidecarEip7594,
-// }
-
-// #[derive(Debug)]
-// pub struct BlobBatchTxContext {
-//     pub chain_id: i64,
-//     pub blob_batch_with_sidecar_vec: Vec<BlobBatchInputWithSidecar>,
-//     pub use_operator_wallet_id: Option<Uuid>,
-//     pub tx_ids: Vec<String>,
-// }
 
 pub struct BlobTxContextBuilder {
     transaction_repo: TxRequestRepo,

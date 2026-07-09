@@ -151,7 +151,6 @@ impl BlobTxRetryManager {
         source_tx_context: &BlobBatchTxContext,
     ) -> anyhow::Result<Vec<BlobBatchTxContext>> {
         let mut blob_batch_contexts = Vec::new();
-        // let use_operator_wallet_id = execution_attempt.tx_requests[0].use_operator_wallet_id;
         let mid = source_tx_context
             .blob_batch_with_sidecar_vec
             .len()

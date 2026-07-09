@@ -1,20 +1,3 @@
-// use std::time::Duration;
-
-// use crate::standard_tx::retry_path::set_tx_max_age;
-// use db_types::TxStatus;
-// use e2e_test::{
-//     aws::sqs::{
-//         event::{TestEventMessage, build_lambda_sqs_event},
-//         test_queue::SqsQueueTester,
-//     },
-//     db::execution_attempt::ExecutionAttemptTestExt,
-//     fixture::E2eTestFixture,
-//     tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional},
-// };
-// use tx_request::standard::StandardTxRequestBody;
-
-use std::time::Duration;
-
 use db_types::TxStatus;
 use e2e_test::{
     aws::{
@@ -28,6 +11,7 @@ use e2e_test::{
     fixture::E2eTestFixture,
     tx_request::{BlobTxRequestBodyForTest, BlobTxRequestBodyOptional},
 };
+use std::time::Duration;
 use tx_request::blob_tx::BlobTxRequestBody;
 
 use crate::common::retry::get_receipt_poller_with_tx_max_age;
