@@ -51,11 +51,11 @@ pub async fn happy_path_two_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow
         .receive_messages(5)
         .await?;
 
-    match blob_tx_sender::aws_lambda::function_handler(
-        blob_sender_queue_event,
-        &e2e_test_fixture.pool,
-    )
-    .await
+    match e2e_test_fixture
+        .orchestrators
+        .blob_tx_sender_orchestrator
+        .function_handler(blob_sender_queue_event)
+        .await
     {
         Ok(_) => {}
         Err(err) => {

@@ -34,6 +34,7 @@ impl ExecutionAttemptTestExt for ExecutionAttemptRepo {
             max_fee_per_blob_gas,
             outcome as "outcome: TxExecutionOutcome",
             error_object,
+            retryable,
             created_at,
             updated_at
         FROM
@@ -69,6 +70,7 @@ impl ExecutionAttemptTestExt for ExecutionAttemptRepo {
             ea.max_fee_per_blob_gas,
             ea.outcome as "outcome: TxExecutionOutcome",
             ea.error_object,
+            ea.retryable,
             ea.created_at,
             ea.updated_at
         FROM

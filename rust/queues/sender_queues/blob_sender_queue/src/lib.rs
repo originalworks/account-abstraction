@@ -7,11 +7,13 @@ pub struct BlobSenderQueueMessageBody {
     pub tx_id: String,
 }
 
+#[derive(Debug)]
 pub struct BlobSenderQueueMessage {
     pub message_id: String,
     pub body: BlobSenderQueueMessageBody,
 }
 
+#[derive(Debug)]
 pub struct BlobSenderQueueEvent {
     pub messages: Vec<BlobSenderQueueMessage>,
     pub tx_id_to_message_id: HashMap<String, String>,

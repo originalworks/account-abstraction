@@ -12,12 +12,14 @@ use e2e_test::{
 use std::time::Duration;
 use tx_request::standard::StandardTxRequestBody;
 
-use crate::standard_tx::retry_path::set_tx_max_age;
+use crate::common::retry::get_receipt_poller_with_tx_max_age;
+
+// use crate::standard_tx::retry_path::get_receipt_poller_with_tx_max_age;
 
 pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
     let tx_id = uuid::Uuid::new_v4().to_string();
 
-    let receipt_poller = set_tx_max_age(&e2e_test_fixture, 1).await?;
+    let mut receipt_poller = get_receipt_poller_with_tx_max_age(&e2e_test_fixture, 1).await?;
 
     let mut tx_request_body = StandardTxRequestBody::test_build(
         StandardTxRequestBodyOptional::default(e2e_test_fixture.env_vars.anvil_chain_id),
@@ -130,7 +132,8 @@ pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> 
     provider
         .raw_request::<_, ()>("evm_setAutomine".into(), [true])
         .await?;
-    set_tx_max_age(&e2e_test_fixture, default_tx_max_age_sec).await?;
+    receipt_poller =
+        get_receipt_poller_with_tx_max_age(&e2e_test_fixture, default_tx_max_age_sec).await?;
 
     let receipt_poller_queue_event_2 = e2e_test_fixture
         .test_queue_manager

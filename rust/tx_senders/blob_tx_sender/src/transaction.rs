@@ -1,35 +1,24 @@
-use crate::contract::sEOA::BlobBatchInput;
-use alloy::{
-    consensus::BlobTransactionSidecarEip7594,
-    primitives::{FixedBytes, Uint, keccak256},
-};
+use alloy::primitives::{FixedBytes, Uint, keccak256};
 use blob_storage::storage::s3::S3BlobStorageManager;
+use seoa_contract::{
+    contract::sEOA::BlobBatchInput,
+    transaction::{BlobBatchInputWithSidecar, BlobBatchTxContext},
+};
 use std::collections::HashMap;
-use tx_request_db::{repo::TxRequestRepo, types::BlobTxRequestRaw};
+use tx_request_db::{
+    repo::TxRequestRepo,
+    types::{BlobTxRequestRaw, IntoTxRequestWithInput},
+};
 use uuid::Uuid;
 
-#[derive(Debug)]
-pub struct BlobBatchInputWithSidecar {
-    pub blob_batch_input: BlobBatchInput,
-    pub sidecar: BlobTransactionSidecarEip7594,
-}
-
-#[derive(Debug)]
-pub struct BlobBatchTxContext {
-    pub chain_id: i64,
-    pub blob_batch_with_sidecar_vec: Vec<BlobBatchInputWithSidecar>,
-    pub use_operator_wallet_id: Option<Uuid>,
-    pub tx_ids: Vec<String>,
-}
-
-pub struct BlobTxContextBuilder<'a> {
-    transaction_repo: &'a TxRequestRepo,
+pub struct BlobTxContextBuilder {
+    transaction_repo: TxRequestRepo,
     blob_storage_manager: S3BlobStorageManager,
 }
 
-impl<'a> BlobTxContextBuilder<'a> {
+impl BlobTxContextBuilder {
     pub fn build(
-        transaction_repo: &'a TxRequestRepo,
+        transaction_repo: TxRequestRepo,
         blob_storage_manager: S3BlobStorageManager,
     ) -> Self {
         Self {
@@ -54,7 +43,7 @@ impl<'a> BlobTxContextBuilder<'a> {
             for (use_operator_wallet_id, transactions) in wallet_map {
                 let context = self
                     .build_batch_context(chain_id, use_operator_wallet_id, transactions)
-                    .await;
+                    .await?;
                 if let Some(ctx) = context {
                     batch_contexts.push(ctx);
                 }
@@ -69,19 +58,18 @@ impl<'a> BlobTxContextBuilder<'a> {
         chain_id: i64,
         use_operator_wallet_id: Option<Uuid>,
         transactions: Vec<BlobTxRequestRaw>,
-    ) -> Option<BlobBatchTxContext> {
+    ) -> anyhow::Result<Option<BlobBatchTxContext>> {
         let mut blob_batch_with_sidecar_vec: Vec<BlobBatchInputWithSidecar> = Vec::new();
-        let mut tx_ids = Vec::new();
 
-        for transaction in transactions {
+        let mut tx_requests = Vec::new();
+
+        for transaction in transactions.clone() {
             match transaction.clone().into_blob_batch_input() {
                 Ok(blob_batch_input) => {
                     let blob_input_json_file = self
                         .blob_storage_manager
-                        .read_json_file(transaction.source_file_path)
-                        .await
-                        .ok()?;
-                    tx_ids.push(transaction.tx_id.clone());
+                        .read_json_file(&transaction.source_file_path)
+                        .await?;
                     blob_batch_with_sidecar_vec.push(BlobBatchInputWithSidecar {
                         blob_batch_input: blob_batch_input.clone(),
                         sidecar: blob_input_json_file.blob_sidecar,
@@ -92,20 +80,29 @@ impl<'a> BlobTxContextBuilder<'a> {
                         .mark_as_invalid(&transaction.tx_id)
                         .await
                         .ok();
+                    continue;
                 }
             }
+            let tx_request = transaction.into_tx_request_with_input()?;
+            tx_requests.push(tx_request);
         }
 
         if blob_batch_with_sidecar_vec.is_empty() {
-            return None;
+            return Ok(None);
         }
 
-        Some(BlobBatchTxContext {
+        Ok(Some(BlobBatchTxContext {
             chain_id,
             use_operator_wallet_id,
             blob_batch_with_sidecar_vec,
-            tx_ids,
-        })
+            tx_requests,
+            successfully_simulated: false,
+            assigned_nonce: None,
+            fees: None,
+            gas_limit: None,
+            tx_hash: None,
+            max_fee_per_blob_gas: None,
+        }))
     }
 
     fn group_by_chain_and_wallet(

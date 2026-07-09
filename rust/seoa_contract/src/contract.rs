@@ -1,4 +1,6 @@
-use crate::transaction::ExecuteBatchTxContext;
+use crate::transaction::{BlobBatchTxContext, ExecuteBatchTxContext};
+use alloy::consensus::BlobTransactionSidecarEip7594;
+use alloy::eips::eip4844::calc_blob_gasprice;
 use alloy::{
     primitives::{Address, Uint},
     providers::{
@@ -48,6 +50,185 @@ impl ContractManager {
             networks_by_chain_id,
             providers_by_chain_id,
         })
+    }
+    pub async fn get_blob_gasprice(
+        &self,
+        root_provider: &HardlyTypedProvider,
+        blob_gas_estimation_buffer_ppm: i64,
+    ) -> anyhow::Result<u128> {
+        let provider = ProviderBuilder::new().connect_provider(root_provider);
+        let block = provider
+            .get_block_by_number(alloy::rpc::types::BlockNumberOrTag::Latest)
+            .await?
+            .unwrap();
+
+        let excess_blob_gas = block.header.excess_blob_gas.unwrap_or(0);
+
+        let blob_base_fee = calc_blob_gasprice(excess_blob_gas);
+
+        let max_fee_per_blob_gas = blob_base_fee
+            + blob_base_fee * u128::try_from(blob_gas_estimation_buffer_ppm)? / 1_000_000;
+
+        Ok(max_fee_per_blob_gas)
+    }
+
+    fn flat_sidecars(
+        tx_context: &BlobBatchTxContext,
+    ) -> anyhow::Result<BlobTransactionSidecarEip7594> {
+        let mut flat_sidecar = BlobTransactionSidecarEip7594::default();
+        for blob_input in &tx_context.blob_batch_with_sidecar_vec {
+            if blob_input.sidecar.blobs.len() != 1 {
+                bail!(
+                    "Expecting one BLOB per tx request, got: {}",
+                    blob_input.sidecar.blobs.len()
+                );
+            }
+            flat_sidecar.blobs.push(
+                blob_input
+                    .sidecar
+                    .blobs
+                    .first()
+                    .expect("No BLOB in the input")
+                    .clone(),
+            );
+            flat_sidecar.commitments.push(
+                blob_input
+                    .sidecar
+                    .commitments
+                    .first()
+                    .expect("No commitments in the input")
+                    .clone(),
+            );
+            flat_sidecar
+                .cell_proofs
+                .extend_from_slice(&blob_input.sidecar.cell_proofs);
+        }
+        Ok(flat_sidecar)
+    }
+
+    pub async fn simulate_send_blob_batch(
+        &self,
+        tx_context: &mut BlobBatchTxContext,
+        wallet: &mut Wallet,
+    ) -> anyhow::Result<()> {
+        let Some(network) = self.networks_by_chain_id.get(&tx_context.chain_id) else {
+            bail!(
+                "Contract address not found for chain id: {}",
+                tx_context.chain_id
+            );
+        };
+        let Some(root_provider) = self.providers_by_chain_id.get(&tx_context.chain_id) else {
+            bail!("Provider not found for chain id: {}", tx_context.chain_id);
+        };
+        let nonce = wallet.use_nonce()?;
+        let provider = ProviderBuilder::new()
+            .wallet(&wallet.ow_wallet.wallet)
+            .connect_provider(root_provider);
+        let contract = SEOA::new(
+            Address::from_str(network.contract_address.as_str())?,
+            &provider,
+        );
+
+        let fees = provider.estimate_eip1559_fees().await?;
+        let max_fee_per_blob_gas = self
+            .get_blob_gasprice(root_provider, network.blob_gas_estimation_buffer_ppm)
+            .await?;
+
+        let tx_sidecar = Self::flat_sidecars(&tx_context)?;
+
+        let call = contract
+            .sendBlobBatch(
+                tx_context
+                    .blob_batch_with_sidecar_vec
+                    .iter()
+                    .map(|c| c.blob_batch_input.clone())
+                    .collect(),
+            )
+            .sidecar_7594(tx_sidecar)
+            .nonce(nonce)
+            .max_fee_per_gas(fees.max_fee_per_gas)
+            .max_priority_fee_per_gas(fees.max_priority_fee_per_gas)
+            .max_fee_per_blob_gas(max_fee_per_blob_gas);
+
+        let estimated_gas = call.estimate_gas().await?;
+
+        let gas_limit = estimated_gas
+            + estimated_gas * u64::try_from(network.gas_estimation_buffer_ppm)? / 1_000_000;
+
+        call.gas(gas_limit).call().await?;
+
+        tx_context.assigned_nonce = Some(nonce);
+        tx_context.fees = Some(fees);
+        tx_context.gas_limit = Some(gas_limit);
+        tx_context.max_fee_per_blob_gas = Some(max_fee_per_blob_gas);
+        tx_context.successfully_simulated = true;
+
+        Ok(())
+    }
+
+    pub async fn send_blob_batch(
+        &self,
+        tx_context: &mut BlobBatchTxContext,
+        wallet: &Wallet,
+    ) -> anyhow::Result<()> {
+        let Some(network) = self.networks_by_chain_id.get(&tx_context.chain_id) else {
+            bail!(
+                "Contract address not found for chain id: {}",
+                tx_context.chain_id
+            );
+        };
+        let Some(root_provider) = self.providers_by_chain_id.get(&tx_context.chain_id) else {
+            bail!("Provider not found for chain id: {}", tx_context.chain_id);
+        };
+
+        let Some(nonce) = tx_context.assigned_nonce else {
+            bail!("Nonce should be assinged at this point. Use simulate_send_batch_tx first");
+        };
+
+        let Some(fees) = tx_context.fees else {
+            bail!("Fees should be calculated at this point. Use simulate_send_batch_tx first");
+        };
+
+        let Some(max_fee_per_blob_gas) = tx_context.max_fee_per_blob_gas else {
+            bail!(
+                "max_fee_per_blob_gas should be calculated at this point. Use simulate_send_batch_tx first"
+            );
+        };
+
+        let Some(gas_limit) = tx_context.gas_limit else {
+            bail!("Gas limit should be calculated at this point. Use simulate_send_batch_tx first");
+        };
+
+        let tx_sidecar = Self::flat_sidecars(&tx_context)?;
+
+        let provider = ProviderBuilder::new()
+            .wallet(wallet.ow_wallet.wallet.clone())
+            .connect_provider(root_provider);
+        let contract = SEOA::new(
+            Address::from_str(network.contract_address.as_str())?,
+            &provider,
+        );
+
+        let pending_tx = contract
+            .sendBlobBatch(
+                tx_context
+                    .blob_batch_with_sidecar_vec
+                    .iter()
+                    .map(|c| c.blob_batch_input.clone())
+                    .collect(),
+            )
+            .sidecar_7594(tx_sidecar)
+            .nonce(nonce)
+            .max_fee_per_gas(fees.max_fee_per_gas)
+            .max_priority_fee_per_gas(fees.max_priority_fee_per_gas)
+            .max_fee_per_blob_gas(max_fee_per_blob_gas)
+            .gas(gas_limit)
+            .send()
+            .await?;
+
+        tx_context.tx_hash = Some(pending_tx.tx_hash().to_string());
+
+        Ok(())
     }
 
     pub async fn simulate_send_batch_tx(

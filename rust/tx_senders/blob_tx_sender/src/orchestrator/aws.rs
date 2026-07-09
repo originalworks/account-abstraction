@@ -1,10 +1,10 @@
-#![cfg(feature = "aws")]
-
 use crate::{
-    Config, error::StandardExecutionErrorHandler,
-    execution_attempt::ExecutionAttemptFromStandardSuccessful, transaction::TxContextBuilder,
+    Config, error::BlobTxExecutionErrorHandler,
+    execution_attempt::ExecutionAttemptFromSuccessfulBlobTx, transaction::BlobTxContextBuilder,
 };
 use aws_lambda_events::sqs::{SqsBatchResponse, SqsEvent};
+use blob_sender_queue::BlobSenderQueueEvent;
+use blob_storage::storage::s3::S3BlobStorageManager;
 use execution_attempt_db::execution_attempts::{
     ExecutionAttempt, ExecutionAttemptRepo, NewExecutionAttempt,
 };
@@ -14,9 +14,8 @@ use network_db::networks::NetworkRepo;
 use operator_wallet_db::operator_wallets::OperatorWalletRepo;
 use outcome_emitter::emitter::event_bridge::AwsEventBridgeOutcomeEmitter;
 use receipt_poller_queue::ReceiptPollerQueueMessageBody;
-use seoa_contract::{contract::ContractManager, transaction::ExecuteBatchTxContext};
+use seoa_contract::{contract::ContractManager, transaction::BlobBatchTxContext};
 use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
-use standard_sender_queue::StandardSenderQueueEvent;
 use tx_request_db::repo::TxRequestRepo;
 use wallet_assignment_db::wallet_assignments::WalletAssignmentRepo;
 use wallet_pool::{manager::WalletPoolManager, wallet::Wallet};
@@ -27,8 +26,9 @@ pub struct AwsLambdaOrchestrator {
     pub execution_attempt_repo: ExecutionAttemptRepo,
     pub execution_attempt_item_repo: ExecutionAttemptItemRepo,
     pub wallet_pool_manager: WalletPoolManager,
-    pub tx_context_builder: TxContextBuilder,
+    pub tx_context_builder: BlobTxContextBuilder,
     pub contract_manager: ContractManager,
+    pub sqs_client: aws_sdk_sqs::Client,
     pub receipt_poller_queue: SqsQueue,
     pub retry_queue: SqsQueue,
     pub outcome_emitter: AwsEventBridgeOutcomeEmitter,
@@ -50,9 +50,12 @@ impl AwsLambdaOrchestrator {
         let execution_attempt_repo = ExecutionAttemptRepo::new(pool.clone());
         let execution_attempt_item_repo = ExecutionAttemptItemRepo::new(pool.clone());
         let networks = network_repo.select_all().await?;
+        let blob_storage_manager =
+            S3BlobStorageManager::build(&aws_config, &config.blob_storage_bucket_name);
 
-        let wallet_pool_manager = WalletPoolManager::build(operator_wallet_repo.clone(), &networks);
-        let tx_context_builder = TxContextBuilder::build(&tx_request_repo);
+        let wallet_pool_manager = WalletPoolManager::build(operator_wallet_repo, &networks);
+        let tx_context_builder =
+            BlobTxContextBuilder::build(tx_request_repo.clone(), blob_storage_manager);
         let contract_manager = ContractManager::build(&networks).await?;
         let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
         let receipt_poller_queue = SqsQueue::build(
@@ -60,6 +63,7 @@ impl AwsLambdaOrchestrator {
             &config.receipt_poller_queue_url,
             &config.receipt_poller_queue_message_group_id,
         )?;
+
         let event_bridge_client = aws_sdk_eventbridge::Client::new(&aws_config);
         let outcome_emitter = AwsEventBridgeOutcomeEmitter::build(
             &event_bridge_client,
@@ -71,17 +75,19 @@ impl AwsLambdaOrchestrator {
             &config.retry_queue_url,
             &config.retry_queue_message_group_id,
         )?;
+
         Ok(Self {
-            wallet_assignment_repo,
+            tx_context_builder,
+            wallet_pool_manager,
             tx_request_repo,
+            wallet_assignment_repo,
             execution_attempt_repo,
             execution_attempt_item_repo,
-            wallet_pool_manager,
-            tx_context_builder,
             contract_manager,
+            sqs_client,
             receipt_poller_queue,
-            retry_queue,
             outcome_emitter,
+            retry_queue,
         })
     }
 
@@ -90,10 +96,8 @@ impl AwsLambdaOrchestrator {
         event: LambdaEvent<SqsEvent>,
     ) -> anyhow::Result<SqsBatchResponse, lambda_runtime::Error> {
         let mut sqs_batch_response = SqsBatchResponse::default();
-        tracing::info!("Reading...");
-        let tx_sender_queue_event = StandardSenderQueueEvent::from_sqs_lambda_event(event)?;
-
-        tracing::info!("{tx_sender_queue_event:?}");
+        println!("Reading...");
+        let tx_sender_queue_event = BlobSenderQueueEvent::from_sqs_lambda_event(event)?;
 
         let tx_ids = tx_sender_queue_event
             .messages
@@ -101,25 +105,25 @@ impl AwsLambdaOrchestrator {
             .map(|message| message.body.tx_id.clone())
             .collect::<Vec<String>>();
 
-        let execute_batch_context_vec = self
+        let blob_batch_context_vec = self
             .tx_context_builder
             .fetch_and_sort_into_batches(&tx_ids)
             .await?;
 
-        tracing::info!("Executing...");
-        for mut execute_batch_context in execute_batch_context_vec {
+        println!("Executing...");
+        for mut blob_batch_context in blob_batch_context_vec {
             let Some(mut wallet) = self
                 .wallet_pool_manager
                 .acquire(
-                    execute_batch_context.chain_id,
-                    execute_batch_context.use_operator_wallet_id,
+                    blob_batch_context.chain_id,
+                    blob_batch_context.use_operator_wallet_id,
                 )
                 .await?
             else {
                 self.tx_request_repo
-                    .release_many(&execute_batch_context.get_tx_ids())
+                    .release_many(&blob_batch_context.get_tx_ids())
                     .await?;
-                execute_batch_context.get_tx_ids().iter().for_each(|tx_id| {
+                blob_batch_context.get_tx_ids().iter().for_each(|tx_id| {
                     if let Some(message_id) = tx_sender_queue_event.tx_id_to_message_id.get(tx_id) {
                         sqs_batch_response.add_failure(message_id);
                     };
@@ -129,12 +133,12 @@ impl AwsLambdaOrchestrator {
 
             let _wallet_assignment_ids = self
                 .wallet_assignment_repo
-                .new_assignments(&execute_batch_context.get_tx_ids(), wallet.db_record.id)
+                .new_assignments(&blob_batch_context.get_tx_ids(), wallet.db_record.id)
                 .await?;
 
             match self
                 .contract_manager
-                .simulate_send_batch_tx(&mut execute_batch_context, &mut wallet)
+                .simulate_send_blob_batch(&mut blob_batch_context, &mut wallet)
                 .await
             {
                 Ok(_) => {}
@@ -143,33 +147,30 @@ impl AwsLambdaOrchestrator {
                     self.wallet_pool_manager
                         .release_unused(wallet.db_record.id)
                         .await?;
-                    self.handle_error(&execute_batch_context, &wallet, err)
-                        .await?;
+                    self.handle_error(&blob_batch_context, &wallet, err).await?;
                     continue;
                 }
             };
 
             match self
                 .contract_manager
-                .send_batch(&mut execute_batch_context, &wallet)
+                .send_blob_batch(&mut blob_batch_context, &mut wallet)
                 .await
             {
                 Ok(_) => {
                     let execution_attempt = self
-                        .save_successful_execution(&execute_batch_context, &wallet)
+                        .save_successful_execution(&blob_batch_context, &wallet)
                         .await?;
 
                     self.send_receipt_poller_queue_message(
-                        &execute_batch_context,
+                        &blob_batch_context,
                         &execution_attempt.id.to_string(),
                     )
                     .await?;
                 }
-
                 Err(err) => {
                     tracing::error!("{err:?}");
-                    self.handle_error(&execute_batch_context, &wallet, err)
-                        .await?;
+                    self.handle_error(&blob_batch_context, &wallet, err).await?;
                 }
             };
         }
@@ -179,28 +180,22 @@ impl AwsLambdaOrchestrator {
 
     pub async fn save_successful_execution(
         &self,
-        execute_batch_context: &ExecuteBatchTxContext,
+        tx_context: &BlobBatchTxContext,
         wallet: &Wallet,
     ) -> anyhow::Result<ExecutionAttempt> {
-        let execution_attempt_input = NewExecutionAttempt::standard_successful(
-            execute_batch_context,
-            wallet.db_record.id,
-            None,
-        )?;
+        let execution_attempt_input =
+            NewExecutionAttempt::blob_tx_successful(tx_context, wallet.db_record.id, None)?;
         let execution_attempt = self
             .execution_attempt_repo
             .insert(&execution_attempt_input)
             .await?;
 
         self.execution_attempt_item_repo
-            .insert_many(execution_attempt.id, &execute_batch_context.get_tx_ids())
+            .insert_many(execution_attempt.id, &tx_context.get_tx_ids())
             .await?;
 
         self.tx_request_repo
-            .set_status_for_many(
-                &execute_batch_context.get_tx_ids(),
-                db_types::TxStatus::BROADCASTED,
-            )
+            .set_status_for_many(&tx_context.get_tx_ids(), db_types::TxStatus::BROADCASTED)
             .await?;
 
         Ok(execution_attempt)
@@ -208,12 +203,12 @@ impl AwsLambdaOrchestrator {
 
     pub async fn send_receipt_poller_queue_message(
         &self,
-        execute_batch_context: &ExecuteBatchTxContext,
+        tx_context: &BlobBatchTxContext,
         execution_attempt_id: &String,
     ) -> anyhow::Result<()> {
         let receipt_poller_queue_message_body = ReceiptPollerQueueMessageBody {
             execution_attempt_id: execution_attempt_id.clone(),
-            batch_size: u8::try_from(execute_batch_context.tx_requests.len())?,
+            batch_size: u8::try_from(tx_context.tx_requests.len())?,
         };
 
         self.receipt_poller_queue

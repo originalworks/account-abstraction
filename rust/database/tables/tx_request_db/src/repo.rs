@@ -242,6 +242,7 @@ impl TxRequestRepo {
                     t.chain_id,
                     t.use_operator_wallet_id,
                     t.attempts,
+                    t.metadata,
                     t.created_at,
                     t.updated_at
             )
@@ -254,6 +255,7 @@ impl TxRequestRepo {
                 u.chain_id,
                 u.use_operator_wallet_id,
                 u.attempts,
+                u.metadata,
                 u.created_at,
                 u.updated_at,
 

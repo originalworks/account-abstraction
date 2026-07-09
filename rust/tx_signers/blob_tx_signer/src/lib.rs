@@ -110,7 +110,7 @@ pub mod aws_lambda {
             let blob_input_json_file = match tx_request_body.storage_type {
                 BlobStorageType::S3 => {
                     s3_blob_storage_manager
-                        .read_json_file(tx_request_body.source_file_path.clone())
+                        .read_json_file(&tx_request_body.source_file_path.clone())
                         .await?
                 }
             };

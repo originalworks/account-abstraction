@@ -1,0 +1,1 @@
+pub const BUFFER_DENOMINATOR: u128 = 1_000_000;

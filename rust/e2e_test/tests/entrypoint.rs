@@ -1,10 +1,14 @@
 mod blob_tx;
+mod common;
 mod standard_tx;
 
 use crate::{
-    blob_tx::happy_path::{
-        happy_path_single_blob_tx::happy_path_single_blob_tx,
-        happy_path_two_blob_tx::happy_path_two_blob_tx,
+    blob_tx::{
+        happy_path::{
+            happy_path_single_blob_tx::happy_path_single_blob_tx,
+            happy_path_two_blob_tx::happy_path_two_blob_tx,
+        },
+        retry_path::retry_path_blob_tx_dropped::retry_path_blob_tx_dropped,
     },
     standard_tx::{
         fail_path::expired_standard_tx::expired_standard_tx,
@@ -21,6 +25,7 @@ use e2e_test::fixture::get_e2e_test_fixture;
 #[tokio::test]
 async fn e2e_tests() -> anyhow::Result<()> {
     let e2e_test_fixture = get_e2e_test_fixture().await;
+    retry_path_blob_tx_dropped(e2e_test_fixture).await?;
     expired_standard_tx(e2e_test_fixture).await?;
     happy_path_single_standard_tx(e2e_test_fixture).await?;
     happy_path_single_standard_tx(e2e_test_fixture).await?;

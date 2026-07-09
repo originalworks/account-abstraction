@@ -18,7 +18,7 @@ impl SqsQueue {
     }
 
     pub async fn send_new(&self, message_body_string: &String) -> anyhow::Result<()> {
-        let response = self
+        let _response = self
             .client
             .send_message()
             .queue_url(&self.queue_url)

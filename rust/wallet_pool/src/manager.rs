@@ -127,7 +127,7 @@ impl WalletPoolManager {
             );
         };
 
-        let mut wallet = Wallet::build(&operator_wallet, &network).await?;
+        let wallet = Wallet::build(&operator_wallet, &network).await?;
 
         Ok(wallet)
     }

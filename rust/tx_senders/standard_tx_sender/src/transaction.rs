@@ -67,6 +67,7 @@ impl TxContextBuilder {
                         .mark_as_invalid(&transaction.tx_id)
                         .await
                         .ok();
+                    continue;
                 }
             }
             let tx_request = transaction.into_tx_request_with_input()?;

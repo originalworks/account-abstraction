@@ -1,8 +1,8 @@
 #![recursion_limit = "256"]
-pub mod error;
+
+pub mod constant;
 pub mod orchestrator;
 pub mod transaction;
-
 use std::env;
 
 pub struct Config {
@@ -12,6 +12,7 @@ pub struct Config {
     pub outcome_event_bus_name: String,
     pub retry_queue_message_group_id: String,
     pub retry_queue_url: String,
+    pub blob_storage_bucket_name: String,
 }
 
 impl Config {
@@ -23,6 +24,8 @@ impl Config {
         let outcome_event_bus_name = Self::get_env_var("OUTCOME_EVENT_BUS_NAME");
         let retry_queue_message_group_id = Self::get_env_var("RETRY_QUEUE_MESSAGE_GROUP_ID");
         let retry_queue_url = Self::get_env_var("RETRY_QUEUE_URL");
+        let blob_storage_bucket_name = Self::get_env_var("BLOB_STORAGE_BUCKET_NAME");
+
         Ok(Self {
             database_url,
             receipt_poller_queue_url,
@@ -30,6 +33,7 @@ impl Config {
             outcome_event_bus_name,
             retry_queue_message_group_id,
             retry_queue_url,
+            blob_storage_bucket_name,
         })
     }
 
