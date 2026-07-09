@@ -24,9 +24,13 @@ pub async fn happy_path_two_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow
         TestEventMessage::new(&tx_request_body_2.to_string(), None),
     ])?;
 
-    blob_tx_signer::aws_lambda::function_handler(tx_request_event, &e2e_test_fixture.pool)
-        .await
-        .unwrap();
+    blob_tx_signer::aws_lambda::function_handler(
+        tx_request_event,
+        &e2e_test_fixture.pool,
+        &e2e_test_fixture.aws_config,
+    )
+    .await
+    .unwrap();
 
     let blob_tx_input = e2e_test_fixture
         .db_repositories
