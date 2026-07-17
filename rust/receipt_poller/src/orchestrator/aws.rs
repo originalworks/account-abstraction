@@ -198,6 +198,13 @@ impl AwsLambdaOrchestrator {
                             )
                             .await?;
                     }
+                    self.wallet_pool
+                        .release_used(
+                            execution_attempt_with_txs
+                                .execution_attempt
+                                .operator_wallet_id,
+                        )
+                        .await?;
                 }
                 TxExecutionOutcome::STUCK | TxExecutionOutcome::DROPPED => {
                     let execution_atttempts = execution_attempt_with_txs.tx_requests[0].attempts;

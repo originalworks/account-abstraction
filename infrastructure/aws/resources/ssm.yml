@@ -1,6 +1,10 @@
 Transform: AWS::Serverless-2016-10-31
 
 Parameters:
+  BlobTxSignerQueueUrl:
+    Type: String
+  BlobTxSignerQueueArn:
+    Type: String
   StandardTxSignerQueueUrl:
     Type: String
   StandardTxSignerQueueArn:
@@ -9,8 +13,24 @@ Parameters:
     Type: String
   Environment:
     Type: String
+  AaBlobBucketName:
+    Type: String
 
 Resources:
+  BlobTxSignerQueueUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /account-abstraction/${Environment}/sqs/blob-tx-signer/url
+      Type: String
+      Value: !Ref BlobTxSignerQueueUrl
+
+  BlobTxSignerQueueArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /account-abstraction/${Environment}/sqs/blob-tx-signer/arn
+      Type: String
+      Value: !Ref BlobTxSignerQueueArn
+
   StandardTxSignerQueueUrlParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -31,3 +51,10 @@ Resources:
       Name: !Sub /account-abstraction/${Environment}/event-bus/tx-outcome/name
       Type: String
       Value: !Ref StandardTxSignerQueueArn
+
+  AaBlobBucketNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /account-abstraction/${Environment}/s3/blob-bucket/name
+      Type: String
+      Value: !Ref AaBlobBucketName

@@ -6,17 +6,26 @@ edition = "2024"
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
-tx_request_db.workspace = true
 uuid.workspace = true
 anyhow.workspace = true
 hex.workspace = true
 db_types.workspace = true
-standard_tx_input_db.workspace = true
-blob_tx_input_db.workspace = true
+alloy.workspace = true
+
+tx_request_db = { workspace = true, optional = true }
+standard_tx_input_db = { workspace = true, optional = true }
+blob_tx_input_db = { workspace = true, optional = true }
 
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
-alloy.workspace = true
 
 [features]
 aws = ["dep:aws_lambda_events", "dep:lambda_runtime"]
+
+parser = [
+    "dep:aws_lambda_events",
+    "dep:lambda_runtime",
+    "dep:tx_request_db",
+    "dep:standard_tx_input_db",
+    "dep:blob_tx_input_db",
+]
