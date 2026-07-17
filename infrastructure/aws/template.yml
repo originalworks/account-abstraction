@@ -16,6 +16,23 @@ Parameters:
   DatabaseAccessSecurityGroup:
     Type: AWS::SSM::Parameter::Value<String>
 
+  BlobTxSignerQueueName:
+    Type: String
+    Default: blob-tx-signer.fifo
+  BlobTxSignerDlqName:
+    Type: String
+    Default: blob-tx-signer-dlq.fifo
+
+  BlobSenderQueueMessageGroupId:
+    Type: String
+    Default: blob-sender-queue-group
+  BlobTxSenderQueueName:
+    Type: String
+    Default: blob-tx-sender.fifo
+  BlobTxSenderDlqName:
+    Type: String
+    Default: blob-tx-sender-dlq.fifo
+
   StandardTxSignerQueueName:
     Type: String
     Default: standard-tx-signer.fifo
@@ -99,6 +116,10 @@ Resources:
                   - sqs:ChangeMessageVisibility
                   - sqs:SendMessage
                 Resource:
+                  - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${BlobTxSenderQueueName}"
+                  - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${BlobTxSenderDlqName}"
+                  - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${BlobTxSignerQueueName}"
+                  - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${BlobTxSignerDlqName}"
                   - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${StandardTxSenderQueueName}"
                   - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${StandardTxSenderDlqName}"
                   - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${StandardTxSignerQueueName}"
@@ -160,6 +181,23 @@ Resources:
         RetryQueueName: !Ref RetryQueueName
         OutcomeEventBusName: !Ref OutcomeEventBusName
 
+  BlobTxSigner:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./resources/blob-tx-signer.yml
+      Parameters:
+        BlobSenderQueueMessageGroupId: !Ref BlobSenderQueueMessageGroupId
+        MasterKmsSecretsName: !Ref MasterKmsSecretsName
+        LambdaFunctionRoleArn: !GetAtt LambdaFunctionRole.Arn
+        DatabaseName: !Ref DatabaseName
+        DbSecretsName: !Ref DbSecretsName
+        DatabaseAccessSecurityGroup: !Ref DatabaseAccessSecurityGroup
+        PrivateSubnets: !Ref PrivateSubnets
+        BlobTxSenderQueueName: !Ref BlobTxSenderQueueName
+        BlobTxSignerQueueName: !Ref BlobTxSignerQueueName
+        BlobTxSignerDlqName: !Ref BlobTxSignerDlqName
+        AaBlobBucketName: !Ref AaBlobBucketName
+
   ReceiptPoller:
     Type: AWS::Serverless::Application
     Properties:
@@ -190,6 +228,11 @@ Resources:
         PrivateSubnets: !Ref PrivateSubnets
         RetryDlqName: !Ref RetryDlqName
         RetryQueueName: !Ref RetryQueueName
+        ReceiptPollerQueueMessageGroupId: !Ref ReceiptPollerQueueMessageGroupId
+        ReceiptPollerQueueName: !Ref ReceiptPollerQueueName
+        OutcomeEventBusName: !Ref OutcomeEventBusName
+        RetryQueueMessageGroupId: !Ref RetryQueueMessageGroupId
+        AaBlobBucketName: !Ref AaBlobBucketName
 
   Migrations:
     Type: AWS::Serverless::Application
@@ -209,5 +252,8 @@ Resources:
       Parameters:
         StandardTxSignerQueueUrl: !GetAtt StandardTxSigner.Outputs.StandardTxSignerQueueUrl
         StandardTxSignerQueueArn: !GetAtt StandardTxSigner.Outputs.StandardTxSignerQueueArn
+        BlobTxSignerQueueUrl: !GetAtt BlobTxSigner.Outputs.BlobTxSignerQueueUrl
+        BlobTxSignerQueueArn: !GetAtt BlobTxSigner.Outputs.BlobTxSignerQueueArn
         OutcomeEventBusName: !Ref OutcomeEventBusName
         Environment: !Ref Environment
+        AaBlobBucketName: !Ref AaBlobBucketName

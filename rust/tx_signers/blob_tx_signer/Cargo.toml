@@ -10,7 +10,7 @@ serde.workspace = true
 serde_json.workspace = true
 sqlx = { workspace = true, features = ["postgres"] }
 sqs_queue.workspace = true
-tx_request = { workspace = true, features = ["aws"] }
+tx_request = { workspace = true, features = ["aws", "parser"] }
 db_types.workspace = true
 eip712_domain.workspace = true
 ow_wallet_adapter.workspace = true
@@ -38,3 +38,7 @@ aws = [
     "dep:aws_lambda_events",
     "dep:lambda_runtime",
 ]
+
+[[bin]]
+name = "aws_blob_tx_signer"
+path = "src/bin/aws_lambda.rs"

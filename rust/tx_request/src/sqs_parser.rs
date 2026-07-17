@@ -1,5 +1,5 @@
 #![cfg(feature = "aws")]
-
+#![cfg(feature = "parser")]
 use aws_lambda_events::sqs::SqsEvent;
 use lambda_runtime::{LambdaEvent, tracing};
 use serde::de::DeserializeOwned;

@@ -1,6 +1,10 @@
 Transform: AWS::Serverless-2016-10-31
 
 Parameters:
+  BlobSenderQueueMessageGroupId:
+    Type: String
+  MasterKmsSecretsName:
+    Type: String
   LambdaFunctionRoleArn:
     Type: String
   DatabaseName:
@@ -11,49 +15,43 @@ Parameters:
     Type: String
   PrivateSubnets:
     Type: String
-  RetryQueueName:
+  BlobTxSenderQueueName:
     Type: String
-  RetryDlqName:
+  BlobTxSignerQueueName:
     Type: String
-  ReceiptPollerQueueMessageGroupId:
-    Type: String
-  ReceiptPollerQueueName:
-    Type: String
-  OutcomeEventBusName:
-    Type: String
-  RetryQueueMessageGroupId:
+  BlobTxSignerDlqName:
     Type: String
   AaBlobBucketName:
     Type: String
 
 Resources:
-  RetryDeadLetterQueue:
+  BlobTxSignerDeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Ref RetryDlqName
+      QueueName: !Ref BlobTxSignerDlqName
       FifoQueue: true
       ContentBasedDeduplication: true
 
-  RetryQueue:
+  BlobTxSignerQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Ref RetryQueueName
+      QueueName: !Ref BlobTxSignerQueueName
       FifoQueue: true
       ContentBasedDeduplication: true
-      VisibilityTimeout: 300
+      VisibilityTimeout: 35
       RedrivePolicy:
-        deadLetterTargetArn: !GetAtt RetryDeadLetterQueue.Arn
+        deadLetterTargetArn: !GetAtt BlobTxSignerDeadLetterQueue.Arn
         maxReceiveCount: 5
 
-  RetryHandlerFunction:
+  BlobTxSignerFunction:
     Type: AWS::Serverless::Function
     Properties:
       Runtime: provided.al2023
       Architectures:
         - x86_64
       Handler: bootstrap
-      CodeUri: ../../../target/lambda/aws_retry_handler
-      Timeout: 300
+      CodeUri: ../../../target/lambda/aws_blob_tx_signer
+      Timeout: 25
       Role: !Ref LambdaFunctionRoleArn
       Environment:
         Variables:
@@ -77,21 +75,33 @@ Resources:
               - ":SecretString:port}}"
               - "/"
               - !Ref DatabaseName
-          RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID: !Ref ReceiptPollerQueueMessageGroupId
-          RECEIPT_POLLER_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${ReceiptPollerQueueName}"
-          OUTCOME_EVENT_BUS_NAME: !Ref OutcomeEventBusName
-          RETRY_QUEUE_MESSAGE_GROUP_ID: !Ref RetryQueueMessageGroupId
-          RETRY_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${RetryQueueName}"
+          BLOB_SENDER_QUEUE_MESSAGE_GROUP_ID: !Ref BlobSenderQueueMessageGroupId
+          BLOB_SENDER_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${BlobTxSenderQueueName}"
           BLOB_STORAGE_BUCKET_NAME: !Ref AaBlobBucketName
+          USE_KMS: true
+          SIGNER_KMS_ID: !Join
+            - ""
+            - - "{{resolve:secretsmanager:"
+              - !Ref MasterKmsSecretsName
+              - ":SecretString:AA_MASTER_KMS_ID}}"
       VpcConfig:
         SecurityGroupIds:
           - !Ref DatabaseAccessSecurityGroup
         SubnetIds: !Split [",", !Ref PrivateSubnets]
       Events:
-        RetryHandlerQueueEvent:
+        BlobTxSignerQueueEvent:
           Type: SQS
           Properties:
-            Queue: !GetAtt RetryQueue.Arn
+            Queue: !GetAtt BlobTxSignerQueue.Arn
             BatchSize: 5
             FunctionResponseTypes:
               - ReportBatchItemFailures
+
+Outputs:
+  BlobTxSignerQueueArn:
+    Description: ARN of the BlobTxSigner SQS queue
+    Value: !GetAtt BlobTxSignerQueue.Arn
+
+  BlobTxSignerQueueUrl:
+    Description: URL of the BlobTxSigner SQS queue
+    Value: !Ref BlobTxSignerQueue

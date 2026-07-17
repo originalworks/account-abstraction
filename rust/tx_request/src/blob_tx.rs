@@ -1,8 +1,11 @@
-use alloy::{consensus::BlobTransactionSidecarEip7594, primitives::FixedBytes};
+#[cfg(feature = "parser")]
 use blob_tx_input_db::blob_tx_inputs::NewBlobTxInput;
+#[cfg(feature = "parser")]
+use tx_request_db::types::{NewTxInput, NewTxRequest, NewTxRequestWithTxInput};
+
+use alloy::{consensus::BlobTransactionSidecarEip7594, primitives::FixedBytes};
 use db_types::{BlobStorageType, TxStatus, TxType};
 use serde::{Deserialize, Serialize};
-use tx_request_db::types::{NewTxInput, NewTxRequest, NewTxRequestWithTxInput};
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -24,6 +27,7 @@ pub struct BlobInputJsonFile {
     pub blob_sidecar: BlobTransactionSidecarEip7594,
 }
 
+#[cfg(feature = "parser")]
 impl BlobTxRequestBody {
     pub fn into_db_input(
         &self,

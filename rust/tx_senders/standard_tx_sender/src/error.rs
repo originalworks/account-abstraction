@@ -57,15 +57,15 @@ pub trait StandardExecutionErrorHandler {
                         .set_status_for_many(&execute_batch_context.get_tx_ids(), TxStatus::FAILED)
                         .await?;
 
-                    for tx_request in execute_batch_context.tx_requests.clone() {
-                        let outcome = failed_new_execution
-                            .outcome
-                            .clone()
-                            .unwrap_or(TxExecutionOutcome::FAILED);
+                    let outcome = failed_new_execution
+                        .outcome
+                        .clone()
+                        .unwrap_or(TxExecutionOutcome::FAILED);
 
+                    for tx_request in execute_batch_context.tx_requests.clone() {
                         self.outcome_emitter()
                             .emit_outcome(&OutcomeEvent {
-                                outcome,
+                                outcome: outcome.clone(),
                                 tx_request_id: tx_request.tx_id,
                                 gas_fee: failed_new_execution.used_gas,
                                 transaction_hash: failed_new_execution.tx_hash.clone(),
