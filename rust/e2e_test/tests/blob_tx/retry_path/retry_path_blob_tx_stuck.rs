@@ -2,25 +2,29 @@ use crate::common::retry::get_receipt_poller_with_tx_max_age;
 use alloy::providers::{Provider, ProviderBuilder};
 use db_types::TxStatus;
 use e2e_test::{
-    aws::sqs::{
-        event::{TestEventMessage, build_lambda_sqs_event},
-        test_queue::SqsQueueTester,
+    aws::{
+        s3::BLOB_JSON_TEST_FILES,
+        sqs::{
+            event::{TestEventMessage, build_lambda_sqs_event},
+            test_queue::SqsQueueTester,
+        },
     },
     db::execution_attempt::ExecutionAttemptTestExt,
     fixture::E2eTestFixture,
-    tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional},
+    tx_request::{BlobTxRequestBodyForTest, BlobTxRequestBodyOptional},
 };
 use std::time::Duration;
-use tx_request::standard::StandardTxRequestBody;
+use tx_request::blob_tx::BlobTxRequestBody;
 
-pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
     let tx_id = uuid::Uuid::new_v4().to_string();
 
     let mut receipt_poller = get_receipt_poller_with_tx_max_age(&e2e_test_fixture, 1).await?;
 
-    let mut tx_request_body = StandardTxRequestBody::test_build(
-        StandardTxRequestBodyOptional::default(e2e_test_fixture.env_vars.anvil_chain_id),
-    )?;
+    let mut tx_request_body = BlobTxRequestBody::test_build(BlobTxRequestBodyOptional::default(
+        e2e_test_fixture.env_vars.anvil_chain_id,
+        BLOB_JSON_TEST_FILES[3].to_string(),
+    ))?;
 
     tx_request_body.tx_id = tx_id.clone();
 
@@ -30,7 +34,7 @@ pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> 
     )])?;
 
     // SIGN
-    standard_tx_signer::aws_lambda::function_handler(
+    blob_tx_signer::aws_lambda::function_handler(
         tx_request_event,
         &e2e_test_fixture.pool,
         &e2e_test_fixture.aws_config,
@@ -54,13 +58,13 @@ pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> 
     // SEND
     let sender_queue_event = e2e_test_fixture
         .test_queue_manager
-        .standard_sender_queue
+        .blob_sender_queue
         .receive_messages(5)
         .await?;
 
     match e2e_test_fixture
         .orchestrators
-        .standard_tx_sender_orchestrator
+        .blob_tx_sender_orchestrator
         .function_handler(sender_queue_event)
         .await
     {

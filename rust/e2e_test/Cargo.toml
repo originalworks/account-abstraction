@@ -24,7 +24,7 @@ receipt_poller = { workspace = true, features = ["aws"] }
 retry_queue = { workspace = true, features = ["aws"] }
 retry_handler = { workspace = true, features = ["aws"] }
 sqs_queue = { workspace = true, optional = true }
-tx_request = { workspace = true, features = ["aws"] }
+tx_request = { workspace = true, features = ["aws", "parser"] }
 standard_tx_input_db.workspace = true
 blob_tx_signer = { workspace = true, features = ["aws"] }
 aws-sdk-s3 = "1.131.0"
