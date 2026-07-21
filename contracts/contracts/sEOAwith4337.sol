@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/account/extensions/draft-ERC7821.sol";
 import "@openzeppelin/contracts/utils/cryptography/signers/SignerERC7702.sol";
 import "./PermissionManager.sol";
-import "./interfaces/IDdexSequencer.sol";
+import "@originalworks/protocol-core-contracts/interfaces/IDdexSequencer.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -40,7 +40,7 @@ contract sEOAwith4337 is
         address ddexSequencerAddress
     ) public onlyRole(BLOB_SENDER_ROLE) {
         for (uint i = 0; i < inputs.length; i++) {
-            IDdexSequencer(ddexSequencerAddress).submitNewBlob(
+            IDdexSequencer(ddexSequencerAddress).submitNewBlobWithIndex(
                 inputs[i].imageId,
                 inputs[i].commitment,
                 inputs[i].blobSha2,
