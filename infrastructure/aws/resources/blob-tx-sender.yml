@@ -1,0 +1,100 @@
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  BlobTxSenderQueueName:
+    Type: String
+  BlobTxSenderDlqName:
+    Type: String
+  LambdaFunctionRoleArn:
+    Type: String
+  DatabaseName:
+    Type: String
+  DbSecretsName:
+    Type: String
+  DatabaseAccessSecurityGroup:
+    Type: String
+  PrivateSubnets:
+    Type: String
+  ReceiptPollerQueueMessageGroupId:
+    Type: String
+  ReceiptPollerQueueName:
+    Type: String
+  RetryQueueMessageGroupId:
+    Type: String
+  RetryQueueName:
+    Type: String
+  OutcomeEventBusName:
+    Type: String
+  AaBlobBucketName:
+    Type: String
+
+Resources:
+  BlobTxSenderDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref BlobTxSenderDlqName
+      FifoQueue: true
+      ContentBasedDeduplication: true
+
+  BlobTxSenderQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref BlobTxSenderQueueName
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      VisibilityTimeout: 35
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt BlobTxSenderDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  BlobTxSenderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: provided.al2023
+      Architectures:
+        - x86_64
+      Handler: bootstrap
+      CodeUri: ../../../target/lambda/aws_blob_tx_sender
+      Timeout: 25
+      Role: !Ref LambdaFunctionRoleArn
+      Environment:
+        Variables:
+          DATABASE_URL: !Join
+            - ""
+            - - "postgresql://"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:username}}"
+              - ":"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:password}}"
+              - "@"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:host}}"
+              - ":"
+              - "{{resolve:secretsmanager:"
+              - !Ref DbSecretsName
+              - ":SecretString:port}}"
+              - "/"
+              - !Ref DatabaseName
+          RECEIPT_POLLER_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${ReceiptPollerQueueName}"
+          RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID: !Ref ReceiptPollerQueueMessageGroupId
+          BLOB_STORAGE_BUCKET_NAME: !Ref AaBlobBucketName
+          RETRY_QUEUE_MESSAGE_GROUP_ID: !Ref RetryQueueMessageGroupId
+          RETRY_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${RetryQueueName}"
+          OUTCOME_EVENT_BUS_NAME: !Ref OutcomeEventBusName
+
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref DatabaseAccessSecurityGroup
+        SubnetIds: !Split [",", !Ref PrivateSubnets]
+      Events:
+        BlobTxSenderQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt BlobTxSenderQueue.Arn
+            BatchSize: 5
+            FunctionResponseTypes:
+              - ReportBatchItemFailures

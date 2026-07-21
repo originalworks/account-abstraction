@@ -61,7 +61,6 @@ impl Config {
 #[cfg(feature = "aws")]
 pub mod aws_lambda {
 
-    use aws_config::{BehaviorVersion, meta::region::RegionProviderChain};
     use aws_lambda_events::sqs::SqsEvent;
     use blob_sender_queue::BlobSenderQueueMessageBody;
     use blob_storage::storage::s3::S3BlobStorageManager;

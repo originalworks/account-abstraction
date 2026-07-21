@@ -12,6 +12,7 @@ use alloy::{
 use anyhow::bail;
 use network_db::networks::Network;
 use serde::{Deserialize, Serialize};
+use std::cmp::max;
 use std::{collections::HashMap, str::FromStr};
 use wallet_pool::wallet::Wallet;
 
@@ -30,6 +31,8 @@ type HardlyTypedProvider = FillProvider<
     >,
     alloy::providers::RootProvider,
 >;
+
+const GNOSIS_MIN_BLOB_GAS_PRICE: u128 = 1_000_000_000;
 
 pub struct ContractManager {
     pub networks_by_chain_id: HashMap<i64, Network>,
@@ -54,21 +57,25 @@ impl ContractManager {
     pub async fn get_blob_gasprice(
         &self,
         root_provider: &HardlyTypedProvider,
-        blob_gas_estimation_buffer_ppm: i64,
+        network: &Network,
     ) -> anyhow::Result<u128> {
         let provider = ProviderBuilder::new().connect_provider(root_provider);
+
         let block = provider
             .get_block_by_number(alloy::rpc::types::BlockNumberOrTag::Latest)
             .await?
             .unwrap();
 
-        let excess_blob_gas = block.header.excess_blob_gas.unwrap_or(0);
+        let excess_blob_gas = block.header.excess_blob_gas.unwrap_or(1);
 
-        let blob_base_fee = calc_blob_gasprice(excess_blob_gas);
+        let mut blob_base_fee = calc_blob_gasprice(excess_blob_gas);
 
+        // detects Gnosis Mainnet and Chiado testnet, where min. blob gas price is 1 Gwei
+        if network.chain_id == 100 || network.chain_id == 10200 {
+            blob_base_fee = max(blob_base_fee, GNOSIS_MIN_BLOB_GAS_PRICE);
+        }
         let max_fee_per_blob_gas = blob_base_fee
-            + blob_base_fee * u128::try_from(blob_gas_estimation_buffer_ppm)? / 1_000_000;
-
+            + blob_base_fee * u128::try_from(network.blob_gas_estimation_buffer_ppm)? / 1_000_000;
         Ok(max_fee_per_blob_gas)
     }
 
@@ -130,9 +137,7 @@ impl ContractManager {
         );
 
         let fees = provider.estimate_eip1559_fees().await?;
-        let max_fee_per_blob_gas = self
-            .get_blob_gasprice(root_provider, network.blob_gas_estimation_buffer_ppm)
-            .await?;
+        let max_fee_per_blob_gas = self.get_blob_gasprice(root_provider, &network).await?;
 
         let tx_sidecar = Self::flat_sidecars(&tx_context)?;
 

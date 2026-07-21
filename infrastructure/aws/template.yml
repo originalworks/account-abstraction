@@ -107,6 +107,13 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:aws:s3:::${AaBlobBucketName}"
+                  - !Sub "arn:aws:s3:::${AaBlobBucketName}/*"
               - Sid: ConsumeAaQueues
                 Effect: Allow
                 Action:
@@ -196,6 +203,25 @@ Resources:
         BlobTxSenderQueueName: !Ref BlobTxSenderQueueName
         BlobTxSignerQueueName: !Ref BlobTxSignerQueueName
         BlobTxSignerDlqName: !Ref BlobTxSignerDlqName
+        AaBlobBucketName: !Ref AaBlobBucketName
+
+  BlobTxSender:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./resources/blob-tx-sender.yml
+      Parameters:
+        BlobTxSenderQueueName: !Ref BlobTxSenderQueueName
+        BlobTxSenderDlqName: !Ref BlobTxSenderDlqName
+        LambdaFunctionRoleArn: !GetAtt LambdaFunctionRole.Arn
+        DatabaseName: !Ref DatabaseName
+        DbSecretsName: !Ref DbSecretsName
+        DatabaseAccessSecurityGroup: !Ref DatabaseAccessSecurityGroup
+        PrivateSubnets: !Ref PrivateSubnets
+        ReceiptPollerQueueMessageGroupId: !Ref ReceiptPollerQueueMessageGroupId
+        ReceiptPollerQueueName: !Ref ReceiptPollerQueueName
+        RetryQueueMessageGroupId: !Ref RetryQueueMessageGroupId
+        RetryQueueName: !Ref RetryQueueName
+        OutcomeEventBusName: !Ref OutcomeEventBusName
         AaBlobBucketName: !Ref AaBlobBucketName
 
   ReceiptPoller:
