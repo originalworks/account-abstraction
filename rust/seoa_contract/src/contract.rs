@@ -139,10 +139,6 @@ impl ContractManager {
         let fees = provider.estimate_eip1559_fees().await?;
         let max_fee_per_blob_gas = self.get_blob_gasprice(root_provider, &network).await?;
 
-        // let max_fee_per_blob_gas = 5000000000;
-
-        println!("++-- max_fee_per_blob_gas applied at the end: {max_fee_per_blob_gas}");
-
         let tx_sidecar = Self::flat_sidecars(&tx_context)?;
 
         let call = contract
