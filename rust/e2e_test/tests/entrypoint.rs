@@ -9,7 +9,10 @@ use crate::{
             happy_path_single_blob_tx::happy_path_single_blob_tx,
             happy_path_two_blob_tx::happy_path_two_blob_tx,
         },
-        retry_path::retry_path_blob_tx_dropped::retry_path_blob_tx_dropped,
+        retry_path::{
+            retry_path_blob_tx_dropped::retry_path_blob_tx_dropped,
+            retry_path_blob_tx_stuck::retry_path_blob_tx_stuck,
+        },
     },
     standard_tx::{
         fail_path::expired_standard_tx::expired_standard_tx,
@@ -28,6 +31,7 @@ async fn e2e_tests() -> anyhow::Result<()> {
     let e2e_test_fixture = get_e2e_test_fixture().await;
     expired_blob_tx(e2e_test_fixture).await?;
     retry_path_blob_tx_dropped(e2e_test_fixture).await?;
+    retry_path_blob_tx_stuck(e2e_test_fixture).await?;
     happy_path_single_blob_tx(e2e_test_fixture).await?;
     happy_path_two_blob_tx(e2e_test_fixture).await?;
 
