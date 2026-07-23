@@ -111,45 +111,7 @@ impl E2eTestFixture {
             )
             .await?;
         }
-        // if let Some(tx_max_age_sec) = with_tx_max_age_override {
-        //     let receipt_poller_orchestrator = self
-        //         .get_receipt_poller_with_tx_max_age(tx_max_age_sec)
-        //         .await?;
-        //     match receipt_poller_orchestrator
-        //         .sqs_event_handler(receipt_poller_queue_event.clone().payload)
-        //         .await
-        //     {
-        //         Ok(_) => {}
-        //         Err(err) => {
-        //             println!("{err:#?}")
-        //         }
-        //     }
 
-        //     if self.get_tx_status_by_id(&wait_for_tx_id).await? != TxStatus::EXECUTED {
-        //         self.run_receipt_poller_scheduler(&wait_for_tx_id, &receipt_poller_orchestrator)
-        //             .await?;
-        //     }
-        // } else {
-        //     match self
-        //         .orchestrators
-        //         .receipt_poller_orchestrator
-        //         .sqs_event_handler(receipt_poller_queue_event.clone().payload)
-        //         .await
-        //     {
-        //         Ok(_) => {}
-        //         Err(err) => {
-        //             println!("{err:#?}")
-        //         }
-        //     }
-
-        //     if self.get_tx_status_by_id(&wait_for_tx_id).await? != TxStatus::EXECUTED {
-        //         self.run_receipt_poller_scheduler(
-        //             &wait_for_tx_id,
-        //             &self.orchestrators.receipt_poller_orchestrator,
-        //         )
-        //         .await?;
-        //     }
-        // }
         Ok(())
     }
 
@@ -196,22 +158,6 @@ impl E2eTestFixture {
 
         Ok(receipt_poller)
     }
-
-    // pub async fn set_default_tx_max_age(&mut self) -> anyhow::Result<()> {
-    //     self.db_repositories
-    //         .network_repo
-    //         .set_tx_max_age(DEFAULT_TX_MAX_AGE_SEC, self.env_vars.anvil_chain_id)
-    //         .await?;
-
-    //     // Can't use receipt_poller from e2e_test_fixture because it has old network data cached
-    //     let receipt_poller = receipt_poller::orchestrator::aws::AwsLambdaOrchestrator::build(
-    //         &self.pool,
-    //         &self.aws_config,
-    //     )
-    //     .await?;
-    //     self.orchestrators.receipt_poller_orchestrator = receipt_poller;
-    //     Ok(())
-    // }
 }
 
 pub struct E2eTestEnvVars {
