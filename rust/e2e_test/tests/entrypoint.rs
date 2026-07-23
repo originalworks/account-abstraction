@@ -1,5 +1,4 @@
 mod blob_tx;
-mod common;
 mod standard_tx;
 
 use crate::{
@@ -9,6 +8,10 @@ use crate::{
             happy_path_single_blob_tx::happy_path_single_blob_tx,
             happy_path_two_blob_tx::happy_path_two_blob_tx,
         },
+        idempotency::{
+            concurrent_blob_tx_workers::concurrent_blob_tx_workers,
+            concurrent_retry_workers_in_blob_tx::concurrent_retry_workers_in_blob_tx,
+        },
         retry_path::{
             retry_path_blob_tx_dropped::retry_path_blob_tx_dropped,
             retry_path_blob_tx_stuck::retry_path_blob_tx_stuck,
@@ -16,7 +19,14 @@ use crate::{
     },
     standard_tx::{
         fail_path::expired_standard_tx::expired_standard_tx,
-        happy_path::happy_path_single_standard_tx::happy_path_single_standard_tx,
+        happy_path::{
+            happy_path_single_standard_tx::happy_path_single_standard_tx,
+            happy_path_two_standard_tx::happy_path_two_standard_tx,
+        },
+        idempotency::{
+            concurrent_standard_tx_retry_workers::concurrent_standard_tx_retry_workers,
+            concurrent_standard_tx_workers::concurrent_standard_tx_workers,
+        },
         retry_path::{
             retry_path_standard_dropped::retry_path_standard_dropped,
             retry_path_standard_reverted::retry_path_standard_reverted,
@@ -29,15 +39,30 @@ use e2e_test::fixture::get_e2e_test_fixture;
 #[tokio::test]
 async fn e2e_tests() -> anyhow::Result<()> {
     let e2e_test_fixture = get_e2e_test_fixture().await;
+    //
+    // BLOB TXS
     expired_blob_tx(e2e_test_fixture).await?;
+
     retry_path_blob_tx_dropped(e2e_test_fixture).await?;
     retry_path_blob_tx_stuck(e2e_test_fixture).await?;
+
     happy_path_single_blob_tx(e2e_test_fixture).await?;
     happy_path_two_blob_tx(e2e_test_fixture).await?;
 
+    concurrent_blob_tx_workers(e2e_test_fixture).await?;
+    concurrent_retry_workers_in_blob_tx(e2e_test_fixture).await?;
+
+    //
+    // STANDARD TXS
     expired_standard_tx(e2e_test_fixture).await?;
+
     happy_path_single_standard_tx(e2e_test_fixture).await?;
     happy_path_single_standard_tx(e2e_test_fixture).await?;
+    happy_path_two_standard_tx(e2e_test_fixture).await?;
+
+    concurrent_standard_tx_workers(e2e_test_fixture).await?;
+    concurrent_standard_tx_retry_workers(e2e_test_fixture).await?;
+
     retry_path_standard_tx_stuck(e2e_test_fixture).await?;
     retry_path_standard_dropped(e2e_test_fixture).await?;
     retry_path_standard_reverted(e2e_test_fixture).await?;

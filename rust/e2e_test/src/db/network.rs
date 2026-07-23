@@ -1,5 +1,7 @@
 use network_db::networks::{NetworkRepo, NewNetwork};
 
+use crate::constants::DEFAULT_TX_MAX_AGE_SEC;
+
 #[allow(async_fn_in_trait)]
 pub trait AnvilTestNetwork {
     async fn add_anvil(&self, contract_address: String, chain_id: i64) -> anyhow::Result<()>;
@@ -17,7 +19,7 @@ impl AnvilTestNetwork for NetworkRepo {
             gas_estimation_buffer_ppm: 1_200_000,
             blob_gas_estimation_buffer_ppm: 1_000_000,
             max_retry_attempts: 3,
-            tx_max_age_sec: 3600,
+            tx_max_age_sec: DEFAULT_TX_MAX_AGE_SEC,
         })
         .await?;
         Ok(())

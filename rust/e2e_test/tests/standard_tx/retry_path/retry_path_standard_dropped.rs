@@ -6,32 +6,21 @@ use e2e_test::{
     },
     db::execution_attempt::ExecutionAttemptTestExt,
     fixture::E2eTestFixture,
+    // receipt_poller::get_receipt_poller_with_tx_max_age,
     tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional},
 };
 use std::time::Duration;
 use tx_request::standard::StandardTxRequestBody;
 
-use crate::common::retry::get_receipt_poller_with_tx_max_age;
-
 const RANDOM_TX_HASH: &str = "0x27ee575f57248220b3ae9c190b93de171ceec766850fbcf79f8d6db77f13f752";
 
 pub async fn retry_path_standard_dropped(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+    println!("Entering test: {}", module_path!());
     let tx_id = uuid::Uuid::new_v4().to_string();
     let chain_id = e2e_test_fixture.env_vars.anvil_chain_id;
 
-    let networks = e2e_test_fixture
-        .db_repositories
-        .network_repo
-        .select_all()
-        .await?;
-
-    let default_tx_max_age_sec = networks[0].tx_max_age_sec;
-
-    let mut receipt_poller = get_receipt_poller_with_tx_max_age(&e2e_test_fixture, 1).await?;
-
-    let mut tx_request_body = StandardTxRequestBody::test_build(
-        StandardTxRequestBodyOptional::default(e2e_test_fixture.env_vars.anvil_chain_id),
-    )?;
+    let mut tx_request_body =
+        StandardTxRequestBody::test_build(StandardTxRequestBodyOptional::default(chain_id))?;
 
     tx_request_body.tx_id = tx_id.clone();
 
@@ -48,6 +37,13 @@ pub async fn retry_path_standard_dropped(e2e_test_fixture: &E2eTestFixture) -> a
     )
     .await
     .unwrap();
+
+    // receive message to clear the queue
+    e2e_test_fixture
+        .test_queue_manager
+        .standard_sender_queue
+        .receive_messages(1)
+        .await?;
 
     // Simulate sending dropped transaction by saving it to the database without sending it to the network
     let mut execute_batch_context = e2e_test_fixture
@@ -106,26 +102,14 @@ pub async fn retry_path_standard_dropped(e2e_test_fixture: &E2eTestFixture) -> a
         .receipt_poller_queue
         .receive_messages(5)
         .await?;
-
-    match receipt_poller
-        .sqs_event_handler(receipt_poller_queue_event.clone().payload)
-        .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{err:#?}")
-        }
-    }
-    let mut tx_request = e2e_test_fixture
-        .db_repositories
-        .tx_request_repo
-        .find_by_tx_id(&tx_id)
+    e2e_test_fixture
+        .poll_for_receipt_with_tx_max_age(&receipt_poller_queue_event, 1)
         .await?;
 
-    assert_eq!(tx_request.tx_status, TxStatus::RETRIED);
-
-    receipt_poller =
-        get_receipt_poller_with_tx_max_age(&e2e_test_fixture, default_tx_max_age_sec).await?;
+    assert_eq!(
+        e2e_test_fixture.get_tx_status_by_id(&tx_id).await?,
+        TxStatus::RETRIED
+    );
 
     // RETRY
     let retry_queue_event = e2e_test_fixture
@@ -146,13 +130,10 @@ pub async fn retry_path_standard_dropped(e2e_test_fixture: &E2eTestFixture) -> a
         }
     }
 
-    tx_request = e2e_test_fixture
-        .db_repositories
-        .tx_request_repo
-        .find_by_tx_id(&tx_id)
-        .await?;
-
-    assert_eq!(tx_request.tx_status, TxStatus::BROADCASTED);
+    assert_eq!(
+        e2e_test_fixture.get_tx_status_by_id(&tx_id).await?,
+        TxStatus::BROADCASTED
+    );
 
     // POLL FOR RECEIPT AGAIN
     let receipt_poller_queue_event_2 = e2e_test_fixture
@@ -161,17 +142,11 @@ pub async fn retry_path_standard_dropped(e2e_test_fixture: &E2eTestFixture) -> a
         .receive_messages(5)
         .await?;
 
-    match receipt_poller
-        .sqs_event_handler(receipt_poller_queue_event_2.clone().payload)
-        .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{err:#?}")
-        }
-    }
+    e2e_test_fixture
+        .poll_for_receipt_with_scheduler(&tx_id, &receipt_poller_queue_event_2)
+        .await?;
 
-    tx_request = e2e_test_fixture
+    let tx_request = e2e_test_fixture
         .db_repositories
         .tx_request_repo
         .find_by_tx_id(&tx_id)
@@ -191,6 +166,6 @@ pub async fn retry_path_standard_dropped(e2e_test_fixture: &E2eTestFixture) -> a
         execution_attempts[0].nonce_used,
         execution_attempts[1].nonce_used
     );
-
+    println!("{} PASSED", module_path!());
     Ok(())
 }

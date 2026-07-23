@@ -1,15 +1,22 @@
+use std::time::Duration;
+
 use crate::{
     aws::{
         config::build_aws_sdk_config, event_bridge::attach_outcome_event_bridge_to_queue,
         s3::S3BlobStorageManagerTestFeatures, sqs::TestQueueManager,
     },
+    constants::{DEFAULT_TX_MAX_AGE_SEC, MAX_SCHEDULER_RUNS, SCHEDULER_INTERVAL_SEC},
     db::{get_pool, network::AnvilTestNetwork, operator_wallet::InsertFromMnemonic},
 };
 use alloy::{primitives::Address, signers::local::PrivateKeySigner};
+use anyhow::bail;
+use aws_lambda_events::sqs::SqsEvent;
 use blob_storage::storage::s3::S3BlobStorageManager;
 use blob_tx_input_db::blob_tx_inputs::BlobTxInputRepo;
+use db_types::TxStatus;
 use execution_attempt_db::execution_attempts::ExecutionAttemptRepo;
 use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo;
+use lambda_runtime::LambdaEvent;
 use network_db::networks::NetworkRepo;
 use operator_wallet_db::operator_wallets::OperatorWalletRepo;
 use sqlx::PgPool;
@@ -47,6 +54,164 @@ pub struct E2eTestFixture {
     pub blob_storage_manager: S3BlobStorageManager,
     pub aws_config: aws_config::SdkConfig,
     pub orchestrators: TestOrchestrators,
+}
+
+impl E2eTestFixture {
+    pub async fn get_tx_status_by_id(&self, tx_id: &String) -> anyhow::Result<TxStatus> {
+        Ok(self
+            .db_repositories
+            .tx_request_repo
+            .find_by_tx_id(&tx_id)
+            .await?
+            .tx_status)
+    }
+
+    pub async fn poll_for_receipt_with_tx_max_age(
+        &self,
+        receipt_poller_queue_event: &LambdaEvent<SqsEvent>,
+        tx_max_age_sec: i64,
+    ) -> anyhow::Result<()> {
+        let receipt_poller_orchestrator = self
+            .get_receipt_poller_with_tx_max_age(tx_max_age_sec)
+            .await?;
+        match receipt_poller_orchestrator
+            .sqs_event_handler(receipt_poller_queue_event.clone().payload)
+            .await
+        {
+            Ok(_) => {}
+            Err(err) => {
+                println!("{err:#?}")
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn poll_for_receipt_with_scheduler(
+        &self,
+        wait_for_tx_id: &String,
+        receipt_poller_queue_event: &LambdaEvent<SqsEvent>,
+        // with_tx_max_age_override: Option<i64>,
+    ) -> anyhow::Result<()> {
+        match self
+            .orchestrators
+            .receipt_poller_orchestrator
+            .sqs_event_handler(receipt_poller_queue_event.clone().payload)
+            .await
+        {
+            Ok(_) => {}
+            Err(err) => {
+                println!("{err:#?}")
+            }
+        }
+
+        if self.get_tx_status_by_id(&wait_for_tx_id).await? != TxStatus::EXECUTED {
+            self.run_receipt_poller_scheduler(
+                &wait_for_tx_id,
+                &self.orchestrators.receipt_poller_orchestrator,
+            )
+            .await?;
+        }
+        // if let Some(tx_max_age_sec) = with_tx_max_age_override {
+        //     let receipt_poller_orchestrator = self
+        //         .get_receipt_poller_with_tx_max_age(tx_max_age_sec)
+        //         .await?;
+        //     match receipt_poller_orchestrator
+        //         .sqs_event_handler(receipt_poller_queue_event.clone().payload)
+        //         .await
+        //     {
+        //         Ok(_) => {}
+        //         Err(err) => {
+        //             println!("{err:#?}")
+        //         }
+        //     }
+
+        //     if self.get_tx_status_by_id(&wait_for_tx_id).await? != TxStatus::EXECUTED {
+        //         self.run_receipt_poller_scheduler(&wait_for_tx_id, &receipt_poller_orchestrator)
+        //             .await?;
+        //     }
+        // } else {
+        //     match self
+        //         .orchestrators
+        //         .receipt_poller_orchestrator
+        //         .sqs_event_handler(receipt_poller_queue_event.clone().payload)
+        //         .await
+        //     {
+        //         Ok(_) => {}
+        //         Err(err) => {
+        //             println!("{err:#?}")
+        //         }
+        //     }
+
+        //     if self.get_tx_status_by_id(&wait_for_tx_id).await? != TxStatus::EXECUTED {
+        //         self.run_receipt_poller_scheduler(
+        //             &wait_for_tx_id,
+        //             &self.orchestrators.receipt_poller_orchestrator,
+        //         )
+        //         .await?;
+        //     }
+        // }
+        Ok(())
+    }
+
+    pub async fn run_receipt_poller_scheduler(
+        &self,
+        wait_for_tx_id: &String,
+        receipt_poller_orchestrator: &receipt_poller::orchestrator::aws::AwsLambdaOrchestrator,
+    ) -> anyhow::Result<()> {
+        for _ in 0..MAX_SCHEDULER_RUNS {
+            match receipt_poller_orchestrator.scheduler_event_handler().await {
+                Ok(_) => {}
+                Err(err) => {
+                    println!("{err:#?}")
+                }
+            }
+
+            if self.get_tx_status_by_id(&wait_for_tx_id).await? == TxStatus::EXECUTED {
+                return Ok(());
+            }
+            tokio::time::sleep(Duration::from_secs(SCHEDULER_INTERVAL_SEC)).await;
+        }
+
+        bail!("No receipt was found for {}", wait_for_tx_id)
+    }
+
+    pub async fn get_receipt_poller_with_tx_max_age(
+        &self,
+        tx_max_age_sec: i64,
+    ) -> anyhow::Result<receipt_poller::orchestrator::aws::AwsLambdaOrchestrator> {
+        self.db_repositories
+            .network_repo
+            .set_tx_max_age(tx_max_age_sec, self.env_vars.anvil_chain_id)
+            .await?;
+        // Get receipt_poller with new network data cached
+        let receipt_poller = receipt_poller::orchestrator::aws::AwsLambdaOrchestrator::build(
+            &self.pool,
+            &self.aws_config,
+        )
+        .await?;
+        self.db_repositories
+            .network_repo
+            .set_tx_max_age(DEFAULT_TX_MAX_AGE_SEC, self.env_vars.anvil_chain_id)
+            .await?;
+
+        Ok(receipt_poller)
+    }
+
+    // pub async fn set_default_tx_max_age(&mut self) -> anyhow::Result<()> {
+    //     self.db_repositories
+    //         .network_repo
+    //         .set_tx_max_age(DEFAULT_TX_MAX_AGE_SEC, self.env_vars.anvil_chain_id)
+    //         .await?;
+
+    //     // Can't use receipt_poller from e2e_test_fixture because it has old network data cached
+    //     let receipt_poller = receipt_poller::orchestrator::aws::AwsLambdaOrchestrator::build(
+    //         &self.pool,
+    //         &self.aws_config,
+    //     )
+    //     .await?;
+    //     self.orchestrators.receipt_poller_orchestrator = receipt_poller;
+    //     Ok(())
+    // }
 }
 
 pub struct E2eTestEnvVars {

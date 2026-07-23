@@ -1,4 +1,3 @@
-use crate::common::retry::get_receipt_poller_with_tx_max_age;
 use alloy::providers::{Provider, ProviderBuilder};
 use db_types::TxStatus;
 use e2e_test::{
@@ -14,9 +13,8 @@ use std::time::Duration;
 use tx_request::standard::StandardTxRequestBody;
 
 pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+    println!("Entering test: {}", module_path!());
     let tx_id = uuid::Uuid::new_v4().to_string();
-
-    let mut receipt_poller = get_receipt_poller_with_tx_max_age(&e2e_test_fixture, 1).await?;
 
     let mut tx_request_body = StandardTxRequestBody::test_build(
         StandardTxRequestBodyOptional::default(e2e_test_fixture.env_vars.anvil_chain_id),
@@ -77,26 +75,16 @@ pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> 
         .receive_messages(5)
         .await?;
 
-    let default_tx_max_age_sec = networks[0].tx_max_age_sec;
-
     tokio::time::sleep(Duration::from_millis(3000)).await;
 
-    match receipt_poller
-        .sqs_event_handler(receipt_poller_queue_event.clone().payload)
-        .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{err:#?}")
-        }
-    }
-    let mut tx_request = e2e_test_fixture
-        .db_repositories
-        .tx_request_repo
-        .find_by_tx_id(&tx_id)
+    e2e_test_fixture
+        .poll_for_receipt_with_tx_max_age(&receipt_poller_queue_event, 1)
         .await?;
 
-    assert_eq!(tx_request.tx_status, TxStatus::RETRIED);
+    assert_eq!(
+        e2e_test_fixture.get_tx_status_by_id(&tx_id).await?,
+        TxStatus::RETRIED
+    );
 
     // RETRY
     let retry_queue_event = e2e_test_fixture
@@ -117,20 +105,15 @@ pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> 
         }
     }
 
-    tx_request = e2e_test_fixture
-        .db_repositories
-        .tx_request_repo
-        .find_by_tx_id(&tx_id)
-        .await?;
-
-    assert_eq!(tx_request.tx_status, TxStatus::BROADCASTED);
+    assert_eq!(
+        e2e_test_fixture.get_tx_status_by_id(&tx_id).await?,
+        TxStatus::BROADCASTED
+    );
 
     // Re-enable automine to allow the retried transaction to be mined into a block.
     provider
         .raw_request::<_, ()>("evm_setAutomine".into(), [true])
         .await?;
-    receipt_poller =
-        get_receipt_poller_with_tx_max_age(&e2e_test_fixture, default_tx_max_age_sec).await?;
 
     let receipt_poller_queue_event_2 = e2e_test_fixture
         .test_queue_manager
@@ -138,17 +121,11 @@ pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> 
         .receive_messages(5)
         .await?;
 
-    match receipt_poller
-        .sqs_event_handler(receipt_poller_queue_event_2.clone().payload)
-        .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{err:#?}")
-        }
-    }
+    e2e_test_fixture
+        .poll_for_receipt_with_scheduler(&tx_id, &receipt_poller_queue_event_2)
+        .await?;
 
-    tx_request = e2e_test_fixture
+    let tx_request = e2e_test_fixture
         .db_repositories
         .tx_request_repo
         .find_by_tx_id(&tx_id)
@@ -168,6 +145,6 @@ pub async fn retry_path_standard_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> 
         execution_attempts[0].nonce_used,
         execution_attempts[1].nonce_used
     );
-
+    println!("{} PASSED", module_path!());
     Ok(())
 }

@@ -13,9 +13,12 @@ use e2e_test::{
     tx_request::{BlobTxRequestBodyForTest, BlobTxRequestBodyOptional},
 };
 use std::time::Duration;
+use tokio::join;
 use tx_request::blob_tx::BlobTxRequestBody;
 
-pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+pub async fn concurrent_retry_workers_in_blob_tx(
+    e2e_test_fixture: &E2eTestFixture,
+) -> anyhow::Result<()> {
     println!("Entering test: {}", module_path!());
     let tx_id = uuid::Uuid::new_v4().to_string();
 
@@ -97,22 +100,36 @@ pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyh
         .receive_messages(5)
         .await?;
 
-    match e2e_test_fixture
-        .orchestrators
-        .retry_handler_orchestrator
-        .function_handler(retry_queue_event.clone())
-        .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{err:#?}")
-        }
-    }
-
-    assert_eq!(
-        e2e_test_fixture.get_tx_status_by_id(&tx_id).await?,
-        TxStatus::BROADCASTED
+    join!(
+        e2e_test_fixture
+            .orchestrators
+            .retry_handler_orchestrator
+            .function_handler(retry_queue_event.clone()),
+        e2e_test_fixture
+            .orchestrators
+            .retry_handler_orchestrator
+            .function_handler(retry_queue_event.clone()),
+        e2e_test_fixture
+            .orchestrators
+            .retry_handler_orchestrator
+            .function_handler(retry_queue_event.clone())
     );
+
+    let mut tx_request = e2e_test_fixture
+        .db_repositories
+        .tx_request_repo
+        .find_by_tx_id(&tx_id)
+        .await?;
+
+    let mut execution_attempts = e2e_test_fixture
+        .db_repositories
+        .execution_attempt_repo
+        .find_by_tx_id(&tx_request_body.tx_id)
+        .await?;
+
+    assert_eq!(tx_request.tx_status, TxStatus::BROADCASTED);
+    assert_eq!(tx_request.attempts, 2);
+    assert_eq!(execution_attempts.len(), 2);
 
     // Re-enable automine to allow the retried transaction to be mined into a block.
     provider
@@ -131,7 +148,7 @@ pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyh
         .poll_for_receipt_with_scheduler(&tx_id, &receipt_poller_queue_event_2)
         .await?;
 
-    let tx_request = e2e_test_fixture
+    tx_request = e2e_test_fixture
         .db_repositories
         .tx_request_repo
         .find_by_tx_id(&tx_id)
@@ -140,7 +157,7 @@ pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyh
     assert_eq!(tx_request.tx_status, TxStatus::EXECUTED);
     assert_eq!(tx_request.attempts, 2);
 
-    let execution_attempts = e2e_test_fixture
+    execution_attempts = e2e_test_fixture
         .db_repositories
         .execution_attempt_repo
         .find_by_tx_id(&tx_id)

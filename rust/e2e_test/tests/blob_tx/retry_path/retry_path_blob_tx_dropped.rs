@@ -14,26 +14,15 @@ use e2e_test::{
 use std::time::Duration;
 use tx_request::blob_tx::BlobTxRequestBody;
 
-use crate::common::retry::get_receipt_poller_with_tx_max_age;
-
 const RANDOM_TX_HASH: &str = "0xf92145c95eb1bbda1237ab8dfbe87bb35136e58c9b2133caee84faae8df91b58";
 
 pub async fn retry_path_blob_tx_dropped(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+    println!("Entering test: {}", module_path!());
     let tx_id = uuid::Uuid::new_v4().to_string();
     let chain_id = e2e_test_fixture.env_vars.anvil_chain_id;
 
-    let networks = e2e_test_fixture
-        .db_repositories
-        .network_repo
-        .select_all()
-        .await?;
-
-    let default_tx_max_age_sec = networks[0].tx_max_age_sec;
-
-    let mut receipt_poller = get_receipt_poller_with_tx_max_age(&e2e_test_fixture, 1).await?;
-
     let mut tx_request_body = BlobTxRequestBody::test_build(BlobTxRequestBodyOptional::default(
-        e2e_test_fixture.env_vars.anvil_chain_id,
+        chain_id,
         BLOB_JSON_TEST_FILES[1].to_string(),
     ))?;
     tx_request_body.tx_id = tx_id.clone();
@@ -113,25 +102,14 @@ pub async fn retry_path_blob_tx_dropped(e2e_test_fixture: &E2eTestFixture) -> an
         .receive_messages(5)
         .await?;
 
-    match receipt_poller
-        .sqs_event_handler(receipt_poller_queue_event.clone().payload)
-        .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{err:#?}")
-        }
-    }
-
-    let mut tx_request = e2e_test_fixture
-        .db_repositories
-        .tx_request_repo
-        .find_by_tx_id(&tx_id)
+    e2e_test_fixture
+        .poll_for_receipt_with_tx_max_age(&receipt_poller_queue_event, 1)
         .await?;
 
-    assert_eq!(tx_request.tx_status, TxStatus::RETRIED);
-    receipt_poller =
-        get_receipt_poller_with_tx_max_age(&e2e_test_fixture, default_tx_max_age_sec).await?;
+    assert_eq!(
+        e2e_test_fixture.get_tx_status_by_id(&tx_id).await?,
+        TxStatus::RETRIED
+    );
 
     // RETRY
     let retry_queue_event = e2e_test_fixture
@@ -152,13 +130,10 @@ pub async fn retry_path_blob_tx_dropped(e2e_test_fixture: &E2eTestFixture) -> an
         }
     }
 
-    tx_request = e2e_test_fixture
-        .db_repositories
-        .tx_request_repo
-        .find_by_tx_id(&tx_id)
-        .await?;
-
-    assert_eq!(tx_request.tx_status, TxStatus::BROADCASTED);
+    assert_eq!(
+        e2e_test_fixture.get_tx_status_by_id(&tx_id).await?,
+        TxStatus::BROADCASTED
+    );
 
     // POLL FOR RECEIPT AGAIN
     let receipt_poller_queue_event_2 = e2e_test_fixture
@@ -167,17 +142,11 @@ pub async fn retry_path_blob_tx_dropped(e2e_test_fixture: &E2eTestFixture) -> an
         .receive_messages(5)
         .await?;
 
-    match receipt_poller
-        .sqs_event_handler(receipt_poller_queue_event_2.clone().payload)
-        .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{err:#?}")
-        }
-    }
+    e2e_test_fixture
+        .poll_for_receipt_with_scheduler(&tx_id, &receipt_poller_queue_event_2)
+        .await?;
 
-    tx_request = e2e_test_fixture
+    let tx_request = e2e_test_fixture
         .db_repositories
         .tx_request_repo
         .find_by_tx_id(&tx_id)
@@ -198,7 +167,7 @@ pub async fn retry_path_blob_tx_dropped(e2e_test_fixture: &E2eTestFixture) -> an
         execution_attempts[1].nonce_used
     );
 
-    println!("retry_path_blob_tx_dropped PASSED");
+    println!("{} PASSED", module_path!());
 
     Ok(())
 }

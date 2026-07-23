@@ -12,6 +12,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tx_request::standard::StandardTxRequestBody;
 
 pub async fn expired_standard_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+    println!("{}", module_path!());
     let current_timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -84,6 +85,6 @@ pub async fn expired_standard_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::R
         Some(TxExecutionOutcome::REVERTED)
     );
     assert_eq!(execution_attempt.retryable, Some(false));
-
+    println!("{} PASSED", module_path!());
     Ok(())
 }

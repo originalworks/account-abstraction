@@ -13,6 +13,7 @@ use tx_request::standard::StandardTxRequestBody;
 pub async fn happy_path_single_standard_tx(
     e2e_test_fixture: &E2eTestFixture,
 ) -> anyhow::Result<()> {
+    println!("Entering test: {}", module_path!());
     let tx_request_body = StandardTxRequestBody::test_build(
         StandardTxRequestBodyOptional::default(e2e_test_fixture.env_vars.anvil_chain_id),
     )?;
@@ -58,43 +59,29 @@ pub async fn happy_path_single_standard_tx(
         }
     }
 
+    tokio::time::sleep(Duration::from_secs(1)).await;
     let receipt_poller_queue_event = e2e_test_fixture
         .test_queue_manager
         .receipt_poller_queue
         .receive_messages(5)
         .await?;
 
-    let mut receipt_found = false;
+    e2e_test_fixture
+        .poll_for_receipt_with_scheduler(&standard_tx_input.tx_id, &receipt_poller_queue_event)
+        .await?;
 
-    while receipt_found == false {
-        match e2e_test_fixture
-            .orchestrators
-            .receipt_poller_orchestrator
-            .sqs_event_handler(receipt_poller_queue_event.clone().payload)
-            .await
-        {
-            Ok(_) => {}
-            Err(err) => {
-                println!("{err:#?}")
-            }
-        }
-        let tx_request = e2e_test_fixture
-            .db_repositories
-            .tx_request_repo
-            .find_by_tx_id(&standard_tx_input.tx_id)
-            .await?;
-        if tx_request.tx_status == TxStatus::EXECUTED {
-            receipt_found = true;
-        }
-        tokio::time::sleep(Duration::from_millis(1000)).await;
-    }
-    assert!(receipt_found);
+    assert_eq!(
+        e2e_test_fixture
+            .get_tx_status_by_id(&standard_tx_input.tx_id)
+            .await?,
+        TxStatus::EXECUTED
+    );
 
     let _outcome_queue_event = e2e_test_fixture
         .test_queue_manager
         .tx_outcome_queue
         .receive_messages(1)
         .await?;
-
+    println!("{} PASSED", module_path!());
     Ok(())
 }

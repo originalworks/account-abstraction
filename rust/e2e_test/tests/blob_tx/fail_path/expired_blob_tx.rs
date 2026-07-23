@@ -15,6 +15,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tx_request::blob_tx::BlobTxRequestBody;
 
 pub async fn expired_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+    println!("Entering test: {}", module_path!());
     let current_timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -90,5 +91,6 @@ pub async fn expired_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::Resul
     );
     assert_eq!(execution_attempt.retryable, Some(false));
 
+    println!("{} PASSED", module_path!());
     Ok(())
 }

@@ -65,7 +65,7 @@ pub mod aws_lambda {
     use blob_sender_queue::BlobSenderQueueMessageBody;
     use blob_storage::storage::s3::S3BlobStorageManager;
     use db_types::BlobStorageType;
-    use lambda_runtime::LambdaEvent;
+    use lambda_runtime::{LambdaEvent, tracing};
     use network_db::networks::NetworkRepo;
     use signer_wallet::{IntoSignerWalletConfig, manager::SignerWalletManager};
     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
@@ -79,7 +79,7 @@ pub mod aws_lambda {
         pool: &sqlx::Pool<sqlx::Postgres>,
         aws_config: &aws_config::SdkConfig,
     ) -> anyhow::Result<(), lambda_runtime::Error> {
-        println!("Building blob_tx_signer...");
+        tracing::info!("Building blob_tx_signer...");
 
         let config = Config::build()?;
 
