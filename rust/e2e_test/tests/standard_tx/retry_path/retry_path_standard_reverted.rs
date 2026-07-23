@@ -11,6 +11,7 @@ use e2e_test::{
 use tx_request::standard::StandardTxRequestBody;
 
 pub async fn retry_path_standard_reverted(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+    println!("Entering test: {}", module_path!());
     let network = e2e_test_fixture
         .db_repositories
         .network_repo
@@ -131,17 +132,9 @@ pub async fn retry_path_standard_reverted(e2e_test_fixture: &E2eTestFixture) -> 
         .receive_messages(5)
         .await?;
 
-    match e2e_test_fixture
-        .orchestrators
-        .receipt_poller_orchestrator
-        .sqs_event_handler(receipt_poller_queue_event.clone().payload)
-        .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{err:#?}")
-        }
-    }
+    e2e_test_fixture
+        .poll_for_receipt_with_scheduler(&valid_tx_request_body.tx_id, &receipt_poller_queue_event)
+        .await?;
 
     valid_tx_request = e2e_test_fixture
         .db_repositories
@@ -149,6 +142,6 @@ pub async fn retry_path_standard_reverted(e2e_test_fixture: &E2eTestFixture) -> 
         .find_by_tx_id(&valid_tx_request_body.tx_id)
         .await?;
     assert_eq!(valid_tx_request.tx_status, TxStatus::EXECUTED);
-
+    println!("{} PASSED", module_path!());
     Ok(())
 }

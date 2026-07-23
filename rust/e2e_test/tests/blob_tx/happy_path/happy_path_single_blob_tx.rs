@@ -15,6 +15,7 @@ use e2e_test::{
 use tx_request::blob_tx::BlobTxRequestBody;
 
 pub async fn happy_path_single_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+    println!("Entering test: {}", module_path!());
     let tx_request_body = BlobTxRequestBody::test_build(BlobTxRequestBodyOptional::default(
         e2e_test_fixture.env_vars.anvil_chain_id,
         BLOB_JSON_TEST_FILES.first().unwrap().to_string(),
@@ -90,8 +91,7 @@ pub async fn happy_path_single_blob_tx(e2e_test_fixture: &E2eTestFixture) -> any
         tokio::time::sleep(Duration::from_millis(1000)).await;
     }
     assert!(receipt_found);
-
-    println!("happy_path_single_blob_tx PASSED");
+    println!("{} PASSED", module_path!());
 
     Ok(())
 }

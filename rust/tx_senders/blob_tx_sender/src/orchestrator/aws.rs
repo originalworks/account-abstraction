@@ -96,7 +96,7 @@ impl AwsLambdaOrchestrator {
         event: LambdaEvent<SqsEvent>,
     ) -> anyhow::Result<SqsBatchResponse, lambda_runtime::Error> {
         let mut sqs_batch_response = SqsBatchResponse::default();
-        println!("Reading...");
+        tracing::info!("Reading...");
         let tx_sender_queue_event = BlobSenderQueueEvent::from_sqs_lambda_event(event)?;
 
         let tx_ids = tx_sender_queue_event
@@ -110,7 +110,7 @@ impl AwsLambdaOrchestrator {
             .fetch_and_sort_into_batches(&tx_ids)
             .await?;
 
-        println!("Executing...");
+        tracing::info!("Executing...");
         for mut blob_batch_context in blob_batch_context_vec {
             let Some(mut wallet) = self
                 .wallet_pool_manager
