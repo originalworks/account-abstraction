@@ -24,7 +24,7 @@ pub struct DbRepositories {
 }
 
 impl DbRepositories {
-    pub async fn build(pool: &PgPool, env_vars: &E2eTestEnvVars) -> anyhow::Result<Self> {
+    pub async fn build(pool: &PgPool) -> anyhow::Result<Self> {
         let network_repo = NetworkRepo::new(pool.clone());
         let standard_tx_input_repo = StandardTxInputRepo::new(pool.clone());
         let blob_tx_input_repo = BlobTxInputRepo::new(pool.clone());
@@ -33,15 +33,6 @@ impl DbRepositories {
         let execution_attempt_repo: ExecutionAttemptRepo = ExecutionAttemptRepo::new(pool.clone());
         let execution_attempt_item_repo = ExecutionAttemptItemRepo::new(pool.clone());
         let wallet_assignment_repo = WalletAssignmentRepo::new(pool.clone());
-        // let seoa_address = env_vars.get_seoa_address()?;
-        // network_repo
-        //     .add_anvil(seoa_address.to_string(), env_vars.anvil_chain_id)
-        //     .await
-        //     .unwrap();
-        // operator_wallet_repo
-        //     .insert_from_mnemonic(&env_vars.anvil_mnemonic, env_vars.anvil_chain_id, 5)
-        //     .await
-        //     .unwrap();
 
         Ok(DbRepositories {
             network_repo,

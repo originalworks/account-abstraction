@@ -46,7 +46,7 @@ impl E2eTestFixture {
 
         Ok(E2eTestFixture {
             test_queue_manager: static_test_environment.test_queue_manager.clone(),
-            db_repositories: DbRepositories::build(pool, &static_test_environment.env_vars).await?,
+            db_repositories: DbRepositories::build(pool).await?,
             orchestrators: TestOrchestrators::build(pool, &static_test_environment.aws_config)
                 .await?,
             env_vars: static_test_environment.env_vars.clone(),

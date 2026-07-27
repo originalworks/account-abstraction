@@ -35,7 +35,6 @@ use crate::{
     },
 };
 use e2e_test::{db::get_pool, fixture::E2eTestFixture};
-// use e2e_test::{db::get_pool, fixture::get_e2e_test_fixture};
 
 #[tokio::test]
 async fn e2e_blob_tx_tests() -> anyhow::Result<()> {
@@ -63,7 +62,6 @@ async fn e2e_blob_tx_tests() -> anyhow::Result<()> {
 async fn e2e_standard_tx_tests() -> anyhow::Result<()> {
     let pool = get_pool().await?;
 
-    // let e2e_test_fixture = get_e2e_test_fixture(pool).await;
     let e2e_test_fixture = E2eTestFixture::build(&pool).await?;
     //
     // STANDARD TXS
