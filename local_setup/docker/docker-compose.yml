@@ -39,7 +39,7 @@ services:
       - BLOB_STORAGE_BUCKET_NAME=blob-storage-bucket
       - OUTCOME_EVENT_BUS_NAME=aa-test-outcome-event-bus
       - IS_LOCAL=true
-    command: ["cargo", "test", "-p", "e2e_test", "--features", "aws", "--", "--no-capture"]
+    command: ["cargo", "test", "-p", "e2e_test", "--features", "aws", "--", "--no-capture", "--test-threads=1"]
 
 
   migration_runner:

@@ -53,6 +53,12 @@ parameter_overrides = [
     "OutcomeEventBusName=aa-stage-transaction-outcome-bus",
     "ReceiptPollerCleanupSchedulerRate='2 minutes'",
 
+    "BlobTxSignerQueueName=aa-stage-blob-tx-signer.fifo",
+    "BlobTxSignerDlqName=aa-stage-blob-tx-signer-dlq.fifo",
+
+    "BlobTxSenderQueueName=aa-stage-blob-tx-sender.fifo",
+    "BlobTxSenderDlqName=aa-stage-blob-tx-sender-dlq.fifo",
+
     "StandardTxSignerQueueName=aa-stage-standard-tx-signer.fifo",
     "StandardTxSignerDlqName=aa-stage-standard-tx-signer-dlq.fifo",
 

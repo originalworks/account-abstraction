@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct SqsQueue {
     pub client: aws_sdk_sqs::Client,
     pub queue_url: String,

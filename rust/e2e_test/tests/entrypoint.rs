@@ -34,38 +34,51 @@ use crate::{
         },
     },
 };
-use e2e_test::fixture::get_e2e_test_fixture;
+use e2e_test::{db::get_pool, fixture::E2eTestFixture};
+// use e2e_test::{db::get_pool, fixture::get_e2e_test_fixture};
 
 #[tokio::test]
-async fn e2e_tests() -> anyhow::Result<()> {
-    let e2e_test_fixture = get_e2e_test_fixture().await;
-    //
-    // BLOB TXS
-    expired_blob_tx(e2e_test_fixture).await?;
+async fn e2e_blob_tx_tests() -> anyhow::Result<()> {
+    let pool = get_pool().await?;
 
-    retry_path_blob_tx_dropped(e2e_test_fixture).await?;
-    retry_path_blob_tx_stuck(e2e_test_fixture).await?;
+    let e2e_test_fixture = E2eTestFixture::build(&pool).await?;
 
-    happy_path_single_blob_tx(e2e_test_fixture).await?;
-    happy_path_two_blob_tx(e2e_test_fixture).await?;
+    // //
+    // // BLOB TXS
+    expired_blob_tx(&e2e_test_fixture).await?;
 
-    concurrent_blob_tx_workers(e2e_test_fixture).await?;
-    concurrent_retry_workers_in_blob_tx(e2e_test_fixture).await?;
+    retry_path_blob_tx_dropped(&e2e_test_fixture).await?;
+    retry_path_blob_tx_stuck(&e2e_test_fixture).await?;
 
+    happy_path_single_blob_tx(&e2e_test_fixture).await?;
+    happy_path_two_blob_tx(&e2e_test_fixture).await?;
+
+    concurrent_blob_tx_workers(&e2e_test_fixture).await?;
+    concurrent_retry_workers_in_blob_tx(&e2e_test_fixture).await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn e2e_standard_tx_tests() -> anyhow::Result<()> {
+    let pool = get_pool().await?;
+
+    // let e2e_test_fixture = get_e2e_test_fixture(pool).await;
+    let e2e_test_fixture = E2eTestFixture::build(&pool).await?;
     //
     // STANDARD TXS
-    expired_standard_tx(e2e_test_fixture).await?;
+    expired_standard_tx(&e2e_test_fixture).await?;
 
-    happy_path_single_standard_tx(e2e_test_fixture).await?;
-    happy_path_single_standard_tx(e2e_test_fixture).await?;
-    happy_path_two_standard_tx(e2e_test_fixture).await?;
+    happy_path_single_standard_tx(&e2e_test_fixture).await?;
+    happy_path_single_standard_tx(&e2e_test_fixture).await?;
+    happy_path_two_standard_tx(&e2e_test_fixture).await?;
 
-    concurrent_standard_tx_workers(e2e_test_fixture).await?;
-    concurrent_standard_tx_retry_workers(e2e_test_fixture).await?;
+    concurrent_standard_tx_workers(&e2e_test_fixture).await?;
+    concurrent_standard_tx_retry_workers(&e2e_test_fixture).await?;
 
-    retry_path_standard_tx_stuck(e2e_test_fixture).await?;
-    retry_path_standard_dropped(e2e_test_fixture).await?;
-    retry_path_standard_reverted(e2e_test_fixture).await?;
+    retry_path_standard_tx_stuck(&e2e_test_fixture).await?;
+    retry_path_standard_dropped(&e2e_test_fixture).await?;
+    retry_path_standard_reverted(&e2e_test_fixture).await?;
 
     Ok(())
 }

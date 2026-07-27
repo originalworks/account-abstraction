@@ -2,13 +2,13 @@ pub mod event;
 pub mod test_queue;
 
 use crate::constants::{
-    BLOB_SENDER_QUEUE_NAME, RECEIPT_POLLER_QUEUE_NAME, RETRY_QUEUE_NAME,
-    STANDARD_SENDER_QUEUE_NAME, TX_OUTCOME_QUEUE_NAME,
+    BLOB_SENDER_QUEUE_NAME, RECEIPT_POLLER_QUEUE_NAME, RETRY_QUEUE_NAME, STANDARD_SENDER_QUEUE_NAME,
 };
 use sqs_queue::queue::SqsQueue;
 use std::env;
 use test_queue::SqsQueueTester;
 
+#[derive(Clone)]
 pub struct TestQueueManager {
     pub sqs_client: aws_sdk_sqs::Client,
     pub blob_sender_queue: SqsQueue,
