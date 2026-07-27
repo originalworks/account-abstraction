@@ -179,9 +179,6 @@ async fn get_or_init_static_test_environment() -> &'static StaticTestEnvironment
                 )
                 .await
                 .unwrap();
-            // let db_repositories = build_db_repositories(&pool, &e2e_test_env_vars)
-            //     .await
-            //     .unwrap();
 
             let test_queue_manager = TestQueueManager::build(&aws_config)
                 .await
