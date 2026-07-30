@@ -10,5 +10,12 @@
         "baseSepolia": "0x98b3258a99aC817C0461DBA91c843a1719F78876",
         "gnosisChiado": "0x98b3258a99aC817C0461DBA91c843a1719F78876",
         "ethereumSepolia": "0xAd907fcc79ea17a557b5516Ff8B80BbD4d075158"
+    },
+    "prod": {
+        "gnosisMainnet": "0xC0614Bb2Df87771F252FA2ffF279C0B94E2EdBE7",
+        "baseMainnet": "0x70698849069ED1289B123FA0DFf24975da87946d",
+        "polygonMainnet": "0x9bAA7248e988de61d9B6bF3FF3c08B46FaA548b3",
+        "polygonAmoy": "0x77C142FA9E2D47CE0Cc12ca0ab85DF73e5D4d04D",
+        "ethereumSepolia": "0x77C142FA9E2D47CE0Cc12ca0ab85DF73e5D4d04D"
     }
 }

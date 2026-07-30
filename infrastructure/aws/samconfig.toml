@@ -70,13 +70,40 @@ parameter_overrides = [
 
     "RetryQueueName=aa-stage-retry.fifo",
     "RetryDlqName=aa-stage-retry-dlq.fifo",
-
 ]
 
 [prod.deploy.parameters]
 stack_name = "aa-infra-prod"
 region = "us-east-1"
-s3_bucket = "ow-protocol-artifacts"
+s3_bucket = "ow-protocol-artifacts-prod"
 s3_prefix = "prod"
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
-parameter_overrides = ["AaBlobBucketName=aa-blob-bucket-prod"]
+parameter_overrides = [
+    "Environment=prod",
+    "AaBlobBucketName=aa-blob-bucket-prod",
+    "DbSecretsName='/rev/prod/db-secret'",
+    "MasterKmsSecretsName='/rev/prod/secrets'",
+    "DatabaseName=account_abstraction_prod_db",
+    "PrivateSubnets=/prod/network/private-subnet-ids",
+    "DatabaseAccessSecurityGroup=/prod/database/access-security-group-id",
+    "OutcomeEventBusName=aa-prod-transaction-outcome-bus",
+    "ReceiptPollerCleanupSchedulerRate='1 minute'",
+
+    "BlobTxSignerQueueName=aa-prod-blob-tx-signer.fifo",
+    "BlobTxSignerDlqName=aa-prod-blob-tx-signer-dlq.fifo",
+
+    "BlobTxSenderQueueName=aa-prod-blob-tx-sender.fifo",
+    "BlobTxSenderDlqName=aa-prod-blob-tx-sender-dlq.fifo",
+
+    "StandardTxSignerQueueName=aa-prod-standard-tx-signer.fifo",
+    "StandardTxSignerDlqName=aa-prod-standard-tx-signer-dlq.fifo",
+
+    "StandardTxSenderQueueName=aa-prod-standard-tx-sender.fifo",
+    "StandardTxSenderDlqName=aa-prod-standard-tx-sender-dlq.fifo",
+
+    "ReceiptPollerQueueName=aa-prod-receipt-poller.fifo",
+    "ReceiptPollerDlqName=aa-prod-receipt-poller-dlq.fifo",
+
+    "RetryQueueName=aa-prod-retry.fifo",
+    "RetryDlqName=aa-prod-retry-dlq.fifo",
+]
