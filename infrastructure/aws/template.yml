@@ -33,6 +33,9 @@ Parameters:
     Type: String
     Default: blob-tx-sender-dlq.fifo
 
+  StandardSignerQueueMessageGroupId:
+    Type: String
+    Default: standard-signer-queue-group
   StandardTxSignerQueueName:
     Type: String
     Default: standard-tx-signer.fifo
@@ -283,3 +286,4 @@ Resources:
         OutcomeEventBusName: !Ref OutcomeEventBusName
         Environment: !Ref Environment
         AaBlobBucketName: !Ref AaBlobBucketName
+        StandardSignerQueueMessageGroupId: !Ref StandardSignerQueueMessageGroupId

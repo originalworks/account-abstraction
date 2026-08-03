@@ -15,6 +15,8 @@ Parameters:
     Type: String
   AaBlobBucketName:
     Type: String
+  StandardSignerQueueMessageGroupId:
+    Type: String
 
 Resources:
   BlobTxSignerQueueUrlParameter:
@@ -38,6 +40,13 @@ Resources:
       Type: String
       Value: !Ref StandardTxSignerQueueUrl
 
+  StandardSignerQueueMessageGroupIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /account-abstraction/${Environment}/sqs/standard-tx-signer/message-group-id
+      Type: String
+      Value: !Ref StandardSignerQueueMessageGroupId
+
   StandardTxSignerQueueArnParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -50,7 +59,7 @@ Resources:
     Properties:
       Name: !Sub /account-abstraction/${Environment}/event-bus/tx-outcome/name
       Type: String
-      Value: !Ref StandardTxSignerQueueArn
+      Value: !Ref OutcomeEventBusName
 
   AaBlobBucketNameParameter:
     Type: AWS::SSM::Parameter
