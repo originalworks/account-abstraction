@@ -70,7 +70,7 @@ pub mod aws_lambda {
     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
     use standard_sender_queue::StandardSenderQueueMessageBody;
     use tx_request::{sqs_parser::tx_requests_from_sqs_event, standard::StandardTxRequestBody};
-    use tx_request_db::repo::TxRequestRepo;
+    use tx_request_db::repo::{InsertTxRequestResult, TxRequestRepo};
 
     pub async fn function_handler(
         event: LambdaEvent<SqsEvent>,
@@ -105,16 +105,26 @@ pub mod aws_lambda {
 
             tracing::info!("Saving...");
             let insert_tx_input = tx_request_body.into_db_input(signature.as_bytes().to_vec())?;
-            transaction_repo
+            match transaction_repo
                 .insert_tx_request_with_tx_input(&insert_tx_input)
-                .await?;
-            let trigger_body = StandardSenderQueueMessageBody {
-                tx_id: insert_tx_input.new_tx_request.tx_id,
-            };
+                .await?
+            {
+                InsertTxRequestResult::SAVED => {
+                    let trigger_body = StandardSenderQueueMessageBody {
+                        tx_id: insert_tx_input.new_tx_request.tx_id,
+                    };
 
-            tx_sender_standard_queue
-                .send_new(&trigger_body.to_json_string()?)
-                .await?;
+                    tx_sender_standard_queue
+                        .send_new(&trigger_body.to_json_string()?)
+                        .await?;
+                }
+                InsertTxRequestResult::SKIPPED => {
+                    tracing::warn!(
+                        "Warning! This transaction request was already signed! Skipping: {:?}",
+                        tx_request_body
+                    );
+                }
+            }
         }
 
         Ok(())

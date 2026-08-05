@@ -70,7 +70,7 @@ pub mod aws_lambda {
     use signer_wallet::{IntoSignerWalletConfig, manager::SignerWalletManager};
     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
     use tx_request::{blob_tx::BlobTxRequestBody, sqs_parser::tx_requests_from_sqs_event};
-    use tx_request_db::repo::TxRequestRepo;
+    use tx_request_db::repo::{InsertTxRequestResult, TxRequestRepo};
 
     use crate::{Config, signature::sign_tx_request};
 
@@ -118,17 +118,26 @@ pub mod aws_lambda {
             let insert_tx_input = tx_request_body
                 .into_db_input(&blob_input_json_file, signature.as_bytes().to_vec())?;
 
-            transaction_repo
+            match transaction_repo
                 .insert_tx_request_with_tx_input(&insert_tx_input)
-                .await?;
+                .await?
+            {
+                InsertTxRequestResult::SAVED => {
+                    let trigger_body = BlobSenderQueueMessageBody {
+                        tx_id: insert_tx_input.new_tx_request.tx_id,
+                    };
 
-            let trigger_body = BlobSenderQueueMessageBody {
-                tx_id: insert_tx_input.new_tx_request.tx_id,
-            };
-
-            blob_tx_sender_queue
-                .send_new(&trigger_body.to_json_string()?)
-                .await?;
+                    blob_tx_sender_queue
+                        .send_new(&trigger_body.to_json_string()?)
+                        .await?;
+                }
+                InsertTxRequestResult::SKIPPED => {
+                    tracing::warn!(
+                        "Warning! This transaction request was already signed! Skipping: {:?}",
+                        tx_request_body
+                    );
+                }
+            }
         }
         Ok(())
     }
