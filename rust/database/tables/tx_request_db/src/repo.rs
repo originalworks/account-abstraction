@@ -5,6 +5,12 @@ use anyhow::bail;
 use db_types::{BlobStorageType, TxStatus, TxType};
 use sqlx::PgPool;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InsertTxRequestResult {
+    SAVED,
+    SKIPPED,
+}
+
 #[derive(Debug, Clone)]
 pub struct TxRequestRepo {
     pool: PgPool,
@@ -18,10 +24,10 @@ impl TxRequestRepo {
     pub async fn insert_tx_request_with_tx_input(
         &self,
         request: &NewTxRequestWithTxInput,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<InsertTxRequestResult> {
         let mut postgres_tx = self.pool.begin().await?;
 
-        sqlx::query!(
+        let tx_requests_input_result = sqlx::query!(
             r#"
             INSERT INTO tx_requests (
                 tx_id,
@@ -45,6 +51,18 @@ impl TxRequestRepo {
         )
         .execute(&mut *postgres_tx)
         .await?;
+
+        match tx_requests_input_result.rows_affected() {
+            1 => {}
+            0 => {
+                // Explicitly finish the transaction before returning.
+                postgres_tx.commit().await?;
+                return Ok(InsertTxRequestResult::SKIPPED);
+            }
+            rows => {
+                bail!("Expected tx_requests INSERT to affect at most one row, but affected {rows}");
+            }
+        }
 
         match &request.tx_input {
             NewTxInput::Blob(new_blob_tx_input) => {
@@ -110,7 +128,7 @@ impl TxRequestRepo {
         }
 
         postgres_tx.commit().await?;
-        Ok(())
+        Ok(InsertTxRequestResult::SAVED)
     }
 
     pub async fn find_by_tx_id(&self, tx_id: &String) -> anyhow::Result<TxRequest> {

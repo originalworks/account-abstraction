@@ -28,7 +28,7 @@ For KMS master signing key (pointed by 'MasterKmsSecretsName'):
 
 - `AA_MASTER_KMS_ID`
 
-**Note:** You can use one secret for both
+**Note:** You can use one AWS Secrets Manager instance for both
 
 ## Deployment steps:
 
