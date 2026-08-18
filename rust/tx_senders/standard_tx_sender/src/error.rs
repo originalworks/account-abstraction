@@ -99,6 +99,13 @@ pub fn build_failed_new_execution(
         execute_batch_context.batch_tx_value,
     );
 
+    let batch_size = execute_batch_context.tx_requests.len();
+    let retryable = if batch_size > 1 && execute_batch_context.use_operator_wallet_id.is_none() {
+        true
+    } else {
+        false
+    };
+
     match error.downcast::<alloy::contract::Error>() {
         Ok(alloy_error) => {
             match alloy_error.try_decode_into_interface_error::<SEOA::SEOAErrors>() {
@@ -111,7 +118,7 @@ pub fn build_failed_new_execution(
                                 error_type: "Expired".to_string(),
                                 error_body: None,
                             },
-                            false,
+                            retryable,
                         )
                         .expect("error parsing failed");
                     }
@@ -123,19 +130,11 @@ pub fn build_failed_new_execution(
                                 error_type: "InvalidSignature".to_string(),
                                 error_body: Some(execute_batch_context.to_json_string()?),
                             },
-                            false,
+                            retryable,
                         )
                         .expect("error parsing failed");
                     }
                     SEOA::SEOAErrors::ExecutionFailed(_) => {
-                        let batch_size = execute_batch_context.tx_requests.len();
-                        let retryable = if batch_size > 1
-                            && execute_batch_context.use_operator_wallet_id.is_none()
-                        {
-                            true
-                        } else {
-                            false
-                        };
                         failed_new_execution = NewExecutionAttempt::standard_failed(
                             execute_batch_context,
                             wallet.db_record.id,
@@ -161,7 +160,7 @@ pub fn build_failed_new_execution(
                                 error_type: "Unknown".to_string(),
                                 error_body: Some(execute_batch_context.to_json_string()?),
                             },
-                            false,
+                            retryable,
                         )
                         .expect("error parsing failed");
                     }
@@ -174,7 +173,7 @@ pub fn build_failed_new_execution(
                             error_type: "Generic alloy error".to_string(),
                             error_body: Some(encoded_error.to_string()),
                         },
-                        false,
+                        retryable,
                     )
                     .expect("error parsing failed");
                 }
@@ -188,7 +187,7 @@ pub fn build_failed_new_execution(
                     error_type: "Generic error".to_string(),
                     error_body: Some(generic_error.to_string()),
                 },
-                false,
+                retryable,
             )
             .expect("error parsing failed");
         }

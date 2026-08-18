@@ -66,10 +66,6 @@ const config: HardhatUserConfig = {
       type: "edr-simulated",
       chainType: "op",
     },
-    sepolia: {
-      type: "http",
-      url: "https://eth-sepolia.g.alchemy.com/v2/s52DQvjWKuzeYvBadyLNC",
-    },
   },
 };
 

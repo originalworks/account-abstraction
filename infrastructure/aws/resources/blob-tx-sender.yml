@@ -42,7 +42,7 @@ Resources:
       QueueName: !Ref BlobTxSenderQueueName
       FifoQueue: true
       ContentBasedDeduplication: true
-      VisibilityTimeout: 35
+      VisibilityTimeout: 90
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt BlobTxSenderDeadLetterQueue.Arn
         maxReceiveCount: 5
