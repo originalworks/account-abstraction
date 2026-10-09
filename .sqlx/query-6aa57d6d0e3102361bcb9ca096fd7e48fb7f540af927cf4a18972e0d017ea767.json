@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE tx_requests\n        SET \n            tx_status = 'SIGNED'\n        WHERE tx_id = ANY($1)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6aa57d6d0e3102361bcb9ca096fd7e48fb7f540af927cf4a18972e0d017ea767"
+}

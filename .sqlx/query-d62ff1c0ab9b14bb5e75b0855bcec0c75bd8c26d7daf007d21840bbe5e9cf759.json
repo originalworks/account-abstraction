@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                id,\n                tx_id, \n                operator_wallet_id, \n                created_at,\n                updated_at\n            FROM \n                wallet_assignments\n            WHERE\n                id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tx_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "operator_wallet_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d62ff1c0ab9b14bb5e75b0855bcec0c75bd8c26d7daf007d21840bbe5e9cf759"
+}

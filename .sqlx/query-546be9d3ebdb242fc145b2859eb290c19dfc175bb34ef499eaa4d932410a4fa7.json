@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH candidate AS (\n            SELECT id, nonce AS current_nonce\n            FROM operator_wallets\n            WHERE\n                chain_id = $1\n                AND is_enabled = true\n                AND in_use = false\n                AND no_funds = false\n            LIMIT 1\n            FOR UPDATE SKIP LOCKED\n        )\n        UPDATE operator_wallets ow\n        SET\n            in_use = true\n        FROM candidate\n        WHERE ow.id = candidate.id\n        RETURNING\n            ow.id,\n            ow.wallet_address,\n            ow.key_ref,\n            ow.key_type as \"key_type: KeyType\",\n            ow.chain_id,\n            candidate.current_nonce AS nonce,\n            ow.is_enabled,\n            ow.in_use,\n            ow.no_funds,\n            ow.created_at,\n            ow.updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "wallet_address",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "key_ref",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "key_type: KeyType",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "chain_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "nonce",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "is_enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "in_use",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "no_funds",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "546be9d3ebdb242fc145b2859eb290c19dfc175bb34ef499eaa4d932410a4fa7"
+}

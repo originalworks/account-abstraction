@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE tx_requests\n        SET \n            tx_status = 'INVALID'\n        WHERE tx_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "aac3fa8e3d2054424afcd7fd47a3a872e7959fbc7234a176182bcabfb0843a1d"
+}

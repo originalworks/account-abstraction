@@ -1,0 +1,87 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO operator_wallets (\n            id,\n            wallet_address,\n            key_ref,\n            key_type,\n            chain_id,\n            nonce,\n            is_enabled,\n            in_use,\n            no_funds\n        )\n        VALUES (\n            $1,\n            $2,\n            $3,\n            $4,\n            $5,\n            $6,\n            true,\n            false,\n            false\n        )\n        RETURNING\n            id,\n            wallet_address,\n            key_ref,\n            key_type as \"key_type: KeyType\",\n            chain_id,\n            nonce,\n            is_enabled,\n            in_use,\n            no_funds,\n            created_at,\n            updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "wallet_address",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "key_ref",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "key_type: KeyType",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "chain_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "nonce",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "is_enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "in_use",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "no_funds",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "20510a7058955dfc4868e0cdb4aa606af4ddb86073a33a256d71bb28ca0b640c"
+}

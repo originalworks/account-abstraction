@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO execution_attempt_items (id, execution_attempt_id, tx_id)\n            SELECT id, $1, tx_id\n            FROM UNNEST($2::uuid[], $3::text[]) AS t(id, tx_id)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5869ee3f48606933329eee6458645f39cf7f96c45d5b025a07dc6823fa1a4e3f"
+}

@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                tx_id, \n                signature,\n                image_id,\n                commitment,\n                blob_sha2,\n                deadline_timestamp,\n                source_file_path,\n                storage_type as \"storage_type: BlobStorageType\",\n                created_at\n            FROM \n                blob_tx_inputs\n            WHERE\n                tx_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tx_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "signature",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 2,
+        "name": "image_id",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "commitment",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "blob_sha2",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 5,
+        "name": "deadline_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "source_file_path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "storage_type: BlobStorageType",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a5a2ba6d036acf90c2028ef6ca818daa1efdfc35c6062b0e9a325973393a3044"
+}

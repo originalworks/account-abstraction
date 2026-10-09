@@ -1,0 +1,118 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                WITH locked AS (\n                    SELECT *\n                    FROM execution_attempts\n                    WHERE\n                        id = $1\n                        AND outcome IN ('DROPPED', 'STUCK', 'REVERTED')\n                        AND retry_lock = false\n                    FOR UPDATE SKIP LOCKED\n                )\n                UPDATE execution_attempts ea\n                SET\n                    retry_lock = true\n                FROM locked\n                WHERE ea.id = locked.id\n                RETURNING\n                    ea.id,\n                    ea.chain_id,\n                    ea.operator_wallet_id,\n                    ea.tx_type as \"tx_type: TxType\",\n                    ea.nonce_used,\n                    ea.tx_value,\n                    ea.tx_hash,\n                    ea.gas_limit,\n                    ea.used_gas,\n                    ea.max_fee_per_gas,\n                    ea.max_priority_fee,\n                    ea.max_fee_per_blob_gas,\n                    ea.outcome as \"outcome: TxExecutionOutcome\",\n                    ea.error_object,\n                    ea.retryable,\n                    ea.created_at,\n                    ea.updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "chain_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "operator_wallet_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "tx_type: TxType",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "nonce_used",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "tx_value",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "tx_hash",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "gas_limit",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "used_gas",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "max_fee_per_gas",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 10,
+        "name": "max_priority_fee",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 11,
+        "name": "max_fee_per_blob_gas",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 12,
+        "name": "outcome: TxExecutionOutcome",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "error_object",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "retryable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 15,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "10c63caed80ac844c9448c5b68345fc424df64ee567c9b4f9a9f8b4efb545071"
+}
