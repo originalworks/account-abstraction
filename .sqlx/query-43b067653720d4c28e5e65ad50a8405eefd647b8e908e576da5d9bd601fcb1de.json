@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH selected AS (\n                SELECT tx_id\n                FROM tx_requests\n                WHERE tx_id = ANY($1)\n                  AND tx_status = 'SIGNED'\n                  AND tx_type = 'BLOB'\n                FOR UPDATE SKIP LOCKED\n            ),\n            updated AS (\n                UPDATE tx_requests t\n                SET\n                    tx_status = 'LOCKED',\n                    attempts = attempts + 1\n                FROM selected\n                WHERE t.tx_id = selected.tx_id\n                RETURNING\n                    t.sequence_id,\n                    t.tx_id,\n                    t.requester_id,\n                    t.tx_type,\n                    t.tx_status,\n                    t.chain_id,\n                    t.use_operator_wallet_id,\n                    t.attempts,\n                    t.metadata,\n                    t.created_at,\n                    t.updated_at\n            )\n            SELECT\n                u.sequence_id,\n                u.tx_id,\n                u.requester_id,\n                u.tx_type as \"tx_type: TxType\",\n                u.tx_status as \"tx_status: TxStatus\",\n                u.chain_id,\n                u.use_operator_wallet_id,\n                u.attempts,\n                u.metadata,\n                u.created_at,\n                u.updated_at,\n\n                b.signature,\n                b.image_id,\n                b.commitment,\n                b.blob_sha2,\n                b.deadline_timestamp,\n                b.source_file_path,\n                b.storage_type as \"storage_type: BlobStorageType\"\n\n            FROM updated u\n            INNER JOIN blob_tx_inputs b ON b.tx_id = u.tx_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "sequence_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "tx_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "requester_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "tx_type: TxType",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "tx_status: TxStatus",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "chain_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "use_operator_wallet_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "attempts",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 8,
+        "name": "metadata",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "signature",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 12,
+        "name": "image_id",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 13,
+        "name": "commitment",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 14,
+        "name": "blob_sha2",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 15,
+        "name": "deadline_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 16,
+        "name": "source_file_path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "storage_type: BlobStorageType",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "43b067653720d4c28e5e65ad50a8405eefd647b8e908e576da5d9bd601fcb1de"
+}

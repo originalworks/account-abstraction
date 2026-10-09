@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE networks\n        SET\n            tx_max_age_sec = $1\n        WHERE\n            chain_id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1c93123bbaa1afa5286d18902028a0d7ddf7b43dd269a2c2bb96a6c333d78a6d"
+}

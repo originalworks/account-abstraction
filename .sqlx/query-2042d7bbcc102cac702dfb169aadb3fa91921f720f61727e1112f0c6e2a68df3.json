@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE tx_requests\n        SET \n            tx_status = $2\n        WHERE tx_id = ANY($1)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2042d7bbcc102cac702dfb169aadb3fa91921f720f61727e1112f0c6e2a68df3"
+}

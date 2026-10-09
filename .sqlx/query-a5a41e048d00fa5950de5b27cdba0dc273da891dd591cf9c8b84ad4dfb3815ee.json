@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE operator_wallets\n        SET\n            in_use = false,\n            nonce = nonce + 1\n        WHERE\n            id = $1\n            AND in_use = true\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a5a41e048d00fa5950de5b27cdba0dc273da891dd591cf9c8b84ad4dfb3815ee"
+}

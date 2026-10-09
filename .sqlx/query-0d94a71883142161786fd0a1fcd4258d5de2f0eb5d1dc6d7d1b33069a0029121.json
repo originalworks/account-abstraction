@@ -1,0 +1,148 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    tr.tx_id,\n                    tr.requester_id,\n                    tr.tx_type as \"tx_type: TxType\",\n                    tr.tx_status as \"tx_status: TxStatus\",\n                    attempts,\n                    metadata,\n                    use_operator_wallet_id,\n\n                    bti.signature as \"blob_signature?\",\n                    bti.image_id as \"image_id?\",\n                    bti.commitment as \"commitment?\",\n                    bti.blob_sha2 as \"blob_sha2?\",\n                    bti.deadline_timestamp as \"blob_deadline_timestamp?\",\n                    bti.storage_type as \"storage_type?: BlobStorageType\",\n                    bti.source_file_path as \"source_file_path?\",\n                    bti.created_at as \"blob_created_at?\",\n\n                    sti.signature as \"standard_signature?\",\n                    sti.calldata as \"calldata?\",\n                    sti.to_address as \"to_address?\",\n                    sti.value_wei as \"value_wei?\",\n                    sti.deadline_timestamp as \"standard_deadline_timestamp?\",\n                    sti.pass_value_from_operator_wallet as \"pass_value_from_operator_wallet?\",\n                    sti.created_at as \"standard_created_at?\"\n\n                FROM execution_attempt_items eai\n                JOIN tx_requests tr\n                    ON tr.tx_id = eai.tx_id\n\n                LEFT JOIN blob_tx_inputs bti\n                    ON bti.tx_id = tr.tx_id\n\n                LEFT JOIN standard_tx_inputs sti\n                    ON sti.tx_id = tr.tx_id\n\n                WHERE eai.execution_attempt_id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tx_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "requester_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "tx_type: TxType",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "tx_status: TxStatus",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "attempts",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 5,
+        "name": "metadata",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "use_operator_wallet_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "blob_signature?",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 8,
+        "name": "image_id?",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 9,
+        "name": "commitment?",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 10,
+        "name": "blob_sha2?",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 11,
+        "name": "blob_deadline_timestamp?",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 12,
+        "name": "storage_type?: BlobStorageType",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "source_file_path?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "blob_created_at?",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "standard_signature?",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 16,
+        "name": "calldata?",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 17,
+        "name": "to_address?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 18,
+        "name": "value_wei?",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 19,
+        "name": "standard_deadline_timestamp?",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 20,
+        "name": "pass_value_from_operator_wallet?",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 21,
+        "name": "standard_created_at?",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0d94a71883142161786fd0a1fcd4258d5de2f0eb5d1dc6d7d1b33069a0029121"
+}

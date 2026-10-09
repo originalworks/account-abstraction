@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO networks (\n                chain_id,\n                chain_name,\n                rpc_url,\n                contract_address,\n                min_operator_wallet_balance,\n                gas_estimation_buffer_ppm,\n                blob_gas_estimation_buffer_ppm,\n                max_retry_attempts,\n                tx_max_age_sec\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Int8",
+        "Int8",
+        "Int2",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "78bb6a978a118257c505247f8767dfb4957e449e5ace66e60b38127e969c479a"
+}

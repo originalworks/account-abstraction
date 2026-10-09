@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE tx_requests tr\n            SET\n                tx_status = $2\n            FROM execution_attempt_items eai\n            JOIN execution_attempts ea\n                ON ea.id = eai.execution_attempt_id\n            WHERE\n                tr.tx_id = eai.tx_id\n                AND ea.id = $1\n                AND ea.outcome IS NOT NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "206a69ac06dc77b798e249fbbfd8dfd3c78097fc0f112126a853ff8cdddfe6f5"
+}

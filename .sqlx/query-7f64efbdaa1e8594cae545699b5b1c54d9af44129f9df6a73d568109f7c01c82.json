@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                sequence_id,\n                tx_id, \n                requester_id, \n                tx_status as \"tx_status: TxStatus\", \n                tx_type as \"tx_type: TxType\", \n                chain_id,\n                attempts,\n                use_operator_wallet_id,\n                metadata,\n                created_at,\n                updated_at\n            FROM \n                tx_requests\n            WHERE\n                tx_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "sequence_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "tx_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "requester_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "tx_status: TxStatus",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "tx_type: TxType",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "chain_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "attempts",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 7,
+        "name": "use_operator_wallet_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "metadata",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "7f64efbdaa1e8594cae545699b5b1c54d9af44129f9df6a73d568109f7c01c82"
+}

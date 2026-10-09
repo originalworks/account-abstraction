@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO wallet_assignments (\n                id,\n                tx_id,\n                operator_wallet_id\n            )\n            SELECT \n                unnest($1::uuid[]),\n                unnest($2::text[]),\n                $3\n            RETURNING id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "TextArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "727c6e456d0efef6b0cf79b718e81406c794ad39b1b33d9f7bbb6839c3682531"
+}

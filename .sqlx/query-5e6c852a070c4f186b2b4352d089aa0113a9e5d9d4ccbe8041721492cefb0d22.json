@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE tx_requests\n        SET \n            tx_status = $2,\n            attempts = attempts + 1\n        WHERE tx_id = ANY($1)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5e6c852a070c4f186b2b4352d089aa0113a9e5d9d4ccbe8041721492cefb0d22"
+}
