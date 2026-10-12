@@ -24,7 +24,7 @@ members = [
     "rust/tx_senders/standard_tx_sender",
     "rust/tx_senders/blob_tx_sender",
     "rust/receipt_poller",
-    "rust/e2e_test",
+    "rust/tests/e2e_test",
     "rust/wallet_pool",
     "rust/retry_handler",
     "rust/tx_request",
@@ -32,8 +32,8 @@ members = [
     "rust/database/tables/tx_input/tx_input_types",
     "rust/outcome_emitter",
     "rust/seoa_contract",
-    "rust/component_test",
-    "rust/test_fixture",
+    "rust/tests/component_test",
+    "rust/tests/test_fixture",
 ]
 
 [workspace.dependencies]
@@ -66,7 +66,7 @@ outcome_emitter = { path = "./rust/outcome_emitter" }
 receipt_poller = { path = "./rust/receipt_poller" }
 blob_storage = { path = "./rust/blob_storage" }
 seoa_contract = { path = "./rust/seoa_contract" }
-test_fixture = { path = "./rust/test_fixture" }
+test_fixture = { path = "./rust/tests/test_fixture" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"
