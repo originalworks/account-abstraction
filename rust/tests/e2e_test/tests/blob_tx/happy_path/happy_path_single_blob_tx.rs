@@ -1,34 +1,27 @@
 use db_types::TxStatus;
 use std::time::Duration;
 use test_fixture::{
-    aws::{
-        s3::BLOB_JSON_TEST_FILES,
-        sqs::{
-            event::{TestEventMessage, build_lambda_sqs_event},
-            test_queue::SqsQueueTester,
-        },
+    aws::sqs::{
+        event::{TestEventMessage, build_lambda_sqs_event},
+        test_queue::SqsQueueTester,
     },
+    constants::BLOB_JSON_TEST_FILES,
     fixture::E2eTestFixture,
     tx_request::{BlobTxRequestBodyForTest, BlobTxRequestBodyOptional},
 };
 use tx_request::blob_tx::BlobTxRequestBody;
 
-pub async fn happy_path_two_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+pub async fn happy_path_single_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
     println!("Entering test: {}", module_path!());
     let tx_request_body = BlobTxRequestBody::test_build(BlobTxRequestBodyOptional::default(
         e2e_test_fixture.env_vars.anvil_chain_id,
-        BLOB_JSON_TEST_FILES[1].to_string(),
+        BLOB_JSON_TEST_FILES.first().unwrap().to_string(),
     ))?;
 
-    let tx_request_body_2 = BlobTxRequestBody::test_build(BlobTxRequestBodyOptional::default(
-        e2e_test_fixture.env_vars.anvil_chain_id,
-        BLOB_JSON_TEST_FILES[2].to_string(),
-    ))?;
-
-    let tx_request_event = build_lambda_sqs_event(vec![
-        TestEventMessage::new(&tx_request_body.to_string(), None),
-        TestEventMessage::new(&tx_request_body_2.to_string(), None),
-    ])?;
+    let tx_request_event = build_lambda_sqs_event(vec![TestEventMessage::new(
+        &tx_request_body.to_string(),
+        None,
+    )])?;
 
     blob_tx_signer::aws_lambda::function_handler(
         tx_request_event,
@@ -46,19 +39,10 @@ pub async fn happy_path_two_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow
 
     assert!(blob_tx_input.signature.is_empty() == false);
 
-    let blob_tx_input_2 = e2e_test_fixture
-        .db_repositories
-        .blob_tx_input_repo
-        .find_by_tx_id(&tx_request_body_2.tx_id)
-        .await?;
-
-    assert!(blob_tx_input_2.signature.is_empty() == false);
-    // Transaction Request was signed and is ready to be sent
-
     let blob_sender_queue_event = e2e_test_fixture
         .test_queue_manager
         .blob_sender_queue
-        .receive_messages(5)
+        .receive_messages(1)
         .await?;
 
     match e2e_test_fixture
@@ -105,5 +89,6 @@ pub async fn happy_path_two_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow
     }
     assert!(receipt_found);
     println!("{} PASSED", module_path!());
+
     Ok(())
 }

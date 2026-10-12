@@ -6,3 +6,6 @@ pub const TX_OUTCOME_QUEUE_NAME: &str = "tx-outcome-queue";
 pub const DEFAULT_TX_MAX_AGE_SEC: i64 = 3600;
 pub const MAX_SCHEDULER_RUNS: u8 = 15;
 pub const SCHEDULER_INTERVAL_SEC: u64 = 1;
+pub const TEST_BLOB_FOLDER: &str = "../../../local_setup/blob_test_files";
+pub const BLOB_JSON_TEST_FILES: &[&str] =
+    &["blob_1.json", "blob_2.json", "blob_3.json", "blob_4.json"];

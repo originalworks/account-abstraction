@@ -1,13 +1,11 @@
 use db_types::{TxExecutionOutcome, TxStatus};
 use std::time::Duration;
 use test_fixture::{
-    aws::{
-        s3::BLOB_JSON_TEST_FILES,
-        sqs::{
-            event::{TestEventMessage, build_lambda_sqs_event},
-            test_queue::SqsQueueTester,
-        },
+    aws::sqs::{
+        event::{TestEventMessage, build_lambda_sqs_event},
+        test_queue::SqsQueueTester,
     },
+    constants::BLOB_JSON_TEST_FILES,
     db::execution_attempt::ExecutionAttemptTestExt,
     fixture::E2eTestFixture,
     tx_request::{BlobTxRequestBodyForTest, BlobTxRequestBodyOptional},

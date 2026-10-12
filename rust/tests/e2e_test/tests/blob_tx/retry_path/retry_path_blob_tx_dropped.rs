@@ -1,29 +1,28 @@
-use alloy::providers::{Provider, ProviderBuilder};
 use db_types::TxStatus;
 use std::time::Duration;
 use test_fixture::{
-    aws::{
-        s3::BLOB_JSON_TEST_FILES,
-        sqs::{
-            event::{TestEventMessage, build_lambda_sqs_event},
-            test_queue::SqsQueueTester,
-        },
+    aws::sqs::{
+        event::{TestEventMessage, build_lambda_sqs_event},
+        test_queue::SqsQueueTester,
     },
+    constants::BLOB_JSON_TEST_FILES,
     db::execution_attempt::ExecutionAttemptTestExt,
     fixture::E2eTestFixture,
     tx_request::{BlobTxRequestBodyForTest, BlobTxRequestBodyOptional},
 };
 use tx_request::blob_tx::BlobTxRequestBody;
 
-pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
+const RANDOM_TX_HASH: &str = "0xf92145c95eb1bbda1237ab8dfbe87bb35136e58c9b2133caee84faae8df91b58";
+
+pub async fn retry_path_blob_tx_dropped(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
     println!("Entering test: {}", module_path!());
     let tx_id = uuid::Uuid::new_v4().to_string();
+    let chain_id = e2e_test_fixture.env_vars.anvil_chain_id;
 
     let mut tx_request_body = BlobTxRequestBody::test_build(BlobTxRequestBodyOptional::default(
-        e2e_test_fixture.env_vars.anvil_chain_id,
-        BLOB_JSON_TEST_FILES[3].to_string(),
+        chain_id,
+        BLOB_JSON_TEST_FILES[1].to_string(),
     ))?;
-
     tx_request_body.tx_id = tx_id.clone();
 
     let tx_request_event = build_lambda_sqs_event(vec![TestEventMessage::new(
@@ -31,7 +30,6 @@ pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyh
         None,
     )])?;
 
-    // SIGN
     blob_tx_signer::aws_lambda::function_handler(
         tx_request_event,
         &e2e_test_fixture.pool,
@@ -40,37 +38,60 @@ pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyh
     .await
     .unwrap();
 
-    let networks = e2e_test_fixture
-        .db_repositories
-        .network_repo
-        .select_all()
-        .await?;
-    let provider = ProviderBuilder::new().connect_http(networks[0].rpc_url.parse()?);
-
-    // Disable automine to simulate a stuck transaction.
-    // Transaction will not be mined into a block, and will remain in pool.
-    provider
-        .raw_request::<_, ()>("evm_setAutomine".into(), [false])
-        .await?;
-
-    // SEND
-    let sender_queue_event = e2e_test_fixture
+    // receive message to clear the queue
+    e2e_test_fixture
         .test_queue_manager
         .blob_sender_queue
-        .receive_messages(5)
+        .receive_messages(1)
         .await?;
 
-    match e2e_test_fixture
+    // Simulate sending dropped transaction by saving it to the database without sending it to the network
+    let mut blob_batch_context = e2e_test_fixture
         .orchestrators
         .blob_tx_sender_orchestrator
-        .function_handler(sender_queue_event)
-        .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{err:#?}")
-        }
-    }
+        .tx_context_builder
+        .fetch_and_sort_into_batches(&vec![tx_id.clone()])
+        .await?
+        .pop()
+        .unwrap();
+
+    let mut wallet = e2e_test_fixture
+        .orchestrators
+        .blob_tx_sender_orchestrator
+        .wallet_pool_manager
+        .acquire(chain_id, None)
+        .await?
+        .unwrap();
+
+    e2e_test_fixture
+        .orchestrators
+        .blob_tx_sender_orchestrator
+        .wallet_assignment_repo
+        .new_assignments(&vec![tx_id.clone()], wallet.db_record.id)
+        .await?;
+
+    e2e_test_fixture
+        .orchestrators
+        .blob_tx_sender_orchestrator
+        .contract_manager
+        .simulate_send_blob_batch(&mut blob_batch_context, &mut wallet)
+        .await?;
+
+    blob_batch_context.tx_hash = Some(RANDOM_TX_HASH.to_string());
+
+    let execution_attempt = e2e_test_fixture
+        .orchestrators
+        .blob_tx_sender_orchestrator
+        .save_successful_execution(&blob_batch_context, &wallet)
+        .await?;
+
+    e2e_test_fixture
+        .orchestrators
+        .blob_tx_sender_orchestrator
+        .send_receipt_poller_queue_message(&blob_batch_context, &execution_attempt.id.to_string())
+        .await?;
+
+    tokio::time::sleep(Duration::from_millis(3000)).await;
 
     // POLL FOR RECEIPT
     let receipt_poller_queue_event = e2e_test_fixture
@@ -78,8 +99,6 @@ pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyh
         .receipt_poller_queue
         .receive_messages(5)
         .await?;
-
-    tokio::time::sleep(Duration::from_millis(3000)).await;
 
     e2e_test_fixture
         .poll_for_receipt_with_tx_max_age(&receipt_poller_queue_event, 1)
@@ -114,18 +133,12 @@ pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyh
         TxStatus::BROADCASTED
     );
 
-    // Re-enable automine to allow the retried transaction to be mined into a block.
-    provider
-        .raw_request::<_, ()>("evm_setAutomine".into(), [true])
-        .await?;
-
+    // POLL FOR RECEIPT AGAIN
     let receipt_poller_queue_event_2 = e2e_test_fixture
         .test_queue_manager
         .receipt_poller_queue
         .receive_messages(5)
         .await?;
-
-    tokio::time::sleep(Duration::from_millis(1000)).await;
 
     e2e_test_fixture
         .poll_for_receipt_with_scheduler(&tx_id, &receipt_poller_queue_event_2)
@@ -151,6 +164,8 @@ pub async fn retry_path_blob_tx_stuck(e2e_test_fixture: &E2eTestFixture) -> anyh
         execution_attempts[0].nonce_used,
         execution_attempts[1].nonce_used
     );
+
     println!("{} PASSED", module_path!());
+
     Ok(())
 }

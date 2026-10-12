@@ -1,10 +1,7 @@
+use crate::constants::{BLOB_JSON_TEST_FILES, TEST_BLOB_FOLDER};
 use aws_sdk_s3::primitives::ByteStream;
 use blob_storage::storage::s3::S3BlobStorageManager;
 use std::path::Path;
-
-const TEST_BLOB_FOLDER: &str = "../../local_setup/blob_test_files";
-pub const BLOB_JSON_TEST_FILES: &[&str] =
-    &["blob_1.json", "blob_2.json", "blob_3.json", "blob_4.json"];
 
 #[allow(async_fn_in_trait)]
 pub trait S3BlobStorageManagerTestFeatures {
