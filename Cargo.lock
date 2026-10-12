@@ -1971,6 +1971,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "component_test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "test_fixture",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2379,42 +2387,16 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "anyhow",
- "aws-config",
- "aws-sdk-eventbridge",
- "aws-sdk-s3",
- "aws-sdk-sqs",
- "aws_lambda_events",
- "blob_storage",
- "blob_tx_input_db",
- "blob_tx_sender",
  "blob_tx_signer",
  "db_types",
- "execution_attempt_db",
- "execution_attempt_item_db",
- "hex",
- "lambda_runtime",
- "migrator",
- "network_db",
- "operator_wallet_db",
- "outcome_emitter",
- "receipt_poller",
  "receipt_poller_queue",
- "retry_handler",
  "retry_queue",
- "seoa_contract",
- "serde",
- "serde_json",
- "sqlx",
- "sqs_queue",
- "standard_tx_input_db",
  "standard_tx_sender",
  "standard_tx_signer",
+ "test_fixture",
  "tokio",
  "tx_request",
- "tx_request_db",
  "uuid",
- "wallet_assignment_db",
- "wallet_pool",
 ]
 
 [[package]]
@@ -5613,6 +5595,46 @@ dependencies = [
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "test_fixture"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "anyhow",
+ "aws-config",
+ "aws-sdk-eventbridge",
+ "aws-sdk-s3",
+ "aws-sdk-sqs",
+ "aws_lambda_events",
+ "blob_storage",
+ "blob_tx_input_db",
+ "blob_tx_sender",
+ "db_types",
+ "execution_attempt_db",
+ "execution_attempt_item_db",
+ "hex",
+ "lambda_runtime",
+ "migrator",
+ "network_db",
+ "operator_wallet_db",
+ "outcome_emitter",
+ "receipt_poller",
+ "receipt_poller_queue",
+ "retry_handler",
+ "retry_queue",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "sqs_queue",
+ "standard_tx_input_db",
+ "standard_tx_sender",
+ "tokio",
+ "tx_request",
+ "tx_request_db",
+ "uuid",
+ "wallet_assignment_db",
 ]
 
 [[package]]

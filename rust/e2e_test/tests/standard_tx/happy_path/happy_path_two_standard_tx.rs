@@ -1,5 +1,6 @@
 use db_types::TxStatus;
-use e2e_test::{
+use std::time::Duration;
+use test_fixture::{
     aws::sqs::{
         event::{TestEventMessage, build_lambda_sqs_event},
         test_queue::SqsQueueTester,
@@ -8,7 +9,6 @@ use e2e_test::{
     fixture::E2eTestFixture,
     tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional},
 };
-use std::time::Duration;
 use tx_request::standard::StandardTxRequestBody;
 
 pub async fn happy_path_two_standard_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {

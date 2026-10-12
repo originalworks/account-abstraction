@@ -1,6 +1,8 @@
 mod blob_tx;
 mod standard_tx;
 
+use test_fixture::{db::get_pool, fixture::E2eTestFixture};
+
 use crate::{
     blob_tx::{
         fail_path::expired_blob_tx::expired_blob_tx,
@@ -34,7 +36,6 @@ use crate::{
         },
     },
 };
-use e2e_test::{db::get_pool, fixture::E2eTestFixture};
 
 #[tokio::test]
 async fn e2e_blob_tx_tests() -> anyhow::Result<()> {

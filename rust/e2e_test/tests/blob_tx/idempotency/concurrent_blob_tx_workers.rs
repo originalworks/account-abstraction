@@ -1,5 +1,6 @@
 use db_types::{TxExecutionOutcome, TxStatus};
-use e2e_test::{
+use std::time::Duration;
+use test_fixture::{
     aws::{
         s3::BLOB_JSON_TEST_FILES,
         sqs::{
@@ -11,7 +12,6 @@ use e2e_test::{
     fixture::E2eTestFixture,
     tx_request::{BlobTxRequestBodyForTest, BlobTxRequestBodyOptional},
 };
-use std::time::Duration;
 use tokio::join;
 use tx_request::blob_tx::BlobTxRequestBody;
 

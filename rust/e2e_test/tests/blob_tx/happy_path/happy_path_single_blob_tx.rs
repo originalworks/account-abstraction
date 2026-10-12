@@ -1,7 +1,6 @@
-use std::time::Duration;
-
 use db_types::TxStatus;
-use e2e_test::{
+use std::time::Duration;
+use test_fixture::{
     aws::{
         s3::BLOB_JSON_TEST_FILES,
         sqs::{

@@ -1,5 +1,6 @@
 use db_types::{TxExecutionOutcome, TxStatus};
-use e2e_test::{
+use std::time::{SystemTime, UNIX_EPOCH};
+use test_fixture::{
     aws::{
         s3::BLOB_JSON_TEST_FILES,
         sqs::{
@@ -11,7 +12,6 @@ use e2e_test::{
     fixture::E2eTestFixture,
     tx_request::{BlobTxRequestBodyForTest, BlobTxRequestBodyOptional},
 };
-use std::time::{SystemTime, UNIX_EPOCH};
 use tx_request::blob_tx::BlobTxRequestBody;
 
 pub async fn expired_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {
