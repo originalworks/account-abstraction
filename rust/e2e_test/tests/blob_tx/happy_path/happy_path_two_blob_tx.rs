@@ -1,11 +1,16 @@
 use db_types::TxStatus;
-use e2e_test::aws::s3::BLOB_JSON_TEST_FILES;
-use e2e_test::aws::sqs::event::TestEventMessage;
-use e2e_test::aws::sqs::event::build_lambda_sqs_event;
-use e2e_test::aws::sqs::test_queue::SqsQueueTester;
-use e2e_test::fixture::E2eTestFixture;
-use e2e_test::tx_request::{BlobTxRequestBodyForTest, BlobTxRequestBodyOptional};
 use std::time::Duration;
+use test_fixture::{
+    aws::{
+        s3::BLOB_JSON_TEST_FILES,
+        sqs::{
+            event::{TestEventMessage, build_lambda_sqs_event},
+            test_queue::SqsQueueTester,
+        },
+    },
+    fixture::E2eTestFixture,
+    tx_request::{BlobTxRequestBodyForTest, BlobTxRequestBodyOptional},
+};
 use tx_request::blob_tx::BlobTxRequestBody;
 
 pub async fn happy_path_two_blob_tx(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()> {

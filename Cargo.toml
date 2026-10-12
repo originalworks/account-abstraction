@@ -32,6 +32,8 @@ members = [
     "rust/database/tables/tx_input/tx_input_types",
     "rust/outcome_emitter",
     "rust/seoa_contract",
+    "rust/component_test",
+    "rust/test_fixture",
 ]
 
 [workspace.dependencies]
@@ -64,6 +66,7 @@ outcome_emitter = { path = "./rust/outcome_emitter" }
 receipt_poller = { path = "./rust/receipt_poller" }
 blob_storage = { path = "./rust/blob_storage" }
 seoa_contract = { path = "./rust/seoa_contract" }
+test_fixture = { path = "./rust/test_fixture" }
 anyhow = "1.0.102"
 tokio = "1.49.0"
 serde = "1.0.228"
@@ -81,3 +84,4 @@ lambda_runtime = "1.0.2"
 aws-sdk-sqs = "1.85.0"
 aws_lambda_events = "1.0.3"
 aws-sdk-eventbridge = "1.108.0"
+aws-sdk-s3 = "1.131.0"

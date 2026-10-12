@@ -1,0 +1,58 @@
+[package]
+name = "test_fixture"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+alloy = { workspace = true, features = ["getrandom", "signer-mnemonic"] }
+anyhow.workspace = true
+db_types.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tx_request_db.workspace = true
+uuid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+migrator.workspace = true
+sqlx = { workspace = true, features = ["postgres"] }
+network_db.workspace = true
+# standard_tx_signer = { workspace = true, features = ["aws"] }
+standard_tx_sender = { workspace = true, features = ["aws", "test-keys"] }
+operator_wallet_db = { workspace = true, features = ["test-keys"] }
+hex.workspace = true
+receipt_poller_queue = { workspace = true, features = ["aws"] }
+receipt_poller = { workspace = true, features = ["aws"] }
+retry_queue = { workspace = true, features = ["aws"] }
+retry_handler = { workspace = true, features = ["aws"] }
+sqs_queue = { workspace = true, optional = true }
+tx_request = { workspace = true, features = ["aws", "parser"] }
+standard_tx_input_db.workspace = true
+# blob_tx_signer = { workspace = true, features = ["aws"] }
+blob_tx_input_db.workspace = true
+blob_tx_sender = { workspace = true, features = ["aws"] }
+blob_storage = { workspace = true, features = ["aws"] }
+execution_attempt_db.workspace = true
+execution_attempt_item_db.workspace = true
+wallet_assignment_db.workspace = true
+# wallet_pool = { workspace = true, features = ["test-keys"] }
+outcome_emitter = { workspace = true, features = ["aws"] }
+
+aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
+lambda_runtime = { workspace = true, optional = true }
+aws-sdk-sqs = { workspace = true, optional = true }
+aws-config = { workspace = true, features = [
+    "behavior-version-latest",
+], optional = true }
+aws-sdk-eventbridge = { workspace = true, optional = true }
+aws-sdk-s3 = { workspace = true, optional = true }
+
+
+[features]
+aws = [
+    "dep:aws_lambda_events",
+    "dep:lambda_runtime",
+    "dep:aws-sdk-sqs",
+    "dep:aws-config",
+    "dep:sqs_queue",
+    "dep:aws-sdk-eventbridge",
+    "dep:aws-sdk-s3",
+]

@@ -1,5 +1,5 @@
 use db_types::{TxExecutionOutcome, TxStatus};
-use e2e_test::{
+use test_fixture::{
     aws::sqs::{
         event::{TestEventMessage, build_lambda_sqs_event},
         test_queue::SqsQueueTester,

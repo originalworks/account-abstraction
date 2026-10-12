@@ -1,15 +1,14 @@
 use db_types::TxStatus;
-use e2e_test::{
+use std::time::Duration;
+use test_fixture::{
     aws::sqs::{
         event::{TestEventMessage, build_lambda_sqs_event},
         test_queue::SqsQueueTester,
     },
     db::execution_attempt::ExecutionAttemptTestExt,
     fixture::E2eTestFixture,
-    // receipt_poller::get_receipt_poller_with_tx_max_age,
     tx_request::{StandardTxRequestBodyForTest, StandardTxRequestBodyOptional},
 };
-use std::time::Duration;
 use tx_request::standard::StandardTxRequestBody;
 
 const RANDOM_TX_HASH: &str = "0x27ee575f57248220b3ae9c190b93de171ceec766850fbcf79f8d6db77f13f752";
