@@ -1975,7 +1975,11 @@ name = "component_test"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "db_types",
+ "standard_tx_signer",
  "test_fixture",
+ "tokio",
+ "tx_request",
 ]
 
 [[package]]
