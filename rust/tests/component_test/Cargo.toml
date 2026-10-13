@@ -6,6 +6,10 @@ edition = "2024"
 [dependencies]
 anyhow.workspace = true
 test_fixture = { workspace = true, features = ["aws"] }
+db_types.workspace = true
+tx_request.workspace = true
+standard_tx_signer = { workspace = true, features = ["aws"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [features]
 aws = []

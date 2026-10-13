@@ -41,6 +41,41 @@ services:
       - IS_LOCAL=true
     command: ["cargo", "test", "-p", "e2e_test", "--features", "aws", "--", "--no-capture", "--test-threads=1"]
 
+  component_test_runner:
+    build: .
+    depends_on:
+      contracts_builder:
+        condition: service_completed_successfully
+      migration_runner:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      anvil:
+        condition: service_healthy
+    working_dir: /account-abstraction
+    volumes:
+      - ../../:/account-abstraction
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - ANVIL_RPC_URL=http://anvil:${ANVIL_PORT}
+      - ANVIL_CHAIN_ID=${ANVIL_CHAIN_ID}
+      - ANVIL_MNEMONIC=${ANVIL_MNEMONIC}
+      - USE_KMS=false
+      - PRIVATE_KEY=${SEOA_PRIVATE_KEY}
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - BLOB_SENDER_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-blob-queue"
+      - STANDARD_SENDER_QUEUE_MESSAGE_GROUP_ID="aa-tx-sender-standard-queue"
+      - RECEIPT_POLLER_QUEUE_MESSAGE_GROUP_ID="aa-receipt-poller-queue"
+      - RETRY_QUEUE_MESSAGE_GROUP_ID="aa-retry-queue"
+      - BLOB_STORAGE_BUCKET_NAME=blob-storage-bucket
+      - OUTCOME_EVENT_BUS_NAME=aa-test-outcome-event-bus
+      - IS_LOCAL=true
+    command: ["cargo", "test", "-p", "component_test", "--features", "aws", "--", "--no-capture", "--test-threads=1"]
 
   migration_runner:
     build: .
