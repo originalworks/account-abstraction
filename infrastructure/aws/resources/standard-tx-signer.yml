@@ -21,6 +21,8 @@ Parameters:
     Type: String
   StandardTxSignerDlqName:
     Type: String
+  OutcomeEventBusName:
+    Type: String
 
 Resources:
   StandardTxSignerDeadLetterQueue:
@@ -76,6 +78,7 @@ Resources:
           STANDARD_SENDER_QUEUE_MESSAGE_GROUP_ID: !Ref StandardSenderQueueMessageGroupId
           STANDARD_SENDER_QUEUE_URL: !Sub "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${StandardTxSenderQueueName}"
           USE_KMS: true
+          OUTCOME_EVENT_BUS_NAME: !Ref OutcomeEventBusName
           SIGNER_KMS_ID: !Join
             - ""
             - - "{{resolve:secretsmanager:"
@@ -91,8 +94,6 @@ Resources:
           Properties:
             Queue: !GetAtt StandardTxSignerQueue.Arn
             BatchSize: 5
-            FunctionResponseTypes:
-              - ReportBatchItemFailures
 
 Outputs:
   StandardTxSignerQueueArn:

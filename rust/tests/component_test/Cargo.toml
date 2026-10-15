@@ -10,6 +10,7 @@ db_types.workspace = true
 tx_request.workspace = true
 standard_tx_signer = { workspace = true, features = ["aws"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+sqlx.workspace = true
 
 [features]
 aws = []

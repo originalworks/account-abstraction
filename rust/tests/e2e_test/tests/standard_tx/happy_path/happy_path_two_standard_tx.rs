@@ -26,13 +26,12 @@ pub async fn happy_path_two_standard_tx(e2e_test_fixture: &E2eTestFixture) -> an
         TestEventMessage::new(&tx_request_body_2.to_string(), None),
     ])?;
 
-    standard_tx_signer::aws_lambda::function_handler(
-        tx_request_event,
-        &e2e_test_fixture.pool,
-        &e2e_test_fixture.aws_config,
-    )
-    .await
-    .unwrap();
+    e2e_test_fixture
+        .orchestrators
+        .standard_tx_signer_orchestrator
+        .function_handler(tx_request_event)
+        .await
+        .unwrap();
 
     // Transaction Request was signed and is ready to be sent
     let sender_queue_event = e2e_test_fixture

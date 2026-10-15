@@ -1,4 +1,5 @@
 pub mod calldata;
+pub mod orchestrator;
 pub mod signature;
 
 use signer_wallet::IntoSignerWalletConfig;
@@ -21,6 +22,7 @@ pub struct Config {
     pub sender_standard_queue_url: String,
     pub standard_sender_queue_message_group_id: String,
     pub database_url: String,
+    pub outcome_event_bus_name: String,
 }
 
 impl Config {
@@ -29,6 +31,7 @@ impl Config {
             Self::get_env_var("STANDARD_SENDER_QUEUE_MESSAGE_GROUP_ID");
         let sender_standard_queue_url = Self::get_env_var("STANDARD_SENDER_QUEUE_URL");
         let database_url = Self::get_env_var("DATABASE_URL");
+        let outcome_event_bus_name = Self::get_env_var("OUTCOME_EVENT_BUS_NAME");
         let mut signer_kms_id = None;
         let mut private_key = None;
         let use_kms = matches!(
@@ -51,6 +54,7 @@ impl Config {
             database_url,
             sender_standard_queue_url,
             standard_sender_queue_message_group_id,
+            outcome_event_bus_name,
         })
     }
 
@@ -59,74 +63,74 @@ impl Config {
     }
 }
 
-#[cfg(feature = "aws")]
-pub mod aws_lambda {
+// #[cfg(feature = "aws")]
+// pub mod aws_lambda {
 
-    use crate::{Config, signature::sign_tx_request};
-    use aws_lambda_events::sqs::SqsEvent;
-    use lambda_runtime::{LambdaEvent, tracing};
-    use network_db::networks::NetworkRepo;
-    use signer_wallet::{IntoSignerWalletConfig, manager::SignerWalletManager};
-    use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
-    use standard_sender_queue::StandardSenderQueueMessageBody;
-    use tx_request::{sqs_parser::tx_requests_from_sqs_event, standard::StandardTxRequestBody};
-    use tx_request_db::repo::{InsertTxRequestResult, TxRequestRepo};
+//     use crate::{Config, signature::sign_tx_request};
+//     use aws_lambda_events::sqs::SqsEvent;
+//     use lambda_runtime::{LambdaEvent, tracing};
+//     use network_db::networks::NetworkRepo;
+//     use signer_wallet::{IntoSignerWalletConfig, manager::SignerWalletManager};
+//     use sqs_queue::{message_body::ToJsonString, queue::SqsQueue};
+//     use standard_sender_queue::StandardSenderQueueMessageBody;
+//     use tx_request::{sqs_parser::tx_requests_from_sqs_event, standard::StandardTxRequestBody};
+//     use tx_request_db::repo::{InsertTxRequestResult, TxRequestRepo};
 
-    pub async fn function_handler(
-        event: LambdaEvent<SqsEvent>,
-        pool: &sqlx::Pool<sqlx::Postgres>,
-        aws_config: &aws_config::SdkConfig,
-    ) -> anyhow::Result<(), lambda_runtime::Error> {
-        tracing::info!("Building standard_tx_signer...");
+//     pub async fn function_handler(
+//         event: LambdaEvent<SqsEvent>,
+//         pool: &sqlx::Pool<sqlx::Postgres>,
+//         aws_config: &aws_config::SdkConfig,
+//     ) -> anyhow::Result<(), lambda_runtime::Error> {
+//         tracing::info!("Building standard_tx_signer...");
 
-        let config = Config::build()?;
+//         let config = Config::build()?;
 
-        let transaction_repo = TxRequestRepo::new(pool.clone());
-        let network_repo = NetworkRepo::new(pool.clone());
-        let networks = network_repo.select_all().await?;
+//         let transaction_repo = TxRequestRepo::new(pool.clone());
+//         let network_repo = NetworkRepo::new(pool.clone());
+//         let networks = network_repo.select_all().await?;
 
-        let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
+//         let sqs_client = aws_sdk_sqs::Client::new(&aws_config);
 
-        let tx_sender_standard_queue = SqsQueue::build(
-            &sqs_client,
-            &config.sender_standard_queue_url,
-            &config.standard_sender_queue_message_group_id,
-        )?;
+//         let tx_sender_standard_queue = SqsQueue::build(
+//             &sqs_client,
+//             &config.sender_standard_queue_url,
+//             &config.standard_sender_queue_message_group_id,
+//         )?;
 
-        let tx_request_body_vec = tx_requests_from_sqs_event::<StandardTxRequestBody>(event)?;
-        let mut wallet_manager =
-            SignerWalletManager::build(&networks, &config.into_signer_wallet_config())?;
+//         let tx_request_body_vec = tx_requests_from_sqs_event::<StandardTxRequestBody>(event)?;
+//         let mut wallet_manager =
+//             SignerWalletManager::build(&networks, &config.into_signer_wallet_config())?;
 
-        for tx_request_body in tx_request_body_vec {
-            tracing::info!("Signing: {tx_request_body:?}");
+//         for tx_request_body in tx_request_body_vec {
+//             tracing::info!("Signing: {tx_request_body:?}");
 
-            let wallet = wallet_manager.get_wallet(tx_request_body.chain_id).await?;
-            let signature = sign_tx_request(&tx_request_body, wallet).await?;
+//             let wallet = wallet_manager.get_wallet(tx_request_body.chain_id).await?;
+//             let signature = sign_tx_request(&tx_request_body, wallet).await?;
 
-            tracing::info!("Saving...");
-            let insert_tx_input = tx_request_body.into_db_input(signature.as_bytes().to_vec())?;
-            match transaction_repo
-                .insert_tx_request_with_tx_input(&insert_tx_input)
-                .await?
-            {
-                InsertTxRequestResult::SAVED => {
-                    let trigger_body = StandardSenderQueueMessageBody {
-                        tx_id: insert_tx_input.new_tx_request.tx_id,
-                    };
+//             tracing::info!("Saving...");
+//             let insert_tx_input = tx_request_body.into_db_input(signature.as_bytes().to_vec())?;
+//             match transaction_repo
+//                 .insert_tx_request_with_tx_input(&insert_tx_input)
+//                 .await?
+//             {
+//                 InsertTxRequestResult::SAVED => {
+//                     let trigger_body = StandardSenderQueueMessageBody {
+//                         tx_id: insert_tx_input.new_tx_request.tx_id,
+//                     };
 
-                    tx_sender_standard_queue
-                        .send_new(&trigger_body.to_json_string()?)
-                        .await?;
-                }
-                InsertTxRequestResult::SKIPPED => {
-                    tracing::warn!(
-                        "Warning! This transaction request was already signed! Skipping: {:?}",
-                        tx_request_body
-                    );
-                }
-            }
-        }
+//                     tx_sender_standard_queue
+//                         .send_new(&trigger_body.to_json_string()?)
+//                         .await?;
+//                 }
+//                 InsertTxRequestResult::SKIPPED => {
+//                     tracing::warn!(
+//                         "Warning! This transaction request was already signed! Skipping: {:?}",
+//                         tx_request_body
+//                     );
+//                 }
+//             }
+//         }
 
-        Ok(())
-    }
-}
+//         Ok(())
+//     }
+// }

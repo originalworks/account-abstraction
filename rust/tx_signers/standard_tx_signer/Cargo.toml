@@ -21,6 +21,7 @@ alloy = { workspace = true }
 alloy-sol-types.workspace = true
 eip712_domain.workspace = true
 signer_wallet.workspace = true
+outcome_emitter = { workspace = true, features = ["aws"] }
 
 # aws
 aws-sdk-sqs = { workspace = true, optional = true }
@@ -30,6 +31,7 @@ aws-config = { workspace = true, features = [
 aws_lambda_events = { workspace = true, features = ["sqs"], optional = true }
 lambda_runtime = { workspace = true, optional = true }
 sqs_queue = { workspace = true, optional = true }
+aws-sdk-eventbridge = { workspace = true, optional = true }
 
 [dev-dependencies]
 alloy = { workspace = true, features = ["node-bindings"] }
@@ -42,6 +44,7 @@ aws = [
     "dep:aws_lambda_events",
     "dep:lambda_runtime",
     "dep:sqs_queue",
+    "dep:aws-sdk-eventbridge",
 ]
 
 [[bin]]
