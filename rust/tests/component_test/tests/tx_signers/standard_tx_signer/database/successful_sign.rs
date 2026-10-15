@@ -20,13 +20,12 @@ pub async fn successful_sign_single_request(
         None,
     )])?;
 
-    standard_tx_signer::aws_lambda::function_handler(
-        tx_request_event,
-        &e2e_test_fixture.pool,
-        &e2e_test_fixture.aws_config,
-    )
-    .await
-    .unwrap();
+    e2e_test_fixture
+        .orchestrators
+        .standard_tx_signer_orchestrator
+        .function_handler(tx_request_event)
+        .await
+        .unwrap();
 
     let tx_request = e2e_test_fixture
         .db_repositories
@@ -100,13 +99,12 @@ pub async fn successful_sign_multiple_request(
 
     let tx_request_event = build_lambda_sqs_event(messages)?;
 
-    standard_tx_signer::aws_lambda::function_handler(
-        tx_request_event,
-        &e2e_test_fixture.pool,
-        &e2e_test_fixture.aws_config,
-    )
-    .await
-    .unwrap();
+    e2e_test_fixture
+        .orchestrators
+        .standard_tx_signer_orchestrator
+        .function_handler(tx_request_event)
+        .await
+        .unwrap();
 
     for body in &tx_request_bodies {
         let tx_request = e2e_test_fixture

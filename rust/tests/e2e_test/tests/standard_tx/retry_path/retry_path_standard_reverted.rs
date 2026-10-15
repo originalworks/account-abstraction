@@ -34,13 +34,12 @@ pub async fn retry_path_standard_reverted(e2e_test_fixture: &E2eTestFixture) -> 
     ])?;
 
     // SIGN
-    standard_tx_signer::aws_lambda::function_handler(
-        tx_request_event,
-        &e2e_test_fixture.pool,
-        &e2e_test_fixture.aws_config,
-    )
-    .await
-    .unwrap();
+    e2e_test_fixture
+        .orchestrators
+        .standard_tx_signer_orchestrator
+        .function_handler(tx_request_event)
+        .await
+        .unwrap();
 
     // SEND
     let sender_queue_event = e2e_test_fixture

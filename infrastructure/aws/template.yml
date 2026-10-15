@@ -172,6 +172,7 @@ Resources:
         StandardTxSenderQueueName: !Ref StandardTxSenderQueueName
         StandardTxSignerQueueName: !Ref StandardTxSignerQueueName
         StandardTxSignerDlqName: !Ref StandardTxSignerDlqName
+        OutcomeEventBusName: !Ref OutcomeEventBusName
 
   StandardTxSender:
     Type: AWS::Serverless::Application

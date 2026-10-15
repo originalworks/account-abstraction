@@ -23,13 +23,12 @@ pub async fn happy_path_single_standard_tx(
         None,
     )])?;
 
-    standard_tx_signer::aws_lambda::function_handler(
-        tx_request_event,
-        &e2e_test_fixture.pool,
-        &e2e_test_fixture.aws_config,
-    )
-    .await
-    .unwrap();
+    e2e_test_fixture
+        .orchestrators
+        .standard_tx_signer_orchestrator
+        .function_handler(tx_request_event)
+        .await
+        .unwrap();
 
     let standard_tx_input = e2e_test_fixture
         .db_repositories

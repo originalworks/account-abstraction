@@ -10,7 +10,10 @@ mod tests {
     use serde_json::json;
     use sqlx::PgPool;
     use standard_tx_input_db::standard_tx_inputs::StandardTxInputRepo;
-    use standard_tx_signer::{Config, aws_lambda::function_handler};
+    use standard_tx_signer::{
+        Config,
+        orchestrator::{self, aws::AwsLambdaOrchestrator},
+    };
     use tx_request_db::repo::TxRequestRepo;
 
     async fn create_transaction_sender_queue() -> anyhow::Result<()> {
@@ -89,7 +92,8 @@ mod tests {
             .region(region_provider)
             .load()
             .await;
-        match function_handler(lambda_event, &pool, &aws_config).await {
+        let orchestrator = AwsLambdaOrchestrator::build(&pool, &aws_config).await?;
+        match orchestrator.function_handler(lambda_event).await {
             Ok(value) => value,
             Err(err) => {
                 println!("{err:?}");

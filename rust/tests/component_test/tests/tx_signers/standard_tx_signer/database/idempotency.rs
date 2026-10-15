@@ -17,13 +17,12 @@ pub async fn duplicates(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()>
         None,
     )])?;
 
-    standard_tx_signer::aws_lambda::function_handler(
-        tx_request_event.clone(),
-        &e2e_test_fixture.pool,
-        &e2e_test_fixture.aws_config,
-    )
-    .await
-    .unwrap();
+    e2e_test_fixture
+        .orchestrators
+        .standard_tx_signer_orchestrator
+        .function_handler(tx_request_event.clone())
+        .await
+        .unwrap();
 
     let first_tx_request = e2e_test_fixture
         .db_repositories
@@ -37,13 +36,12 @@ pub async fn duplicates(e2e_test_fixture: &E2eTestFixture) -> anyhow::Result<()>
         .find_by_tx_id(&tx_request_body.tx_id)
         .await?;
 
-    standard_tx_signer::aws_lambda::function_handler(
-        tx_request_event,
-        &e2e_test_fixture.pool,
-        &e2e_test_fixture.aws_config,
-    )
-    .await
-    .unwrap();
+    e2e_test_fixture
+        .orchestrators
+        .standard_tx_signer_orchestrator
+        .function_handler(tx_request_event)
+        .await
+        .unwrap();
 
     let second_tx_request = e2e_test_fixture
         .db_repositories
@@ -128,13 +126,12 @@ pub async fn duplicate_tx_id_with_different_body(
         None,
     )])?;
 
-    standard_tx_signer::aws_lambda::function_handler(
-        original_tx_request_event.clone(),
-        &e2e_test_fixture.pool,
-        &e2e_test_fixture.aws_config,
-    )
-    .await
-    .unwrap();
+    e2e_test_fixture
+        .orchestrators
+        .standard_tx_signer_orchestrator
+        .function_handler(original_tx_request_event.clone())
+        .await
+        .unwrap();
 
     let tx_request_before = e2e_test_fixture
         .db_repositories
@@ -148,13 +145,12 @@ pub async fn duplicate_tx_id_with_different_body(
         .find_by_tx_id(&original_tx_request_body.tx_id)
         .await?;
 
-    standard_tx_signer::aws_lambda::function_handler(
-        fake_tx_request_event,
-        &e2e_test_fixture.pool,
-        &e2e_test_fixture.aws_config,
-    )
-    .await
-    .unwrap();
+    e2e_test_fixture
+        .orchestrators
+        .standard_tx_signer_orchestrator
+        .function_handler(fake_tx_request_event)
+        .await
+        .unwrap();
 
     let tx_request_after = e2e_test_fixture
         .db_repositories

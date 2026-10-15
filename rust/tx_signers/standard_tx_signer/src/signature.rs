@@ -1,3 +1,4 @@
+use crate::calldata::parse_calldata;
 use alloy::{
     primitives::{Address, U256, Uint, keccak256},
     signers::Signature,
@@ -6,11 +7,8 @@ use alloy::{
 use alloy_sol_types::Eip712Domain;
 use eip712_domain::constants::{EIP712_DOMAIN_NAME, EIP712_DOMAIN_VERSION};
 use ow_wallet_adapter::wallet::OwWallet;
-use tx_request::standard::StandardTxRequestBody;
-// use signer_queue::tx_request::TxRequestBody;
 use std::str::FromStr;
-
-use crate::calldata::parse_calldata;
+use tx_request::standard::StandardTxRequestBody;
 
 sol!(
     #[allow(missing_docs)]

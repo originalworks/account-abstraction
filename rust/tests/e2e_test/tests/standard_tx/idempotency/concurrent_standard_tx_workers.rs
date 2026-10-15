@@ -27,21 +27,18 @@ pub async fn concurrent_standard_tx_workers(
 
     // SIGN
     join!(
-        standard_tx_signer::aws_lambda::function_handler(
-            tx_request_event.clone(),
-            &e2e_test_fixture.pool,
-            &e2e_test_fixture.aws_config,
-        ),
-        standard_tx_signer::aws_lambda::function_handler(
-            tx_request_event.clone(),
-            &e2e_test_fixture.pool,
-            &e2e_test_fixture.aws_config,
-        ),
-        standard_tx_signer::aws_lambda::function_handler(
-            tx_request_event.clone(),
-            &e2e_test_fixture.pool,
-            &e2e_test_fixture.aws_config,
-        )
+        e2e_test_fixture
+            .orchestrators
+            .standard_tx_signer_orchestrator
+            .function_handler(tx_request_event.clone(),),
+        e2e_test_fixture
+            .orchestrators
+            .standard_tx_signer_orchestrator
+            .function_handler(tx_request_event.clone(),),
+        e2e_test_fixture
+            .orchestrators
+            .standard_tx_signer_orchestrator
+            .function_handler(tx_request_event.clone(),)
     );
 
     let mut tx_request = e2e_test_fixture
