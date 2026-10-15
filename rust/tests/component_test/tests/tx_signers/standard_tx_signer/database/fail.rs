@@ -16,22 +16,10 @@ pub async fn database_unavailable(e2e_test_fixture: &E2eTestFixture) -> anyhow::
         StandardTxRequestBodyOptional::default(e2e_test_fixture.env_vars.anvil_chain_id),
     )?;
 
-    let tx_request_event = build_lambda_sqs_event(vec![TestEventMessage::new(
-        &tx_request_body.to_string(),
-        None,
-    )])?;
-
     // Unavailable PostgreSQL endpoint
     let unavailable_pool = PgPoolOptions::new()
         .acquire_timeout(Duration::from_secs(2))
         .connect_lazy("postgres://postgres:postgres@127.0.0.1:1/standard_tx_signer_test")?;
-
-    // let standard_tx_signer_orchestrator_with_unavailable_pool =
-    //     standard_tx_signer::orchestrator::aws::AwsLambdaOrchestrator::build(
-    //         &unavailable_pool,
-    //         &e2e_test_fixture.aws_config,
-    //     )
-    //     .await?;
 
     let result = tokio::time::timeout(
         Duration::from_secs(10),
