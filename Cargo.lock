@@ -1976,7 +1976,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "db_types",
+ "serde",
+ "serde_json",
  "sqlx",
+ "standard_sender_queue",
  "standard_tx_signer",
  "test_fixture",
  "tokio",

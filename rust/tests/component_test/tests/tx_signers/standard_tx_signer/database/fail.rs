@@ -12,10 +12,6 @@ pub async fn database_unavailable(e2e_test_fixture: &E2eTestFixture) -> anyhow::
     println!("Entering component test: {}", module_path!());
     println!("Verifies that signing fails gracefully when the database is unavailable");
 
-    let tx_request_body = StandardTxRequestBody::test_build(
-        StandardTxRequestBodyOptional::default(e2e_test_fixture.env_vars.anvil_chain_id),
-    )?;
-
     // Unavailable PostgreSQL endpoint
     let unavailable_pool = PgPoolOptions::new()
         .acquire_timeout(Duration::from_secs(2))
@@ -163,6 +159,118 @@ pub async fn malformed_requests_with_valid_request_in_batch(
         valid_input.pass_value_from_operator_wallet,
         valid_body.pass_value_from_operator_wallet
     );
+
+    println!("{} PASSED", module_path!());
+    Ok(())
+}
+
+pub async fn malformed_request_structures_in_batch(
+    e2e_test_fixture: &E2eTestFixture,
+) -> anyhow::Result<()> {
+    println!("Entering component test: {}", module_path!());
+    println!(
+        "Verifies signer behavior when every message in an SQS batch has an invalid JSON structure"
+    );
+
+    let default_options =
+        || StandardTxRequestBodyOptional::default(e2e_test_fixture.env_vars.anvil_chain_id);
+
+    // Message 1: missing required calldata field.
+    let body_missing_calldata = StandardTxRequestBody::test_build(default_options())?;
+    let tx_id_missing_calldata = body_missing_calldata.tx_id.clone();
+
+    let mut json_missing_calldata: serde_json::Value =
+        serde_json::from_str(&body_missing_calldata.to_string())?;
+    json_missing_calldata
+        .as_object_mut()
+        .expect("Expected a JSON object")
+        .remove("calldata");
+
+    // Message 2: missing required tx_id field.
+    let body_missing_tx_id = StandardTxRequestBody::test_build(default_options())?;
+
+    let mut json_missing_tx_id: serde_json::Value =
+        serde_json::from_str(&body_missing_tx_id.to_string())?;
+    json_missing_tx_id
+        .as_object_mut()
+        .expect("Expected a JSON object")
+        .remove("tx_id");
+
+    // Message 3: chain_id has the wrong JSON type.
+    let body_wrong_chain_id_type = StandardTxRequestBody::test_build(default_options())?;
+    let tx_id_wrong_chain_id_type = body_wrong_chain_id_type.tx_id.clone();
+
+    let mut json_wrong_chain_id_type: serde_json::Value =
+        serde_json::from_str(&body_wrong_chain_id_type.to_string())?;
+    json_wrong_chain_id_type
+        .as_object_mut()
+        .expect("Expected a JSON object")
+        .insert(
+            "chain_id".to_string(),
+            serde_json::Value::String("not-a-number".to_string()),
+        );
+
+    let event = build_lambda_sqs_event(vec![
+        TestEventMessage::new(&json_missing_calldata.to_string(), None),
+        TestEventMessage::new(&json_missing_tx_id.to_string(), None),
+        TestEventMessage::new(&json_wrong_chain_id_type.to_string(), None),
+    ])?;
+
+    let result = e2e_test_fixture
+        .orchestrators
+        .standard_tx_signer_orchestrator
+        .function_handler(event)
+        .await;
+
+    assert!(
+        result.is_ok(),
+        "Expected the handler to complete without a top-level error when all messages are malformed"
+    );
+
+    // No request with a malformed structure should be persisted.
+    let missing_calldata_request = e2e_test_fixture
+        .db_repositories
+        .tx_request_repo
+        .find_by_tx_id(&tx_id_missing_calldata)
+        .await;
+    assert!(
+        missing_calldata_request.is_err(),
+        "Request missing calldata should not be persisted"
+    );
+
+    let missing_calldata_input = e2e_test_fixture
+        .db_repositories
+        .standard_tx_input_repo
+        .find_by_tx_id(&tx_id_missing_calldata)
+        .await;
+    assert!(
+        missing_calldata_input.is_err(),
+        "Transaction input for request missing calldata should not be persisted"
+    );
+
+    let wrong_chain_id_request = e2e_test_fixture
+        .db_repositories
+        .tx_request_repo
+        .find_by_tx_id(&tx_id_wrong_chain_id_type)
+        .await;
+    assert!(
+        wrong_chain_id_request.is_err(),
+        "Request with chain_id of the wrong JSON type should not be persisted"
+    );
+
+    let wrong_chain_id_input = e2e_test_fixture
+        .db_repositories
+        .standard_tx_input_repo
+        .find_by_tx_id(&tx_id_wrong_chain_id_type)
+        .await;
+    assert!(
+        wrong_chain_id_input.is_err(),
+        "Transaction input for request with an invalid chain_id type should not be persisted"
+    );
+
+    // The message missing tx_id cannot be looked up by its original ID,
+    // because that ID was deliberately removed from the JSON payload.
+    // Its absence from the database cannot be verified by tx_id alone.
 
     println!("{} PASSED", module_path!());
     Ok(())

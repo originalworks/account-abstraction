@@ -21,9 +21,19 @@ pub trait SqsQueueTester {
     async fn create_outcome_queue_if_not_exist(
         sqs_client: &aws_sdk_sqs::Client,
     ) -> anyhow::Result<SqsQueue>;
+    async fn clear_queue(&self) -> anyhow::Result<()>;
 }
 
 impl SqsQueueTester for SqsQueue {
+    async fn clear_queue(&self) -> anyhow::Result<()> {
+        loop {
+            match self.receive_messages(10).await {
+                Ok(_) => continue,
+                Err(_) => return Ok(()),
+            }
+        }
+    }
+
     async fn receive_messages(&self, limit: i32) -> anyhow::Result<LambdaEvent<SqsEvent>> {
         let response = self
             .client
