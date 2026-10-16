@@ -11,6 +11,9 @@ tx_request.workspace = true
 standard_tx_signer = { workspace = true, features = ["aws"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 sqlx.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+standard_sender_queue.workspace = true
 
 [features]
 aws = []

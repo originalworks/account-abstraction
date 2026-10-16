@@ -1,7 +1,3 @@
-use crate::{
-    db::{network::AnvilTestNetwork, operator_wallet::InsertFromMnemonic},
-    fixture::env_vars::E2eTestEnvVars,
-};
 use blob_tx_input_db::blob_tx_inputs::BlobTxInputRepo;
 use execution_attempt_db::execution_attempts::ExecutionAttemptRepo;
 use execution_attempt_item_db::execution_attempt_items::ExecutionAttemptItemRepo;
